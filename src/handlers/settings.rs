@@ -173,6 +173,16 @@ pub(super) fn handle_confirm_clear_cache(app: &mut App, key: KeyEvent) {
         KeyCode::Enter => {
             let _ = clear_article_cache();
             app.article_cache_size = 0;
+            // Reset in-memory article state so feeds don't appear fetched
+            for feed in app.feeds.iter_mut() {
+                feed.articles.clear();
+                feed.fetched = false;
+                feed.fetch_error = None;
+                feed.unread_count = 0;
+            }
+            // Clear read list and persist
+            app.user_data.read_links.clear();
+            let _ = save_user_data(&app.user_data);
             app.status_msg = "Article cache cleared.".to_string();
             app.state = AppState::SettingsList;
         }
