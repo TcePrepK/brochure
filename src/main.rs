@@ -92,6 +92,11 @@ async fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()
                 let _ = tx2.send(AppEvent::FeedFetched(idx, result));
             });
         }
+    } else {
+        for feed in &mut app.feeds {
+            feed.fetched = true;
+        }
+        app.set_status("");
     }
 
     loop {
