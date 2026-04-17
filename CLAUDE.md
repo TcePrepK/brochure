@@ -24,42 +24,22 @@ rule), fix it in the same commit.
 ## Task Workflow
 
 1. **On session start**: read `TASKS.md`. Pick up the highest-priority incomplete item.
-2. **Pick up work**: always take the highest-priority incomplete item first.
-3. **If anything is unclear**: stop and ask the user. Do not assume scope, layout, or behavior. Never move items to a "
-   Blocked" section — just ask directly in your response.
-4. **On completion**: move item from its category to **Completed** with a timestamp (e.g.,
-   `[x] - 2026-04-12 14:35 - Task name`).
-5. **Maintain Completed**: keep only the last 10 entries (trim oldest).
+2. **Priority indicators**: tasks marked with [!] are high-priority. Always prioritize these before non-flagged tasks
+   within the same category.
+3. **Pick up work**: always take the highest-priority incomplete item first.
+4. **If anything is unclear**: stop and ask the user. Do not assume scope, layout, or behavior. Just ask directly in
+   your response.
+5. **On completion**: move item from its category to **Completed** with a timestamp (e.g.,
+   `[2026-04-12 14:35] - Task name`).
 
 **Blocked entry format** (required fields):
 
 ```
-- [] **<Task name>** — <one-line summary>
+- **<Task name>** — <one-line summary>
   Question: <exact question to ask the user>
 ```
 
 **Before marking any task done**: run the full test workflow (below) and confirm the requirement is met.
-
----
-
-## Caveman Mode (Permanent)
-
-**This session and all future sessions use `caveman full` mode permanently.**
-
-Caveman reduces output tokens by ~65-75% while maintaining technical accuracy. Rules:
-
-- **No filler** — drop "sure", "certainly", "just", "basically", "actually"
-- **No pleasantries** — no "I'd be happy to", "let me help"
-- **Fragments fine** — short, direct statements okay
-- **Execute before explaining** — show code/result first, explain after if needed
-- **Technical terms stay exact** — "polymorphism" stays "polymorphism"
-- **Code blocks unchanged** — caveman speak around code, not in code
-- **Error messages quoted exact** — caveman explains only
-- **Auto-clarity rule** — drop caveman for: security warnings, irreversible confirmations, multi-step sequences where
-  fragment ambiguity risks misread, user confusion. Resume after.
-
-**Mode persists across conversations.** Do not revert to normal mode after a few exchanges. This is permanent for this
-repository.
 
 ---
 
@@ -120,25 +100,6 @@ src/
 
 See `CHECKLISTS.md` — read it before implementing new types, AppStates, keybindings, background tasks, or persisted
 data.
-
----
-
-## Commit Confirmation (mandatory)
-
-Before running any `git commit` command, use `AskUserQuestion` with **exactly two options**: `["Yes", "No"]`. Ask: "
-Commit these changes?". Only proceed if the user selects **Yes**.
-
-This applies every time — no exceptions, no skipping because changes seem obvious.
-
----
-
-## Code Review Scope (mandatory)
-
-When invoking code review, use the **local `code-reviewer` agent** (subagent_type: `code-reviewer`).
-
-- **Always** determine changed files first: `git diff HEAD --name-only`
-- **Only** pass those files to the reviewer — never ask it to review files outside the diff
-- If no files changed since last commit, say so and skip the review
 
 ---
 
