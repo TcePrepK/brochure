@@ -31,6 +31,10 @@ pub struct App {
     pub favorites_sidebar_list_state: ListState,
     /// Scroll state for the article list panel.
     pub article_list_state: ListState,
+    /// Scroll state for the editor feeds panel.
+    pub editor_feeds_list_state: ListState,
+    /// Scroll state for the editor categories panel.
+    pub editor_cats_list_state: ListState,
 
     // ── Tab bar ──────────────────────────────────────────────────────────────
     pub selected_tab: Tab,
@@ -145,6 +149,8 @@ impl App {
             sidebar_list_state: ListState::default(),
             favorites_sidebar_list_state: ListState::default(),
             article_list_state: ListState::default(),
+            editor_feeds_list_state: ListState::default(),
+            editor_cats_list_state: ListState::default(),
             selected_tab: Tab::Feeds,
             favorites_sidebar_cursor: 0,
             favorite_view_articles: Vec::new(),

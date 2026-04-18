@@ -2,7 +2,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
 };
 
@@ -18,7 +18,7 @@ use super::{
     SUBTEXT0, SURFACE0, TEXT, YELLOW,
 };
 
-pub(super) fn draw_feed_editor(f: &mut Frame, app: &App, area: Rect) {
+pub(super) fn draw_feed_editor(f: &mut Frame, app: &mut App, area: Rect) {
     // Background-only outer block (no borders)
     let bg_block = Block::default().bg(BASE);
     f.render_widget(bg_block, area);
@@ -32,7 +32,7 @@ pub(super) fn draw_feed_editor(f: &mut Frame, app: &App, area: Rect) {
     draw_editor_categories(f, app, cols[1]);
 }
 
-fn draw_editor_feeds(f: &mut Frame, app: &App, area: Rect) {
+fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
     let is_active = app.editor_panel == EditorPanel::Feeds;
     let in_moving_mode = matches!(app.editor_mode, FeedEditorMode::Moving { .. });
     let is_rename = app.state == AppState::FeedEditorRename;
@@ -215,7 +215,6 @@ fn draw_editor_feeds(f: &mut Frame, app: &App, area: Rect) {
         }
     }
 
-    let mut state = ListState::default();
     // Show selection when active, or during feed move (keeps ghost/preview visible when tabbed away).
     let is_feed_moving = in_moving_mode
         && matches!(
@@ -223,13 +222,15 @@ fn draw_editor_feeds(f: &mut Frame, app: &App, area: Rect) {
             Some(FeedTreeItem::Feed { .. })
         );
     if is_active || is_feed_moving {
-        state.select(Some(display_visual));
+        app.editor_feeds_list_state.select(Some(display_visual));
+    } else {
+        app.editor_feeds_list_state.select(None);
     }
-    f.render_stateful_widget(List::new(final_items), inner, &mut state);
+    f.render_stateful_widget(List::new(final_items), inner, &mut app.editor_feeds_list_state);
 }
 
 /// Render the right panel: categories-only tree with add/rename/delete controls.
-fn draw_editor_categories(f: &mut Frame, app: &App, area: Rect) {
+fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
     let is_active = app.editor_panel == EditorPanel::Categories;
     let is_rename = app.state == AppState::FeedEditorRename;
     let in_moving_mode = matches!(app.editor_mode, FeedEditorMode::Moving { .. });
@@ -434,9 +435,10 @@ fn draw_editor_categories(f: &mut Frame, app: &App, area: Rect) {
         }
     }
 
-    let mut state = ListState::default();
     if is_active {
-        state.select(Some(display_cursor.min(final_items.len().saturating_sub(1))));
+        app.editor_cats_list_state.select(Some(display_cursor.min(final_items.len().saturating_sub(1))));
+    } else {
+        app.editor_cats_list_state.select(None);
     }
-    f.render_stateful_widget(List::new(final_items), inner, &mut state);
+    f.render_stateful_widget(List::new(final_items), inner, &mut app.editor_cats_list_state);
 }
