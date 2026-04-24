@@ -113,7 +113,7 @@ If yes → ollama. If not → haiku minimum.
 echo '{"file":"src/path/to/file.rs","instruction":"your instruction here","context_files":[]}' | python scripts/ollama_agent.py
 ```
 
-Default model is `qwen2.5-coder:7b`. Override with `--model <name>` if needed. Result is JSON
+Default model is `gemma4:e4b`. Override with `--model <name>` if needed. Result is JSON
 `{"path": "...", "content": "..."}`. Apply with `Edit` or `Write` tool.
 
 **Fallback:** If `ollama_agent.py` returns `{"error": "..."}`, escalate the task to `haiku`. Never silently drop the
