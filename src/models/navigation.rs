@@ -1,20 +1,33 @@
+//! Application navigation states, tabs, and editor modes.
+
 use super::CategoryId;
 
 /// Application navigation states.
 #[derive(PartialEq, Clone, Debug)]
 pub enum AppState {
+    /// Viewing the feed list in the Feeds tab.
     FeedList,
+    /// Viewing the list of articles in the selected feed.
     ArticleList,
+    /// Viewing the full content of a selected article.
     ArticleDetail,
+    /// Entering a URL to add a new feed.
     AddFeed,
+    /// Viewing the settings menu.
     SettingsList,
     /// Browsing categories in the Saved tab sidebar.
     SavedCategoryList,
+    /// Prompting for OPML export file path.
     OPMLExportPath,
+    /// Prompting for OPML import file path.
     OPMLImportPath,
+    /// Confirmation dialog to clear all data.
     ClearData,
+    /// Confirmation dialog to clear cached article content.
     ClearArticleCache,
+    /// Full-screen feed editor (rearranging and organizing feeds/categories).
     FeedEditor,
+    /// Inline rename input inside the feed editor.
     FeedEditorRename,
     /// Modal for saving an article to a category (or unsaving).
     CategoryPicker,
@@ -37,6 +50,7 @@ pub enum Tab {
 }
 
 impl Tab {
+    /// Cycle to the next tab (wraps around).
     pub fn next(self) -> Self {
         match self {
             Self::Feeds => Self::Saved,
@@ -45,6 +59,7 @@ impl Tab {
         }
     }
 
+    /// Cycle to the previous tab (wraps around).
     pub fn prev(self) -> Self {
         match self {
             Self::Feeds => Self::Settings,
@@ -57,17 +72,26 @@ impl Tab {
 /// Which item is selected in the Settings menu.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SettingsItem {
+    /// Import feeds from an OPML file.
     ImportOpml,
+    /// Export feeds to an OPML file.
     ExportOpml,
+    /// Clear all user data and feeds.
     ClearData,
+    /// Toggle whether to save full article content when fetching.
     SaveArticleContent,
+    /// Clear cached article content and fetch fresh on demand.
     ClearArticleCache,
+    /// Toggle eager fetching of full article content.
     EagerArticleFetch,
+    /// Toggle automatic feed fetching on app startup.
     AutoFetchOnStart,
+    /// Toggle rounded UI borders.
     BorderStyle,
 }
 
 impl SettingsItem {
+    /// Move to the next settings item (wraps around).
     pub fn next(self) -> Self {
         match self {
             Self::ImportOpml => Self::ExportOpml,
@@ -81,6 +105,7 @@ impl SettingsItem {
         }
     }
 
+    /// Move to the previous settings item (wraps around).
     pub fn prev(self) -> Self {
         match self {
             Self::ImportOpml => Self::BorderStyle,
@@ -109,7 +134,7 @@ pub enum EditorPanel {
 pub enum AddFeedStep {
     /// User is typing the feed URL.
     Url,
-    /// User is confirming/editing the feed title.
+    /// User is confirming or editing the auto-detected feed title.
     Title,
 }
 
@@ -118,13 +143,14 @@ pub enum AddFeedStep {
 pub enum FeedSource {
     /// A regular feed at the given index in app.feeds.
     Feed(usize),
-    /// The article was opened from the Saved view.
+    /// The article was opened from the Saved articles view.
     Saved,
 }
 
 /// Interaction mode inside the FeedEditor screen.
 #[derive(Debug, Clone, PartialEq)]
 pub enum FeedEditorMode {
+    /// Standard browsing/selection mode.
     Normal,
     /// Item at this render-list index is being dragged.
     Moving {
@@ -137,10 +163,12 @@ pub enum FeedEditorMode {
     },
     /// Renaming the item at this render-list index.
     Renaming {
+        /// Index of the item being renamed.
         render_idx: usize,
     },
     /// Typing a name for a new category. None = root level, Some = subcategory.
     NewCategory {
+        /// Parent category ID (None for root level).
         parent_id: Option<CategoryId>,
     },
 }

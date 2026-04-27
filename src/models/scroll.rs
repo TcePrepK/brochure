@@ -1,3 +1,5 @@
+//! Scroll state helpers for list and text widgets.
+
 use ratatui::widgets::ListState;
 
 /// Bundles a cursor index with a ratatui `ListState` so that scrollable list
@@ -61,6 +63,7 @@ impl ListScroll {
 /// Stores per-article scroll offsets (keyed by article link URL).
 /// Mirrors the ListScroll pattern for text-scrollable panels.
 pub struct TextScroll {
+    /// Maps article links to their saved scroll offsets.
     offsets: std::collections::HashMap<String, u16>,
 }
 
