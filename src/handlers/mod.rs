@@ -1,3 +1,7 @@
+//! Key event handlers routed by app state.
+//!
+//! Dispatches keyboard input to state-specific handlers (feed list, article detail, settings, etc.).
+
 mod article;
 mod feed_editor;
 mod feed_list;
