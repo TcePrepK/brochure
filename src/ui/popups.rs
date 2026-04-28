@@ -1,3 +1,9 @@
+//! Modal overlay popups: add-feed wizard, OPML paths, confirm dialogs, and category picker.
+//!
+//! This module renders transient modal dialogs that appear over the main content,
+//! including the two-step add-feed wizard, OPML import/export path prompts, confirmation dialogs,
+//! and the category picker for saving articles to custom categories.
+
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
@@ -15,6 +21,7 @@ use crate::{
 
 use super::{BASE, BLUE, GREEN, MAUVE, RED, SUBTEXT0, SURFACE0, TEXT, border_set};
 
+/// Renders the add-feed popup with URL and title input fields.
 pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
     let area = f.area();
 
@@ -139,6 +146,7 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
     );
 }
 
+/// Renders the confirmation dialog for deleting all feeds.
 pub(super) fn draw_confirm_delete_all(f: &mut Frame, app: &App) {
     let area = f.area();
     let vertical = Layout::default()
@@ -192,6 +200,7 @@ pub(super) fn draw_confirm_delete_all(f: &mut Frame, app: &App) {
     f.render_widget(Paragraph::new(text).block(block), center);
 }
 
+/// Renders the confirmation dialog for clearing the article cache.
 pub(super) fn draw_confirm_clear_cache(f: &mut Frame, app: &App) {
     use super::RED;
     let area = f.area();
@@ -245,6 +254,7 @@ pub(super) fn draw_confirm_clear_cache(f: &mut Frame, app: &App) {
     f.render_widget(Paragraph::new(text).block(block), center);
 }
 
+/// Renders the confirmation dialog for deleting a category and its feeds.
 pub(super) fn draw_confirm_delete_cat(
     f: &mut Frame,
     app: &App,
@@ -312,6 +322,7 @@ pub(super) fn draw_confirm_delete_cat(
     f.render_widget(Paragraph::new(text).block(block), center);
 }
 
+/// Renders the OPML import/export path input popup.
 pub(super) fn draw_opml_path_popup(f: &mut Frame, app: &App) {
     let is_export = app.state == AppState::OPMLExportPath;
     let title = if is_export {
@@ -358,6 +369,7 @@ pub(super) fn draw_opml_path_popup(f: &mut Frame, app: &App) {
     );
 }
 
+/// Renders the category picker popup for saving an article to a custom category.
 pub(super) fn draw_category_picker(f: &mut Frame, app: &App) {
     let area = f.area();
     let cats = &app.user_data.saved_categories;
@@ -483,6 +495,7 @@ pub(super) fn draw_category_picker(f: &mut Frame, app: &App) {
     }
 }
 
+/// Renders the confirmation dialog for deleting a saved category.
 pub(super) fn draw_confirm_delete_saved_cat(f: &mut Frame, app: &App) {
     use super::RED;
     let cursor = app.saved_cat_editor_scroll.cursor;

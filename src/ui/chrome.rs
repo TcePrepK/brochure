@@ -1,3 +1,9 @@
+//! Shared chrome rendering: tab bar, progress bar, and footer hints.
+//!
+//! This module renders the persistent chrome elements that appear on every frame:
+//! the top tab bar showing the current tab, feed stats, and progress during fetches;
+//! and the footer showing context-sensitive key hints and scrolling status messages.
+
 use ratatui::{
     Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -15,6 +21,7 @@ use ratatui::prelude::Stylize;
 
 use super::{BASE, GREEN, MANTLE, MAUVE, SUBTEXT0, SURFACE0, YELLOW, border_set};
 
+/// Renders the top tab bar showing the currently selected tab, feed/article counts, and help text.
 pub(super) fn draw_tab_bar(f: &mut Frame, app: &App, area: Rect) {
     let tabs = [
         (" Feeds ", Tab::Feeds),
@@ -82,6 +89,7 @@ pub(super) fn draw_tab_bar(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(List::new([stats]).bg(BASE), cols[1]);
 }
 
+/// Renders a progress bar showing feed fetch completion (done/total).
 pub(super) fn draw_progress_bar(f: &mut Frame, app: &App, area: Rect) {
     let done = app.feeds_total.saturating_sub(app.feeds_pending);
     let counter = format!(" {}/{} ", done, app.feeds_total);
@@ -115,6 +123,7 @@ pub(super) fn draw_progress_bar(f: &mut Frame, app: &App, area: Rect) {
     );
 }
 
+/// Renders the bottom footer showing context-sensitive key hints and a scrolling status message.
 pub(super) fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
     let hints = match app.state {
         AppState::ArticleDetail => " [↑/↓] Scroll   [m] Read   [s] Save   [Esc] Back   [q] Quit ",

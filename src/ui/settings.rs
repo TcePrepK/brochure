@@ -1,3 +1,8 @@
+//! Settings menu and saved-category editor rendering.
+//!
+//! This module renders the Settings tab with toggles and buttons for user preferences,
+//! and the full-screen saved-category editor for managing custom article categories.
+
 use ratatui::{
     Frame,
     layout::Rect,
@@ -17,6 +22,7 @@ use crate::{
 
 use super::{BASE, GREEN, MANTLE, MAUVE, PEACH, RED, SUBTEXT0, SURFACE0, TEXT, YELLOW, border_set};
 
+/// Dispatches to the settings list renderer when in a settings-related state.
 pub(super) fn draw_settings_tab(f: &mut Frame, app: &App, area: Rect) {
     match app.state {
         AppState::SettingsList
@@ -28,6 +34,7 @@ pub(super) fn draw_settings_tab(f: &mut Frame, app: &App, area: Rect) {
     }
 }
 
+/// Formats a byte count as a human-readable size string (B, KB, MB).
 fn format_cache_size(bytes: u64) -> String {
     if bytes >= 1_048_576 {
         format!("{:.1} MB", bytes as f64 / 1_048_576.0)
@@ -40,6 +47,7 @@ fn format_cache_size(bytes: u64) -> String {
     }
 }
 
+/// Renders the settings menu with grouped sections, toggles, and action buttons.
 fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
     enum Row {
         SectionHeader {
@@ -259,6 +267,7 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(List::new(list_items).block(block), area);
 }
 
+/// Renders the full-screen saved-category editor for renaming and deleting custom categories.
 pub(super) fn draw_saved_category_editor(f: &mut Frame, app: &mut App, area: Rect) {
     let rounded = app.user_data.border_rounded;
     let block = Block::default()
