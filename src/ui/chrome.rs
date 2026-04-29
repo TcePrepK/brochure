@@ -127,10 +127,10 @@ pub(super) fn draw_progress_bar(f: &mut Frame, app: &App, area: Rect) {
 pub(super) fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
     let hints = match app.state {
         AppState::ArticleDetail => {
-            " [↑/↓] Scroll   [m] Read   [s] Save   [y] Copy   [Esc] Back   [q] Quit "
+            " [↑/↓] Scroll   [m] Read   [s] Save   [C] Copy   [Esc] Back   [q] Quit "
         }
         AppState::ArticleList => {
-            " [↑/↓] Navigate   [Enter] Open   [m] Read   [s] Save   [y] Copy   [Esc] Back   [q] Quit "
+            " [↑/↓] Navigate   [Enter] Open   [m] Read   [s] Save   [O] Open   [C] Copy   [Esc] Back   [q] Quit "
         }
         AppState::SettingsList => {
             " [↑/↓] Navigate   [Enter] Select   [Tab/Shift+Tab] Switch Tab   [Esc] Back   [q] Quit "
