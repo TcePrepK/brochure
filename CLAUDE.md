@@ -107,15 +107,21 @@ Score each subtask on three axes (0–3 each), sum them, and map to a model:
 
 | Score | Model            | Typical work                                                    |
 |-------|------------------|-----------------------------------------------------------------|
-| 0–2   | `ollama (local)` | Single-fn edits, private helpers, UI tweaks, constants          |
-| 3–5   | `haiku`          | Read-only research, pub fn additions, cross-file pattern follow |
+| 0–1   | `ollama (local)` | Tiny single-fn edits, constants, doc comments — file <300 lines |
+| 2–5   | `haiku`          | Read-only research, pub fn additions, cross-file pattern follow |
 | 6–7   | `sonnet`         | Multi-file logic, new handlers, state machine additions         |
 | 8–9   | `opus`           | Architectural decisions, large refactors, new persisted types   |
+
+**Ollama hard limits** — skip ollama and use haiku if ANY of these apply:
+
+- Target file is longer than ~300 lines
+- Instruction requires embedding multi-line code blocks
+- Change touches more than one logical section of a function
 
 **Scoring examples:**
 
 - Change a keybinding constant → Scope 0 + Context 0 + Risk 0 = **0** → ollama
-- Add private helper fn in `ui/` following local pattern → Scope 1 + Context 1 + Risk 0 = **2** → ollama
+- Add private helper fn in `ui/` following local pattern → Scope 1 + Context 1 + Risk 0 = **2** → haiku
 - Add new pub handler in `handlers/` → Scope 2 + Context 1 + Risk 1 = **4** → haiku
 - Add variant to fetch state machine → Scope 2 + Context 2 + Risk 2 = **6** → sonnet
 - Redesign `AppState` with new persisted type → Scope 3 + Context 3 + Risk 3 = **9** → opus
@@ -129,8 +135,16 @@ python scripts/ollama_agent.py --file src/path/to/file.rs --instruction "your in
 Add `--context src/other.rs` for read-only reference files. Override model with `--model <name>`. Result is JSON
 `{"path": "...", "content": "..."}`. Apply with `Edit` or `Write` tool.
 
-**Fallback:** If `ollama_agent.py` returns `{"error": "..."}`, escalate the task to `haiku`. Never silently drop the
-error.
+**Writing ollama instructions** — ollama models are small and fail on long prompts:
+
+- Keep `--instruction` under ~10 lines total.
+- State the change as: function name → what to find → what to replace it with. No markdown fences.
+- Never embed multi-line code blocks inside the instruction string.
+- If you need to show new code, describe it functionally in one sentence (e.g. "replace it with a loop that…").
+
+**Fallback:** If `ollama_agent.py` returns `{"error": "..."}` or the returned content does not resemble the original
+file (hallucination check: does it still contain the module-level `//!` doc?), escalate to `haiku`. Never silently
+drop the error or apply hallucinated output.
 
 ### 3. Present the dispatch plan — wait for approval
 
