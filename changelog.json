@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "version": "0.3.0",
+    "date": "2026-04-29",
+    "summary": "This update introduces keybinding shortcuts and utility improvements across article viewing and feed editing.",
+    "highlights": [
+      "Use 'C' keybind to copy article links quickly.",
+      "Feed Editor now displays and allows editing of URLs.",
+      "Added toggle to control list wrap-around scrolling.",
+      "Fixed clipping issues in article title previews."
+    ]
+  }
+]
