@@ -1191,11 +1191,7 @@ pub(super) fn draw_article_detail(
         .replace_all(&no_images, "$1")
         .to_string();
 
-    let scroll_offset = if is_preview {
-        0
-    } else {
-        app.article_scroll.get(&article.link)
-    };
+    let scroll_offset = app.article_scroll.get(&article.link);
 
     if !is_preview {
         app.content_area_height = content_area.height;
