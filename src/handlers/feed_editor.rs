@@ -66,6 +66,21 @@ pub(super) fn handle_feed_editor(app: &mut App, key: KeyEvent, _tx: &UnboundedSe
                                 None => {}
                             }
                         }
+                        FeedEditorMode::EditingUrl { render_idx } => {
+                            let items = visible_tree_items(
+                                &app.categories,
+                                &app.feeds,
+                                &app.editor_collapsed,
+                            );
+                            if let Some(FeedTreeItem::Feed { feeds_idx, .. }) =
+                                items.get(*render_idx)
+                            {
+                                if let Some(feed) = app.feeds.get_mut(*feeds_idx) {
+                                    feed.url = name;
+                                }
+                                let _ = save_feeds(&app.feeds);
+                            }
+                        }
                         _ => {}
                     }
                 }
@@ -370,6 +385,27 @@ pub(super) fn handle_feed_editor(app: &mut App, key: KeyEvent, _tx: &UnboundedSe
                                         .unwrap_or_default();
                                     app.editor_input = current_name;
                                     app.editor_mode = FeedEditorMode::Renaming {
+                                        render_idx: app.editor_cursor,
+                                    };
+                                    app.state = AppState::FeedEditorRename;
+                                }
+                            }
+                            KeyCode::Char('u') => {
+                                let items = visible_tree_items(
+                                    &app.categories,
+                                    &app.feeds,
+                                    &app.editor_collapsed,
+                                );
+                                if let Some(FeedTreeItem::Feed { feeds_idx, .. }) =
+                                    items.get(app.editor_cursor)
+                                {
+                                    let current_url = app
+                                        .feeds
+                                        .get(*feeds_idx)
+                                        .map(|f| f.url.clone())
+                                        .unwrap_or_default();
+                                    app.editor_input = current_url;
+                                    app.editor_mode = FeedEditorMode::EditingUrl {
                                         render_idx: app.editor_cursor,
                                     };
                                     app.state = AppState::FeedEditorRename;
