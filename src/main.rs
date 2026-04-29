@@ -14,7 +14,7 @@ use crossterm::{
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use fetch::fetch_feed;
-use models::{AddFeedStep, AppEvent, AppState, CONTENT_STUB_MAX_LEN, FeedSource};
+use models::{AddFeedStep, AppEvent, AppState, CONTENT_STUB_MAX_LEN, FeedSource, FetchPolicy};
 use ratatui::{Terminal, backend::CrosstermBackend};
 use std::{io, time::Duration};
 use tokio::sync::mpsc;
@@ -86,7 +86,7 @@ async fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()
     }
 
     // Kick off initial feed fetches for all persisted feeds (unless disabled in settings).
-    if app.user_data.auto_fetch_on_start {
+    if app.user_data.fetch_policy != FetchPolicy::Never {
         let fetch_count = app.feeds.len();
         app.feeds_total = fetch_count;
         app.feeds_pending = fetch_count;

@@ -135,6 +135,51 @@ impl ArchivePolicy {
     }
 }
 
+/// Controls when the app automatically fetches feeds.
+///
+/// `OnStart`, `EveryHour`, and `EveryDay` all fetch on launch; interval-based
+/// fetching is reserved for future implementation. `Never` skips all automatic fetching.
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+pub enum FetchPolicy {
+    #[default]
+    OnStart,
+    EveryHour,
+    EveryDay,
+    Never,
+}
+
+impl FetchPolicy {
+    /// Human-readable label shown in the settings UI.
+    pub fn label(&self) -> &'static str {
+        match self {
+            FetchPolicy::OnStart => "On Start",
+            FetchPolicy::EveryHour => "Every Hour",
+            FetchPolicy::EveryDay => "Every Day",
+            FetchPolicy::Never => "Never",
+        }
+    }
+
+    /// Returns the next policy in the cycle (wraps around).
+    pub fn next(&self) -> FetchPolicy {
+        match self {
+            FetchPolicy::OnStart => FetchPolicy::EveryHour,
+            FetchPolicy::EveryHour => FetchPolicy::EveryDay,
+            FetchPolicy::EveryDay => FetchPolicy::Never,
+            FetchPolicy::Never => FetchPolicy::OnStart,
+        }
+    }
+
+    /// Returns the previous policy in the cycle (wraps around).
+    pub fn prev(&self) -> FetchPolicy {
+        match self {
+            FetchPolicy::OnStart => FetchPolicy::Never,
+            FetchPolicy::EveryHour => FetchPolicy::OnStart,
+            FetchPolicy::EveryDay => FetchPolicy::EveryHour,
+            FetchPolicy::Never => FetchPolicy::EveryDay,
+        }
+    }
+}
+
 /// A user-defined category for saved articles.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SavedCategory {
@@ -176,9 +221,17 @@ pub struct UserData {
     /// Whether to eagerly fetch full article content when viewing an article.
     #[serde(default = "default_true")]
     pub eager_article_fetch: bool,
-    /// Whether to automatically fetch feeds when the app starts.
-    #[serde(default = "default_true")]
-    pub auto_fetch_on_start: bool,
+    /// Legacy migration field: reads `auto_fetch_on_start` from old JSON but is never re-written.
+    /// When `false`, the value is migrated to `FetchPolicy::Never` in `load_user_data`.
+    #[serde(
+        default = "default_true",
+        skip_serializing,
+        rename = "auto_fetch_on_start"
+    )]
+    pub legacy_auto_fetch_on_start: bool,
+    /// Controls when the app automatically fetches feeds.
+    #[serde(default)]
+    pub fetch_policy: FetchPolicy,
     /// Policy for how long archived articles are kept before deletion.
     #[serde(default)]
     pub archive_policy: ArchivePolicy,
