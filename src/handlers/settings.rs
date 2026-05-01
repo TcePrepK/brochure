@@ -1,3 +1,8 @@
+//! Key event handling for the settings screen and its modal sub-states.
+//!
+//! Covers `SettingsList`, the two-step `AddFeed` wizard, `OPMLImportPath`/`OPMLExportPath` text
+//! inputs, `ClearData`/`ClearArticleCache` confirmation dialogs, and the saved-category editor.
+
 use crossterm::event::{KeyCode, KeyEvent};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -12,6 +17,10 @@ use crate::{
     },
 };
 
+/// Handles key events for the `SettingsList` state.
+///
+/// Refreshes the article cache size on every keypress, toggles boolean settings in-place, and
+/// transitions to sub-states for destructive actions. Returns `true` to quit.
 pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
     // Refresh cache size each time the user interacts with the settings screen.
     app.article_cache_size = article_cache_size();
@@ -83,6 +92,11 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
     false
 }
 
+/// Handles key events for the two-step `AddFeed` wizard (`Url` then `Title`).
+///
+/// In the `Url` step, pressing Enter spawns a background title-fetch and advances to the `Title`
+/// step. In the `Title` step, Enter creates and immediately fetches the new feed, then returns to
+/// the previous state.
 pub(super) fn handle_add_feed(app: &mut App, key: KeyEvent, tx: &UnboundedSender<AppEvent>) {
     if app.add_feed_step == AddFeedStep::Url {
         match key.code {
@@ -172,6 +186,9 @@ pub(super) fn handle_add_feed(app: &mut App, key: KeyEvent, tx: &UnboundedSender
     }
 }
 
+/// Handles key events for the `ClearData` confirmation dialog.
+///
+/// Enter wipes all feeds, categories, and user data from both memory and disk; Esc or `q` cancels.
 pub(super) fn handle_confirm_delete_all(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Enter => {
@@ -192,6 +209,10 @@ pub(super) fn handle_confirm_delete_all(app: &mut App, key: KeyEvent) {
     }
 }
 
+/// Handles key events for the `ClearArticleCache` confirmation dialog.
+///
+/// Enter clears the on-disk article cache, resets all in-memory article lists, and clears the
+/// read-links set; Esc or `q` cancels.
 pub(super) fn handle_confirm_clear_cache(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Enter => {
@@ -215,6 +236,10 @@ pub(super) fn handle_confirm_clear_cache(app: &mut App, key: KeyEvent) {
     }
 }
 
+/// Handles key events for the `OPMLImportPath` and `OPMLExportPath` text-input states.
+///
+/// On Enter, the path is expanded (tilde support) and either exported or imported. A successful
+/// import spawns one background fetch task per new feed and extends the live feed list.
 pub(super) fn handle_opml_path(app: &mut App, key: KeyEvent, tx: &UnboundedSender<AppEvent>) {
     match key.code {
         KeyCode::Enter => {
@@ -272,6 +297,10 @@ pub(super) fn handle_opml_path(app: &mut App, key: KeyEvent, tx: &UnboundedSende
     }
 }
 
+/// Handles key events for the `SavedCategoryEditor` list state.
+///
+/// `r` enters rename mode, `d` enters delete-confirmation mode, `n` enters new-category mode,
+/// and Esc/`q` returns to `SavedCategoryList`.
 pub(super) fn handle_saved_category_editor(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Up => {
@@ -305,6 +334,10 @@ pub(super) fn handle_saved_category_editor(app: &mut App, key: KeyEvent) {
     }
 }
 
+/// Handles key events for the `SavedCategoryEditorDeleteConfirm` dialog.
+///
+/// Enter removes the category and all articles belonging to it from `user_data`, then persists the
+/// change; Esc/`q` cancels and returns to the editor list.
 pub(super) fn handle_saved_category_editor_delete_confirm(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Enter => {
@@ -337,6 +370,10 @@ pub(super) fn handle_saved_category_editor_delete_confirm(app: &mut App, key: Ke
     }
 }
 
+/// Handles key events for the `SavedCategoryEditorNew` text-input state.
+///
+/// Enter creates a new category with the typed name (silently skips duplicates), persists, and
+/// returns to the editor list; Esc discards the input.
 pub(super) fn handle_saved_category_editor_new(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Enter => {
@@ -384,6 +421,10 @@ pub(super) fn handle_saved_category_editor_new(app: &mut App, key: KeyEvent) {
     }
 }
 
+/// Handles key events for the `SavedCategoryEditorRename` text-input state.
+///
+/// Enter overwrites the category name with the trimmed input and persists; Esc discards and
+/// returns to the editor list.
 pub(super) fn handle_saved_category_editor_rename(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Enter => {

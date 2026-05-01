@@ -1,3 +1,7 @@
+//! Key handlers for the main feed list and saved articles category list views.
+//!
+//! Manages navigation, feed refresh, feed editor entry, and category collapse/expand.
+
 use crossterm::event::{KeyCode, KeyEvent};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -7,6 +11,7 @@ use crate::{
     models::{AppEvent, AppState, FeedEditorMode, FeedTreeItem},
 };
 
+/// Handle key input while viewing the main feed list; supports navigation, refresh, and feed editor entry.
 pub(super) fn handle_feed_list(
     app: &mut App,
     key: KeyEvent,
@@ -102,6 +107,7 @@ pub(super) fn handle_feed_list(
     false
 }
 
+/// Handle key input while viewing the saved articles category list.
 pub(super) fn handle_saved_feed_list(app: &mut App, key: KeyEvent) -> bool {
     match key.code {
         KeyCode::Char('q') => return true,

@@ -1,3 +1,7 @@
+//! Key handlers for the feed editor state: rename, move, and delete feeds and categories.
+//!
+//! Manages two-panel editor (feeds and categories), move operations, and category deletion.
+
 use crossterm::event::{KeyCode, KeyEvent};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -10,6 +14,7 @@ use crate::{
     storage::{save_categories, save_feeds},
 };
 
+/// Handle key input in the feed editor: rename, move, and delete feeds or categories.
 pub(super) fn handle_feed_editor(app: &mut App, key: KeyEvent, _tx: &UnboundedSender<AppEvent>) {
     match app.state {
         AppState::FeedEditorRename => match key.code {
@@ -407,6 +412,7 @@ fn clamp_editor_cursor_to_feed(app: &mut App) {
         .unwrap_or(0);
 }
 
+/// Delete the feed at the current cursor position in the feeds panel.
 fn delete_at_cursor(app: &mut App) {
     let items = visible_tree_items(&app.categories, &app.feeds, &app.editor_collapsed);
     // Feeds panel cursor is always on a Feed item (navigation skips categories).
