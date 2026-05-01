@@ -84,6 +84,41 @@ fn age_color(secs: i64) -> ratatui::style::Color {
     }
 }
 
+/// Formats a Unix timestamp as a compact short age string with a leading space (e.g., " now", " 42m", " 2h", " 3d").
+fn short_age(secs: i64) -> String {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(secs);
+    let diff = (now - secs).max(0) as u64;
+    if diff < 60 {
+        " now".to_string()
+    } else if diff < 3600 {
+        format!(" {}m", diff / 60)
+    } else if diff < 86400 {
+        format!(" {}h", diff / 3600)
+    } else {
+        format!(" {}d", diff / 86400)
+    }
+}
+
+/// Returns a clone of the currently selected article regardless of view context (category, saved, or feed).
+fn get_current_article(app: &App) -> Option<Article> {
+    if app.in_category_context {
+        app.category_view_articles
+            .get(app.selected_article)
+            .and_then(|&(fi, ai)| app.feeds.get(fi).and_then(|f| f.articles.get(ai)))
+            .cloned()
+    } else if app.in_saved_context {
+        app.saved_view_articles.get(app.selected_article).cloned()
+    } else {
+        app.feeds
+            .get(app.selected_feed)
+            .and_then(|f| f.articles.get(app.selected_article))
+            .cloned()
+    }
+}
+
 /// Splits articles into current and archived groups, returning indices.
 /// Returns (current_indices, archived_indices, has_archived).
 fn split_articles(articles: &[Article]) -> (Vec<usize>, Vec<usize>, bool) {
@@ -448,6 +483,68 @@ pub(super) fn draw_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
     }
 }
 
+/// Builds a single article list item with icon, title (scrolling if selected), and age badge.
+fn build_article_list_item(
+    article: &Article,
+    is_selected: bool,
+    is_nav_highlight: bool,
+    list_width: u16,
+    tick: usize,
+    article_title_start_tick: usize,
+) -> ListItem<'static> {
+    let style = if is_selected {
+        Style::default()
+            .fg(MAUVE)
+            .bg(SURFACE0)
+            .add_modifier(Modifier::BOLD)
+    } else if is_nav_highlight {
+        Style::default().fg(MAUVE)
+    } else if article.is_read {
+        Style::default().fg(SUBTEXT0)
+    } else {
+        Style::default().fg(TEXT)
+    };
+
+    let age_str: Option<String> = article.published_secs.map(short_age);
+    let age_width = age_str.as_ref().map(|s| s.chars().count()).unwrap_or(0);
+
+    let mut title_spans: Vec<Span> = Vec::new();
+    if article.published_secs.is_none() {
+        title_spans.push(Span::styled("⚠ ", Style::default().fg(YELLOW)));
+    }
+    let title_available = (list_width as usize).saturating_sub(
+        2 + age_width
+            + if article.published_secs.is_none() {
+                2
+            } else {
+                0
+            },
+    );
+    let displayed_title = if is_selected {
+        let elapsed = tick.saturating_sub(article_title_start_tick);
+        scroll_title(&article.title, title_available, elapsed)
+    } else {
+        article.title.clone()
+    };
+    title_spans.push(Span::raw(displayed_title));
+    if let Some(ref age) = age_str {
+        title_spans.push(Span::styled(
+            age.clone(),
+            Style::default()
+                .fg(age_color(article.published_secs.unwrap()))
+                .add_modifier(Modifier::DIM),
+        ));
+    }
+
+    ListItem::new(Line::from(
+        vec![Span::styled(article.get_icon(), article.get_icon_style())]
+            .into_iter()
+            .chain(title_spans)
+            .collect::<Vec<_>>(),
+    ))
+    .style(style)
+}
+
 /// Render the article list panel as a flat date-sorted preview when the sidebar
 /// cursor rests on a category header (FeedList state, no navigation cursor).
 fn draw_category_article_list(f: &mut Frame, app: &mut App, area: Rect) {
@@ -514,23 +611,7 @@ fn draw_category_article_list(f: &mut Frame, app: &mut App, area: Rect) {
                 Style::default().fg(TEXT)
             };
 
-            // Compute short age string (e.g. " 42m", " 2h", " 3d") for display.
-            let age_str: Option<String> = article.published_secs.map(|secs| {
-                let now = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map(|d| d.as_secs() as i64)
-                    .unwrap_or(secs);
-                let diff = (now - secs).max(0) as u64;
-                if diff < 60 {
-                    " now".to_string()
-                } else if diff < 3600 {
-                    format!(" {}m", diff / 60)
-                } else if diff < 86400 {
-                    format!(" {}h", diff / 3600)
-                } else {
-                    format!(" {}d", diff / 86400)
-                }
-            });
+            let age_str: Option<String> = article.published_secs.map(short_age);
             let age_width = age_str.as_ref().map(|s| s.chars().count()).unwrap_or(0);
 
             // Subtract icon width (2) and age width from available title space.
@@ -789,76 +870,15 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
         let article = &articles[i];
         let is_selected = app.selected_article == i
             && (app.state == AppState::ArticleList || app.in_saved_context);
-        let style = if is_selected {
-            Style::default()
-                .fg(MAUVE)
-                .bg(SURFACE0)
-                .add_modifier(Modifier::BOLD)
-        } else if is_navigating && app.selected_article == i {
-            Style::default().fg(MAUVE)
-        } else if article.is_read {
-            Style::default().fg(SUBTEXT0)
-        } else {
-            Style::default().fg(TEXT)
-        };
-
-        // Compute short age string (e.g. " 42m", " 2h", " 3d") for display next to title.
-        let age_str: Option<String> = article.published_secs.map(|secs| {
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_secs() as i64)
-                .unwrap_or(secs);
-            let diff = (now - secs).max(0) as u64;
-            if diff < 60 {
-                " now".to_string()
-            } else if diff < 3600 {
-                format!(" {}m", diff / 60)
-            } else if diff < 86400 {
-                format!(" {}h", diff / 3600)
-            } else {
-                format!(" {}d", diff / 86400)
-            }
-        });
-        let age_width = age_str.as_ref().map(|s| s.chars().count()).unwrap_or(0);
-
-        // Build title with warning icon if no timestamp
-        let mut title_spans = Vec::new();
-        if article.published_secs.is_none() {
-            title_spans.push(Span::styled("⚠ ", Style::default().fg(YELLOW)));
-        }
-        let title_available = (list_area.width as usize).saturating_sub(
-            2 + age_width
-                + if article.published_secs.is_none() {
-                    2
-                } else {
-                    0
-                },
-        );
-        let displayed_title = if is_selected {
-            let elapsed = app.tick.saturating_sub(app.article_title_start_tick);
-            scroll_title(&article.title, title_available, elapsed)
-        } else {
-            article.title.clone()
-        };
-        title_spans.push(Span::raw(displayed_title));
-        if let Some(ref age) = age_str {
-            title_spans.push(Span::styled(
-                age.clone(),
-                Style::default()
-                    .fg(age_color(article.published_secs.unwrap()))
-                    .add_modifier(Modifier::DIM),
-            ));
-        }
-
-        items.push(
-            ListItem::new(Line::from(
-                vec![Span::styled(article.get_icon(), article.get_icon_style())]
-                    .into_iter()
-                    .chain(title_spans)
-                    .collect::<Vec<_>>(),
-            ))
-            .style(style),
-        );
+        let is_nav_highlight = is_navigating && app.selected_article == i && !is_selected;
+        items.push(build_article_list_item(
+            article,
+            is_selected,
+            is_nav_highlight,
+            list_area.width,
+            app.tick,
+            app.article_title_start_tick,
+        ));
     }
 
     // Add separator if there are archived articles
@@ -874,76 +894,15 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
         let article = &articles[i];
         let is_selected = app.selected_article == i
             && (app.state == AppState::ArticleList || app.in_saved_context);
-        let style = if is_selected {
-            Style::default()
-                .fg(MAUVE)
-                .bg(SURFACE0)
-                .add_modifier(Modifier::BOLD)
-        } else if is_navigating && app.selected_article == i {
-            Style::default().fg(MAUVE)
-        } else if article.is_read {
-            Style::default().fg(SUBTEXT0)
-        } else {
-            Style::default().fg(TEXT)
-        };
-
-        // Compute short age string for display next to title.
-        let age_str: Option<String> = article.published_secs.map(|secs| {
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_secs() as i64)
-                .unwrap_or(secs);
-            let diff = (now - secs).max(0) as u64;
-            if diff < 60 {
-                " now".to_string()
-            } else if diff < 3600 {
-                format!(" {}m", diff / 60)
-            } else if diff < 86400 {
-                format!(" {}h", diff / 3600)
-            } else {
-                format!(" {}d", diff / 86400)
-            }
-        });
-        let age_width = age_str.as_ref().map(|s| s.chars().count()).unwrap_or(0);
-
-        // Build title with warning icon if no timestamp
-        let mut title_spans = Vec::new();
-        if article.published_secs.is_none() {
-            title_spans.push(Span::styled("⚠ ", Style::default().fg(YELLOW)));
-        }
-        let title_available = (list_area.width as usize).saturating_sub(
-            2 + age_width
-                + if article.published_secs.is_none() {
-                    2
-                } else {
-                    0
-                },
-        );
-        let displayed_title = if is_selected {
-            let elapsed = app.tick.saturating_sub(app.article_title_start_tick);
-            scroll_title(&article.title, title_available, elapsed)
-        } else {
-            article.title.clone()
-        };
-        title_spans.push(Span::raw(displayed_title));
-        if let Some(ref age) = age_str {
-            title_spans.push(Span::styled(
-                age.clone(),
-                Style::default()
-                    .fg(age_color(article.published_secs.unwrap()))
-                    .add_modifier(Modifier::DIM),
-            ));
-        }
-
-        items.push(
-            ListItem::new(Line::from(
-                vec![Span::styled(article.get_icon(), article.get_icon_style())]
-                    .into_iter()
-                    .chain(title_spans)
-                    .collect::<Vec<_>>(),
-            ))
-            .style(style),
-        );
+        let is_nav_highlight = is_navigating && app.selected_article == i && !is_selected;
+        items.push(build_article_list_item(
+            article,
+            is_selected,
+            is_nav_highlight,
+            list_area.width,
+            app.tick,
+            app.article_title_start_tick,
+        ));
     }
 
     // Calculate the visual selection position, accounting for the separator
@@ -1004,21 +963,9 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
 fn draw_article_footer(f: &mut Frame, app: &App, area: Rect, is_article_view: bool) {
     if is_article_view {
         // ── Article detail footer: link, publish date, scroll % ──
-        let article = if app.in_category_context {
-            app.category_view_articles
-                .get(app.selected_article)
-                .and_then(|&(fi, ai)| app.feeds.get(fi).and_then(|f| f.articles.get(ai)))
-                .cloned()
-        } else if app.in_saved_context {
-            app.saved_view_articles.get(app.selected_article).cloned()
-        } else {
-            app.feeds
-                .get(app.selected_feed)
-                .and_then(|f| f.articles.get(app.selected_article))
-                .cloned()
+        let Some(article) = get_current_article(app) else {
+            return;
         };
-
-        let Some(article) = article else { return };
 
         let mut link_spans = vec![
             Span::raw(" "),
@@ -1146,19 +1093,7 @@ pub(super) fn draw_article_detail(
     is_preview: bool,
     show_footer: bool,
 ) {
-    let article = if app.in_category_context {
-        app.category_view_articles
-            .get(app.selected_article)
-            .and_then(|&(fi, ai)| app.feeds.get(fi).and_then(|f| f.articles.get(ai)))
-            .cloned()
-    } else if app.in_saved_context {
-        app.saved_view_articles.get(app.selected_article).cloned()
-    } else {
-        app.feeds
-            .get(app.selected_feed)
-            .and_then(|f| f.articles.get(app.selected_article))
-            .cloned()
-    };
+    let article = get_current_article(app);
     if article.is_none() && is_preview {
         let block = Block::default()
             .border_set(border_set(app.user_data.border_rounded))
