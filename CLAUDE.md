@@ -274,6 +274,8 @@ The script does everything in one pass:
 5. Renames `changelog/next-update.md` → `changelog/vX.Y.Z.md`
 6. Creates a fresh `changelog/next-update.md` template
 7. Appends an entry to `changelog.json`
+8. Commits changes with 'chore: bumped version to vX.Y.Z'
+9. Publishes the new version
 
 ### After the script succeeds
 
