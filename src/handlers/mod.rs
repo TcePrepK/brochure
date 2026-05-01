@@ -8,7 +8,7 @@ mod feed_editor;
 mod feed_list;
 mod settings;
 
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyCode, KeyEvent};
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
@@ -19,7 +19,19 @@ use crate::{
 /// Route a key event to the correct handler based on the current app state.
 pub async fn handle_key(app: &mut App, key: KeyEvent, tx: &UnboundedSender<AppEvent>) -> bool {
     if app.update_available.is_some() {
-        app.update_available = None;
+        match key.code {
+            KeyCode::Up | KeyCode::Char('k') => {
+                app.update_popup_scroll = app.update_popup_scroll.saturating_sub(1);
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                app.update_popup_scroll = app.update_popup_scroll.saturating_add(1);
+            }
+            KeyCode::Esc | KeyCode::Enter | KeyCode::Char('q') => {
+                app.update_available = None;
+                app.update_popup_scroll = 0;
+            }
+            _ => {}
+        }
         return false;
     }
     match app.state {

@@ -198,15 +198,22 @@ pub struct SavedArticle {
     pub category_id: u32,
 }
 
-/// Information about an available update fetched from crates.io and GitHub releases.
+/// A single release entry fetched from GitHub releases.
+#[derive(Debug, Clone)]
+pub struct ReleaseNote {
+    /// The version string for this release (e.g. `"0.4.0"`).
+    pub version: String,
+    /// Human-readable release date (YYYY-MM-DD), empty if unavailable.
+    pub date: String,
+    /// Bullet-point highlights parsed from the release body, empty if unavailable.
+    pub highlights: Vec<String>,
+}
+
+/// Information about available updates fetched from crates.io and GitHub releases.
 #[derive(Debug, Clone)]
 pub struct UpdateInfo {
-    /// The new version string (e.g. `"0.4.0"`).
-    pub version: String,
-    /// Human-readable release date (e.g. `"2026-05-01"`), empty if unavailable.
-    pub date: String,
-    /// Bullet-point highlights from the GitHub release notes, empty if unavailable.
-    pub highlights: Vec<String>,
+    /// All releases newer than the running version, ordered newest first.
+    pub releases: Vec<ReleaseNote>,
 }
 
 /// User-specific persistent data (read/starred state).

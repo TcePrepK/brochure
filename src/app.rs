@@ -138,6 +138,8 @@ pub struct App {
     /// Latest version available on crates.io, if newer than the running version. `None` until the
     /// background check completes or if already up to date.
     pub update_available: Option<UpdateInfo>,
+    /// Current scroll offset (in lines) for the update-available popup.
+    pub update_popup_scroll: u16,
     /// Value of `tick` when `status_msg` was last set — used to compute per-message scroll offset.
     pub status_msg_start_tick: usize,
 
@@ -227,6 +229,7 @@ impl App {
             editor_delete_cat: None,
             changelog_scroll: 0,
             update_available: None,
+            update_popup_scroll: 0,
             status_msg_start_tick: 0,
             sidebar_title_start_tick: 0,
             article_title_start_tick: 0,

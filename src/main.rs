@@ -230,6 +230,7 @@ async fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()
             }
 
             AppEvent::UpdateAvailable(info) => {
+                app.update_popup_scroll = 0;
                 app.update_available = Some(info);
             }
         }

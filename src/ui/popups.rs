@@ -4,12 +4,15 @@
 //! including the two-step add-feed wizard, OPML import/export path prompts, confirmation dialogs,
 //! and the category picker for saving articles to custom categories.
 
+use ratatui::layout::Constraint::{Fill, Length, Min};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, Paragraph, ScrollbarState, Wrap},
+    widgets::{
+        Block, Borders, Clear, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap,
+    },
 };
 
 use ratatui::prelude::Stylize;
@@ -578,103 +581,137 @@ pub(super) fn draw_confirm_delete_saved_cat(f: &mut Frame, app: &App) {
     f.render_widget(ratatui::widgets::Paragraph::new(text).block(block), center);
 }
 
-/// Renders the update-available popup when a newer version has been found on crates.io.
+/// Renders the update-available popup with scrollable release notes.
 pub(super) fn draw_update_popup(f: &mut Frame, app: &App) {
     let Some(ref info) = app.update_available else {
         return;
     };
-    let version = &info.version;
-    let date = &info.date;
-    let highlights = &info.highlights;
+    let releases = &info.releases;
+    if releases.is_empty() {
+        return;
+    }
 
     let area = f.area();
+    let latest = &releases[0].version;
+    let count = releases.len();
 
-    // Compute dynamic height: 4 base lines + highlights count, capped at 18
-    let content_lines = 4 + highlights.len() as u16;
-    let popup_height = (content_lines + 2).min(18);
+    // Fixed width 60, height = min(terminal - 6, 22), centered
+    let popup_w: u16 = 60;
+    let popup_h: u16 = (area.height.saturating_sub(6)).clamp(10, 22);
 
-    // Vertical centering with fixed popup height
     let vertical = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Fill(1),
-            Constraint::Length(popup_height + 2),
-            Constraint::Fill(1),
-        ])
+        .constraints([Fill(1), Length(popup_h), Fill(1)])
         .split(area);
-
-    // Horizontal centering with fixed width
     let horizontal = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Fill(1),
-            Constraint::Length(54),
-            Constraint::Fill(1),
-        ])
+        .constraints([Fill(1), Length(popup_w), Fill(1)])
         .split(vertical[1]);
     let popup_area = horizontal[1];
 
     f.render_widget(Clear, popup_area);
+
+    // Title shows version count
+    let title = if count == 1 {
+        format!("  Update Available — v{latest} ")
+    } else {
+        format!("  Update Available — v{latest}  ({count} new versions) ")
+    };
+
     let block = Block::default()
         .border_set(border_set(app.user_data.border_rounded))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(MAUVE))
         .bg(BASE)
         .title(Span::styled(
-            "  Update Available ",
+            title,
             Style::default().fg(MAUVE).add_modifier(Modifier::BOLD),
         ));
 
+    // Inner area split: scrollable content (top) + dismiss hint (bottom, 1 line)
+    let inner = block.inner(popup_area);
+    f.render_widget(block, popup_area);
+
+    let [content_area, hint_area] = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Min(0), Length(1)])
+        .areas(inner);
+
+    // Build all content lines
     let current = env!("CARGO_PKG_VERSION");
-
-    let mut text = Vec::new();
-
-    // Line 1: empty
-    text.push(Line::from(""));
-
-    // Line 2: version and date on the same line
-    text.push(Line::from(vec![
-        Span::styled(
-            format!("  v{current}  →  v{version}    {date}"),
-            Style::default(),
-        )
-        .patch_style(Style::default().fg(TEXT)),
-    ]));
-
-    // Line 3: empty
-    text.push(Line::from(""));
-
-    // Highlights section
-    if !highlights.is_empty() {
-        // Line 4: "What's new:" header
-        text.push(Line::from(Span::styled(
-            "  What's new:",
-            Style::default().fg(MAUVE),
+    let mut lines: Vec<Line> = Vec::new();
+    lines.push(Line::from(""));
+    for (i, release) in releases.iter().enumerate() {
+        // Version header line
+        let header = if release.date.is_empty() {
+            format!("  v{}  →  v{}", current, release.version) // only on first
+        } else if i == 0 {
+            format!(
+                "  v{}  →  v{}    {}",
+                current, release.version, release.date
+            )
+        } else {
+            format!("  v{}    {}", release.version, release.date)
+        };
+        lines.push(Line::from(Span::styled(
+            header,
+            Style::default().fg(MAUVE).add_modifier(Modifier::BOLD),
         )));
-
-        // Lines 5+: each highlight
-        for highlight in highlights {
-            text.push(Line::from(Span::styled(
-                format!("  • {highlight}"),
-                Style::default().fg(TEXT),
-            )));
+        if !release.highlights.is_empty() {
+            for h in &release.highlights {
+                lines.push(Line::from(Span::styled(
+                    format!("  • {h}"),
+                    Style::default().fg(TEXT),
+                )));
+            }
         }
+        lines.push(Line::from("")); // spacer between releases / bottom padding
     }
 
-    // Bottom padding: one empty line
-    text.push(Line::from(""));
+    // Scroll
+    let total_lines = lines.len() as u16;
+    let visible_h = content_area.height;
+    let max_scroll = total_lines.saturating_sub(visible_h);
+    let scroll = app.update_popup_scroll.min(max_scroll);
 
-    // Final line: dismiss hint
-    text.push(Line::from(vec![
-        Span::styled(
-            "  [Any key] ",
-            Style::default().fg(MAUVE).add_modifier(Modifier::BOLD),
-        ),
-        Span::styled("Dismiss", Style::default().fg(TEXT)),
-    ]));
+    // Render scrollable content (leave 1 col on right for scrollbar)
+    let [text_area, bar_area] = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Min(0), Length(1)])
+        .areas(content_area);
 
     f.render_widget(
-        Paragraph::new(text).block(block).wrap(Wrap { trim: false }),
-        popup_area,
+        Paragraph::new(lines)
+            .scroll((scroll, 0))
+            .wrap(Wrap { trim: false }),
+        text_area,
+    );
+
+    // Scrollbar
+    if total_lines > visible_h {
+        let mut sb_state = ScrollbarState::new(total_lines as usize).position(scroll as usize);
+        f.render_stateful_widget(
+            Scrollbar::new(ScrollbarOrientation::VerticalRight)
+                .style(Style::default().fg(SURFACE0)),
+            bar_area,
+            &mut sb_state,
+        );
+    }
+
+    // Pinned dismiss hint
+    f.render_widget(
+        Paragraph::new(Line::from(vec![
+            Span::styled(
+                "  [↑↓] ",
+                Style::default().fg(MAUVE).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("Scroll   ", Style::default().fg(TEXT)),
+            Span::styled(
+                "[Enter/Esc] ",
+                Style::default().fg(MAUVE).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("Dismiss", Style::default().fg(TEXT)),
+        ])),
+        hint_area,
     );
 }
