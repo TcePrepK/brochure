@@ -75,12 +75,12 @@ pub(super) async fn handle_article(
         }
         KeyCode::Char('m') => toggle_read(app),
         KeyCode::Char('s') => open_category_picker(app),
-        KeyCode::Char('o') => {
+        KeyCode::Char('O') => {
             if let Some(article) = get_selected_article(app) {
                 let _ = open::that(&article.link);
             }
         }
-        KeyCode::Char('y') => {
+        KeyCode::Char('C') => {
             if let Some(article) = get_selected_article(app) {
                 let link = article.link.clone();
                 match arboard::Clipboard::new().and_then(|mut c| c.set_text(link.clone())) {
