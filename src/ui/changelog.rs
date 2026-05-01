@@ -137,11 +137,11 @@ fn draw_changelog_block(f: &mut Frame, app: &mut App, area: Rect) {
         } else {
             " ├─"
         };
-        let prefix = if i == total - 1 { "    " } else { " │  " };
+        let prefix = if i == total - 1 { "     " } else { " │   " };
 
         // Version line with connector
         lines.push(Line::from(vec![
-            Span::styled(format!("{connector} "), Style::default().fg(SURFACE0)),
+            Span::styled(connector, Style::default().fg(SURFACE0)),
             Span::styled(
                 format!("v{}", entry.version),
                 Style::default().fg(MAUVE).add_modifier(Modifier::BOLD),
@@ -164,7 +164,7 @@ fn draw_changelog_block(f: &mut Frame, app: &mut App, area: Rect) {
         // Separator line (vertical bar or nothing after last entry)
         if i + 1 < total {
             lines.push(Line::from(vec![Span::styled(
-                prefix,
+                " │",
                 Style::default().fg(SURFACE0),
             )]));
         }
