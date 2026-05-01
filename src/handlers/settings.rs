@@ -67,14 +67,12 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                 app.set_status(format!("Eager Article Fetch: {state}"));
             }
             SettingsItem::AutoFetchOnStart => {
-                app.user_data.auto_fetch_on_start = !app.user_data.auto_fetch_on_start;
+                app.user_data.fetch_policy = app.user_data.fetch_policy.next();
                 let _ = save_user_data(&app.user_data);
-                let state = if app.user_data.auto_fetch_on_start {
-                    "ON"
-                } else {
-                    "OFF"
-                };
-                app.set_status(format!("Auto Fetch On Start: {state}"));
+                app.set_status(format!(
+                    "Fetch Policy: {}",
+                    app.user_data.fetch_policy.label()
+                ));
             }
             SettingsItem::ArchivePolicy => {
                 app.user_data.archive_policy = app.user_data.archive_policy.next();
@@ -104,6 +102,14 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                     app.user_data.archive_policy.label()
                 ));
             }
+            if app.settings_selected == SettingsItem::AutoFetchOnStart {
+                app.user_data.fetch_policy = app.user_data.fetch_policy.prev();
+                let _ = save_user_data(&app.user_data);
+                app.set_status(format!(
+                    "Fetch Policy: {}",
+                    app.user_data.fetch_policy.label()
+                ));
+            }
         }
         KeyCode::Right | KeyCode::Char('l') => {
             if app.settings_selected == SettingsItem::ArchivePolicy {
@@ -112,6 +118,14 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                 app.set_status(format!(
                     "Archive Policy: {}",
                     app.user_data.archive_policy.label()
+                ));
+            }
+            if app.settings_selected == SettingsItem::AutoFetchOnStart {
+                app.user_data.fetch_policy = app.user_data.fetch_policy.next();
+                let _ = save_user_data(&app.user_data);
+                app.set_status(format!(
+                    "Fetch Policy: {}",
+                    app.user_data.fetch_policy.label()
                 ));
             }
         }

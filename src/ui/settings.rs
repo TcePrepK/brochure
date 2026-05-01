@@ -80,7 +80,6 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
 
     let save = app.user_data.save_article_content;
     let eager = app.user_data.eager_article_fetch;
-    let auto_fetch = app.user_data.auto_fetch_on_start;
     let rounded = app.user_data.border_rounded;
     let cache_label = format_cache_size(app.article_cache_size);
     let rows = [
@@ -129,11 +128,11 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
             in_last: false,
             on: eager,
         },
-        Row::Toggle {
+        Row::Cycle {
             item: SettingsItem::AutoFetchOnStart,
-            label: "[ Auto Fetch On Start ]",
+            label: "[ Fetch Policy ]",
             in_last: false,
-            on: auto_fetch,
+            value: app.user_data.fetch_policy.label().to_string(),
         },
         Row::Cycle {
             item: SettingsItem::ArchivePolicy,

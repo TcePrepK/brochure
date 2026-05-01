@@ -1,7 +1,7 @@
 //! Disk I/O for brochure: reading and writing feeds, articles, user data, and categories, plus
 //! OPML import/export and path utilities for the platform-specific data directory.
 
-use crate::models::{Article, Category, CategoryId, FAVORITES_URL, Feed, UserData};
+use crate::models::{Article, Category, CategoryId, FAVORITES_URL, Feed, FetchPolicy, UserData};
 use std::{collections::HashMap, fs, path::PathBuf};
 
 // ── Data directory ────────────────────────────────────────────────────────────
@@ -84,6 +84,12 @@ pub fn load_user_data() -> UserData {
             });
         }
         // Persist the migrated data immediately.
+        let _ = save_user_data(&data);
+    }
+
+    // Migrate legacy auto_fetch_on_start=false to FetchPolicy::Never.
+    if !data.legacy_auto_fetch_on_start && data.fetch_policy == FetchPolicy::OnStart {
+        data.fetch_policy = FetchPolicy::Never;
         let _ = save_user_data(&data);
     }
 
