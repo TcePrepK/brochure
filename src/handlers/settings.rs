@@ -17,6 +17,26 @@ use crate::{
     },
 };
 
+/// Toggle a boolean field in `app.user_data`, persist, and show status.
+macro_rules! toggle_setting {
+    ($app:expr, $field:expr, $label:expr) => {{
+        $field = !$field;
+        let _ = save_user_data(&$app.user_data);
+        let state = if $field { "ON" } else { "OFF" };
+        $app.set_status(format!("{}: {state}", $label));
+    }};
+}
+
+/// Set a boolean field in `app.user_data` to a fixed value, persist, and show status.
+macro_rules! set_setting {
+    ($app:expr, $field:expr, $value:expr, $label:expr) => {{
+        $field = $value;
+        let _ = save_user_data(&$app.user_data);
+        let state = if $field { "ON" } else { "OFF" };
+        $app.set_status(format!("{}: {state}", $label));
+    }};
+}
+
 /// Handles key events for the `SettingsList` state.
 ///
 /// Refreshes the article cache size on every keypress, toggles boolean settings in-place, and
@@ -44,27 +64,21 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                 app.state = AppState::ClearData;
             }
             SettingsItem::SaveArticleContent => {
-                app.user_data.save_article_content = !app.user_data.save_article_content;
-                let _ = save_user_data(&app.user_data);
-                let state = if app.user_data.save_article_content {
-                    "ON"
-                } else {
-                    "OFF"
-                };
-                app.set_status(format!("Save Article Content: {state}"));
+                toggle_setting!(
+                    app,
+                    app.user_data.save_article_content,
+                    "Save Article Content"
+                );
             }
             SettingsItem::ClearArticleCache => {
                 app.state = AppState::ClearArticleCache;
             }
             SettingsItem::EagerArticleFetch => {
-                app.user_data.eager_article_fetch = !app.user_data.eager_article_fetch;
-                let _ = save_user_data(&app.user_data);
-                let state = if app.user_data.eager_article_fetch {
-                    "ON"
-                } else {
-                    "OFF"
-                };
-                app.set_status(format!("Eager Article Fetch: {state}"));
+                toggle_setting!(
+                    app,
+                    app.user_data.eager_article_fetch,
+                    "Eager Article Fetch"
+                );
             }
             SettingsItem::AutoFetchOnStart => {
                 app.user_data.fetch_policy = app.user_data.fetch_policy.next();
@@ -83,24 +97,10 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                 ));
             }
             SettingsItem::ScrollLoop => {
-                app.user_data.scroll_loop = !app.user_data.scroll_loop;
-                let _ = save_user_data(&app.user_data);
-                let state = if app.user_data.scroll_loop {
-                    "ON"
-                } else {
-                    "OFF"
-                };
-                app.set_status(format!("Scroll Loop: {state}"));
+                toggle_setting!(app, app.user_data.scroll_loop, "Scroll Loop");
             }
             SettingsItem::BorderStyle => {
-                app.user_data.border_rounded = !app.user_data.border_rounded;
-                let _ = save_user_data(&app.user_data);
-                let state = if app.user_data.border_rounded {
-                    "ON"
-                } else {
-                    "OFF"
-                };
-                app.set_status(format!("Rounded Borders: {state}"));
+                toggle_setting!(app, app.user_data.border_rounded, "Rounded Borders");
             }
         },
         KeyCode::Left | KeyCode::Char('h') => {
@@ -121,24 +121,26 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                 ));
             }
             if app.settings_selected == SettingsItem::SaveArticleContent {
-                app.user_data.save_article_content = false;
-                let _ = save_user_data(&app.user_data);
-                app.set_status("Save Article Content: OFF".to_string());
+                set_setting!(
+                    app,
+                    app.user_data.save_article_content,
+                    false,
+                    "Save Article Content"
+                );
             }
             if app.settings_selected == SettingsItem::EagerArticleFetch {
-                app.user_data.eager_article_fetch = false;
-                let _ = save_user_data(&app.user_data);
-                app.set_status("Eager Article Fetch: OFF".to_string());
+                set_setting!(
+                    app,
+                    app.user_data.eager_article_fetch,
+                    false,
+                    "Eager Article Fetch"
+                );
             }
             if app.settings_selected == SettingsItem::ScrollLoop {
-                app.user_data.scroll_loop = false;
-                let _ = save_user_data(&app.user_data);
-                app.set_status("Scroll Loop: OFF".to_string());
+                set_setting!(app, app.user_data.scroll_loop, false, "Scroll Loop");
             }
             if app.settings_selected == SettingsItem::BorderStyle {
-                app.user_data.border_rounded = false;
-                let _ = save_user_data(&app.user_data);
-                app.set_status("Rounded Borders: OFF".to_string());
+                set_setting!(app, app.user_data.border_rounded, false, "Rounded Borders");
             }
         }
         KeyCode::Right | KeyCode::Char('l') => {
@@ -159,24 +161,26 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                 ));
             }
             if app.settings_selected == SettingsItem::SaveArticleContent {
-                app.user_data.save_article_content = true;
-                let _ = save_user_data(&app.user_data);
-                app.set_status("Save Article Content: ON".to_string());
+                set_setting!(
+                    app,
+                    app.user_data.save_article_content,
+                    true,
+                    "Save Article Content"
+                );
             }
             if app.settings_selected == SettingsItem::EagerArticleFetch {
-                app.user_data.eager_article_fetch = true;
-                let _ = save_user_data(&app.user_data);
-                app.set_status("Eager Article Fetch: ON".to_string());
+                set_setting!(
+                    app,
+                    app.user_data.eager_article_fetch,
+                    true,
+                    "Eager Article Fetch"
+                );
             }
             if app.settings_selected == SettingsItem::ScrollLoop {
-                app.user_data.scroll_loop = true;
-                let _ = save_user_data(&app.user_data);
-                app.set_status("Scroll Loop: ON".to_string());
+                set_setting!(app, app.user_data.scroll_loop, true, "Scroll Loop");
             }
             if app.settings_selected == SettingsItem::BorderStyle {
-                app.user_data.border_rounded = true;
-                let _ = save_user_data(&app.user_data);
-                app.set_status("Rounded Borders: ON".to_string());
+                set_setting!(app, app.user_data.border_rounded, true, "Rounded Borders");
             }
         }
         _ => {}
