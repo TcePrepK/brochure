@@ -8,7 +8,7 @@ use ratatui::layout::Constraint::{Fill, Length, Min};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{
         Block, Borders, Clear, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap,
@@ -149,8 +149,9 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
     );
 }
 
-/// Renders the confirmation dialog for deleting all feeds.
-pub(super) fn draw_confirm_delete_all(f: &mut Frame, app: &App) {
+/// Renders a centered confirmation dialog with a red bordered block.
+/// `horiz_pct` is the percentage width for the center column (60 or 70).
+fn draw_confirm_dialog(f: &mut Frame, app: &App, title: &str, body: String, horiz_pct: u16) {
     let area = f.area();
     let vertical = Layout::default()
         .direction(Direction::Vertical)
@@ -160,67 +161,13 @@ pub(super) fn draw_confirm_delete_all(f: &mut Frame, app: &App) {
             Constraint::Percentage(38),
         ])
         .split(area);
+    let side_pct = (100 - horiz_pct) / 2;
     let center = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Percentage(20),
-            Constraint::Percentage(60),
-            Constraint::Percentage(20),
-        ])
-        .split(vertical[1])[1];
-
-    f.render_widget(Clear, center);
-    let red = Color::Rgb(243, 139, 168); // Catppuccin Red — intentional, no constant
-    let block = Block::default()
-        .border_set(border_set(app.user_data.border_rounded))
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(red))
-        .bg(BASE)
-        .title(Span::styled(
-            " ⚠  Remove All Feeds ",
-            Style::default().fg(red).add_modifier(Modifier::BOLD),
-        ));
-    let text = vec![
-        Line::from(""),
-        Line::from(Span::styled(
-            "  This will delete all feeds permanently.",
-            Style::default().fg(TEXT),
-        )),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled(
-                "  [Enter] ",
-                Style::default().fg(red).add_modifier(Modifier::BOLD),
-            ),
-            Span::styled("Confirm   ", Style::default().fg(TEXT)),
-            Span::styled(
-                "[Esc] ",
-                Style::default().fg(GREEN).add_modifier(Modifier::BOLD),
-            ),
-            Span::styled("Cancel", Style::default().fg(TEXT)),
-        ]),
-    ];
-    f.render_widget(Paragraph::new(text).block(block), center);
-}
-
-/// Renders the confirmation dialog for clearing the article cache.
-pub(super) fn draw_confirm_clear_cache(f: &mut Frame, app: &App) {
-    use super::RED;
-    let area = f.area();
-    let vertical = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage(38),
-            Constraint::Length(7),
-            Constraint::Percentage(38),
-        ])
-        .split(area);
-    let center = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(20),
-            Constraint::Percentage(60),
-            Constraint::Percentage(20),
+            Constraint::Percentage(side_pct),
+            Constraint::Percentage(horiz_pct),
+            Constraint::Percentage(side_pct),
         ])
         .split(vertical[1])[1];
 
@@ -231,78 +178,7 @@ pub(super) fn draw_confirm_clear_cache(f: &mut Frame, app: &App) {
         .border_style(Style::default().fg(RED))
         .bg(BASE)
         .title(Span::styled(
-            " ⚠  Clear Article Cache ",
-            Style::default().fg(RED).add_modifier(Modifier::BOLD),
-        ));
-    let text = vec![
-        Line::from(""),
-        Line::from(Span::styled(
-            "  This will delete all saved article content.",
-            Style::default().fg(super::TEXT),
-        )),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled(
-                "  [Enter] ",
-                Style::default().fg(RED).add_modifier(Modifier::BOLD),
-            ),
-            Span::styled("Confirm   ", Style::default().fg(super::TEXT)),
-            Span::styled(
-                "[Esc] ",
-                Style::default().fg(GREEN).add_modifier(Modifier::BOLD),
-            ),
-            Span::styled("Cancel", Style::default().fg(super::TEXT)),
-        ]),
-    ];
-    f.render_widget(Paragraph::new(text).block(block), center);
-}
-
-/// Renders the confirmation dialog for deleting a category and its feeds.
-pub(super) fn draw_confirm_delete_cat(
-    f: &mut Frame,
-    app: &App,
-    cat_id: CategoryId,
-    feed_count: usize,
-) {
-    use super::RED;
-    let cat_name = app
-        .categories
-        .iter()
-        .find(|c| c.id == cat_id)
-        .map(|c| c.name.as_str())
-        .unwrap_or("?");
-    let body = if feed_count == 0 {
-        format!("  Delete category \"{cat_name}\"?")
-    } else {
-        format!("  Delete \"{cat_name}\" and {feed_count} feed(s) inside?")
-    };
-
-    let area = f.area();
-    let vertical = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage(38),
-            Constraint::Length(7),
-            Constraint::Percentage(38),
-        ])
-        .split(area);
-    let center = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(15),
-            Constraint::Percentage(70),
-            Constraint::Percentage(15),
-        ])
-        .split(vertical[1])[1];
-
-    f.render_widget(Clear, center);
-    let block = Block::default()
-        .border_set(border_set(app.user_data.border_rounded))
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(RED))
-        .bg(BASE)
-        .title(Span::styled(
-            " ⚠  Delete Category ",
+            title.to_string(),
             Style::default().fg(RED).add_modifier(Modifier::BOLD),
         ));
     let text = vec![
@@ -323,6 +199,49 @@ pub(super) fn draw_confirm_delete_cat(
         ]),
     ];
     f.render_widget(Paragraph::new(text).block(block), center);
+}
+
+/// Renders the confirmation dialog for deleting all feeds.
+pub(super) fn draw_confirm_delete_all(f: &mut Frame, app: &App) {
+    draw_confirm_dialog(
+        f,
+        app,
+        " ⚠  Remove All Feeds ",
+        "  This will delete all feeds permanently.".to_string(),
+        60,
+    );
+}
+
+/// Renders the confirmation dialog for clearing the article cache.
+pub(super) fn draw_confirm_clear_cache(f: &mut Frame, app: &App) {
+    draw_confirm_dialog(
+        f,
+        app,
+        " ⚠  Clear Article Cache ",
+        "  This will delete all saved article content.".to_string(),
+        60,
+    );
+}
+
+/// Renders the confirmation dialog for deleting a category and its feeds.
+pub(super) fn draw_confirm_delete_cat(
+    f: &mut Frame,
+    app: &App,
+    cat_id: CategoryId,
+    feed_count: usize,
+) {
+    let cat_name = app
+        .categories
+        .iter()
+        .find(|c| c.id == cat_id)
+        .map(|c| c.name.as_str())
+        .unwrap_or("?");
+    let body = if feed_count == 0 {
+        format!("  Delete category \"{cat_name}\"?")
+    } else {
+        format!("  Delete \"{cat_name}\" and {feed_count} feed(s) inside?")
+    };
+    draw_confirm_dialog(f, app, " ⚠  Delete Category ", body, 70);
 }
 
 /// Renders the OPML import/export path input popup.
@@ -500,7 +419,6 @@ pub(super) fn draw_category_picker(f: &mut Frame, app: &App) {
 
 /// Renders the confirmation dialog for deleting a saved category.
 pub(super) fn draw_confirm_delete_saved_cat(f: &mut Frame, app: &App) {
-    use super::RED;
     let cursor = app.saved_cat_editor_scroll.cursor;
     let cat = app.user_data.saved_categories.get(cursor);
     let Some(cat) = cat else { return };
@@ -520,65 +438,7 @@ pub(super) fn draw_confirm_delete_saved_cat(f: &mut Frame, app: &App) {
             if article_count == 1 { "" } else { "s" }
         )
     };
-
-    let area = f.area();
-    let vertical = ratatui::layout::Layout::default()
-        .direction(ratatui::layout::Direction::Vertical)
-        .constraints([
-            ratatui::layout::Constraint::Percentage(38),
-            ratatui::layout::Constraint::Length(7),
-            ratatui::layout::Constraint::Percentage(38),
-        ])
-        .split(area);
-    let center = ratatui::layout::Layout::default()
-        .direction(ratatui::layout::Direction::Horizontal)
-        .constraints([
-            ratatui::layout::Constraint::Percentage(15),
-            ratatui::layout::Constraint::Percentage(70),
-            ratatui::layout::Constraint::Percentage(15),
-        ])
-        .split(vertical[1])[1];
-
-    f.render_widget(ratatui::widgets::Clear, center);
-    let block = ratatui::widgets::Block::default()
-        .border_set(super::border_set(app.user_data.border_rounded))
-        .borders(ratatui::widgets::Borders::ALL)
-        .border_style(ratatui::style::Style::default().fg(RED))
-        .bg(super::BASE)
-        .title(ratatui::text::Span::styled(
-            " ⚠  Delete Saved Category ",
-            ratatui::style::Style::default()
-                .fg(RED)
-                .add_modifier(ratatui::style::Modifier::BOLD),
-        ));
-    let text = vec![
-        ratatui::text::Line::from(""),
-        ratatui::text::Line::from(ratatui::text::Span::styled(
-            body,
-            ratatui::style::Style::default().fg(super::TEXT),
-        )),
-        ratatui::text::Line::from(""),
-        ratatui::text::Line::from(vec![
-            ratatui::text::Span::styled(
-                "  [Enter] ",
-                ratatui::style::Style::default()
-                    .fg(RED)
-                    .add_modifier(ratatui::style::Modifier::BOLD),
-            ),
-            ratatui::text::Span::styled(
-                "Confirm   ",
-                ratatui::style::Style::default().fg(super::TEXT),
-            ),
-            ratatui::text::Span::styled(
-                "[Esc] ",
-                ratatui::style::Style::default()
-                    .fg(super::GREEN)
-                    .add_modifier(ratatui::style::Modifier::BOLD),
-            ),
-            ratatui::text::Span::styled("Cancel", ratatui::style::Style::default().fg(super::TEXT)),
-        ]),
-    ];
-    f.render_widget(ratatui::widgets::Paragraph::new(text).block(block), center);
+    draw_confirm_dialog(f, app, " ⚠  Delete Saved Category ", body, 70);
 }
 
 /// Renders the update-available popup with scrollable release notes.
