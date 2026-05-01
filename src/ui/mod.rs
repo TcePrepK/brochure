@@ -1,3 +1,8 @@
+//! Terminal UI rendering: color constants, tree utilities, and top-level draw dispatcher.
+//!
+//! This module owns all rendering logic, including Catppuccin Mocha color constants,
+//! tree indentation helpers, and the main `draw()` function that dispatches to per-tab renderers.
+
 mod chrome;
 mod content;
 mod editor;
@@ -14,21 +19,36 @@ use ratatui::{
 };
 
 // ── Catppuccin Mocha palette ──────────────────────────────────────────────────
+/// Catppuccin Mocha mauve color.
 pub(crate) const MAUVE: Color = Color::Rgb(203, 166, 247);
+/// Catppuccin Mocha blue color.
 pub(crate) const BLUE: Color = Color::Rgb(137, 180, 250);
+/// Catppuccin Mocha green color.
 pub(crate) const GREEN: Color = Color::Rgb(166, 227, 161);
+/// Catppuccin Mocha peach color.
 pub(crate) const PEACH: Color = Color::Rgb(250, 179, 135);
+/// Catppuccin Mocha base (dark background) color.
 pub(crate) const BASE: Color = Color::Rgb(30, 30, 46);
+/// Catppuccin Mocha mantle (darkest background) color.
 pub(crate) const MANTLE: Color = Color::Rgb(24, 24, 37);
+/// Catppuccin Mocha text (foreground) color.
 pub(crate) const TEXT: Color = Color::Rgb(205, 214, 244);
+/// Catppuccin Mocha subtext0 (muted text) color.
 pub(crate) const SUBTEXT0: Color = Color::Rgb(166, 173, 200);
+/// Catppuccin Mocha surface0 (light background) color.
 pub(crate) const SURFACE0: Color = Color::Rgb(49, 50, 68);
+/// Catppuccin Mocha yellow color.
 pub(crate) const YELLOW: Color = Color::Rgb(249, 226, 175);
+/// Catppuccin Mocha teal color.
 pub(crate) const TEAL: Color = Color::Rgb(148, 226, 213);
+/// Catppuccin Mocha sky color.
 pub(crate) const SKY: Color = Color::Rgb(137, 220, 235);
+/// Catppuccin Mocha pink color.
 pub(crate) const PINK: Color = Color::Rgb(245, 194, 231);
+/// Catppuccin Mocha red color.
 pub(crate) const RED: Color = Color::Rgb(243, 139, 168);
 
+/// Braille spinner animation frames for loading indicators.
 pub(crate) const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 /// Returns the border set based on the user's rounded-border preference.
@@ -40,7 +60,7 @@ pub(crate) fn border_set(rounded: bool) -> symbols::border::Set<'static> {
     }
 }
 
-/// Fixed palette for category headers (cycles by category id).
+/// Fixed color palette that cycles through category IDs to assign unique colors to categories.
 pub(crate) const CATEGORY_COLORS: &[Color] = &[MAUVE, BLUE, GREEN, PEACH, YELLOW, TEAL, SKY, PINK];
 
 /// Compute the leading indent string for a tree item at `depth` positioned at `render_idx`.
@@ -107,6 +127,10 @@ pub(crate) fn tree_connector(
     }
 }
 
+/// Top-level draw dispatcher that renders the entire UI frame.
+///
+/// Dispatches to per-tab renderers (Feeds, Saved, Settings) and overlays state-specific popups
+/// (add-feed wizard, OPML paths, confirm dialogs, category picker, saved category editor).
 pub fn draw(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)

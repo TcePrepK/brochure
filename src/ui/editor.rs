@@ -1,3 +1,8 @@
+//! Full-screen feed editor view for organizing feeds and categories.
+//!
+//! This module renders the feed editor with a two-panel layout: left panel shows feeds/categories
+//! with drag-to-move support, right panel shows categories with add/rename/delete controls.
+
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
@@ -18,6 +23,7 @@ use super::{
     border_set, tree_connector, tree_indent,
 };
 
+/// Renders the full-screen feed editor with feeds and categories panels.
 pub(super) fn draw_feed_editor(f: &mut Frame, app: &mut App, area: Rect) {
     // Background-only outer block (no borders)
     let bg_block = Block::default().bg(BASE);
@@ -32,6 +38,7 @@ pub(super) fn draw_feed_editor(f: &mut Frame, app: &mut App, area: Rect) {
     draw_editor_categories(f, app, cols[1]);
 }
 
+/// Renders the left editor panel showing feeds with tree indentation and move/rename/delete modes.
 fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
     let is_active = app.editor_panel == EditorPanel::Feeds;
     let in_moving_mode = matches!(app.editor_mode, FeedEditorMode::Moving { .. });

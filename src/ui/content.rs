@@ -1,3 +1,8 @@
+//! Main content area rendering: three-panel layout (sidebar, article list, article detail) shared by multiple tabs.
+//!
+//! This module renders the central content area with the feed/category sidebar, article list,
+//! article detail view, and footer with article metadata or feed stats.
+
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
@@ -21,6 +26,7 @@ use super::{
     TEXT, YELLOW, border_set, editor::draw_feed_editor, tree_connector, tree_indent,
 };
 
+/// Formats a Unix timestamp as a human-readable age string (e.g., "42m ago", "2d ago").
 fn format_age(secs: i64) -> String {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -62,7 +68,7 @@ fn scroll_title(text: &str, available: usize, elapsed: usize) -> String {
     chars[start..start + available].iter().collect()
 }
 
-/// Color for a Unix timestamp age: green = fresh, yellow = today, dimmed = old.
+/// Returns a color for a timestamp age: green for recent (< 1h), yellow for today, dimmed for older.
 fn age_color(secs: i64) -> ratatui::style::Color {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -78,6 +84,7 @@ fn age_color(secs: i64) -> ratatui::style::Color {
     }
 }
 
+/// Renders a three-panel layout: article list (left) and article detail (right).
 fn draw_three_panel(f: &mut Frame, app: &mut App, right_area: Rect, is_preview: bool) {
     let panels = Layout::default()
         .direction(Direction::Horizontal)
@@ -88,6 +95,7 @@ fn draw_three_panel(f: &mut Frame, app: &mut App, right_area: Rect, is_preview: 
     draw_article_detail(f, app, panels[1], is_preview);
 }
 
+/// Renders the Feeds tab with sidebar (categories/feeds) and content area (list or detail).
 pub(super) fn draw_feeds_tab(f: &mut Frame, app: &mut App, area: Rect) {
     if matches!(app.state, AppState::FeedEditor | AppState::FeedEditorRename)
         || (app.state == AppState::AddFeed && app.add_feed_return_state == AppState::FeedEditor)
@@ -126,6 +134,7 @@ pub(super) fn draw_feeds_tab(f: &mut Frame, app: &mut App, area: Rect) {
     }
 }
 
+/// Renders the Saved tab with saved-categories sidebar and content area (list or detail).
 pub(super) fn draw_saved_tab(f: &mut Frame, app: &mut App, area: Rect) {
     let cols = Layout::default()
         .direction(Direction::Horizontal)
@@ -150,6 +159,7 @@ pub(super) fn draw_saved_tab(f: &mut Frame, app: &mut App, area: Rect) {
     }
 }
 
+/// Renders the saved-categories sidebar with "All Saved" entry, categories, and article counts.
 fn draw_saved_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
     let is_navigating = app.state == AppState::SavedCategoryList;
     let rounded = app.user_data.border_rounded;
@@ -220,6 +230,7 @@ fn draw_saved_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_stateful_widget(list, area, &mut app.saved_sidebar_list_state);
 }
 
+/// Renders the feeds sidebar showing categories and feeds in a tree with unread badges and fetch status.
 pub(super) fn draw_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
     let tree = visible_tree_items(&app.categories, &app.feeds, &app.sidebar_collapsed);
     let is_navigating = app.state == AppState::FeedList;
@@ -472,6 +483,7 @@ fn draw_category_article_list(f: &mut Frame, app: &mut App, area: Rect) {
     }
 }
 
+/// Renders the article list for the currently selected feed or category.
 pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect) {
     let content_footer = Layout::default()
         .direction(Direction::Vertical)
@@ -895,6 +907,7 @@ fn draw_article_footer(f: &mut Frame, app: &App, area: Rect, is_article_view: bo
     }
 }
 
+/// Renders the article detail view with markdown content, scrolling, and article metadata footer.
 pub(super) fn draw_article_detail(f: &mut Frame, app: &mut App, area: Rect, is_preview: bool) {
     let article = if app.in_category_context {
         app.category_view_articles
