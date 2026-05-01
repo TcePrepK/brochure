@@ -29,8 +29,10 @@ rule), fix it in the same commit.
 3. **If anything is unclear**: stop and ask the user. Do not assume scope, layout, or behavior. Just ask directly in
    your response.
 4. **On completion**: remove the item from TASKS.md and append it to `changelog/vX.Y.Z.md` (current version,
-   e.g. `changelog/v0.1.0.md`). Create the file if it doesn't exist; use the heading `# vX.Y.Z`. Never commit
-   without doing this first. Never read the `changelog/` files — they are an append-only archive.
+   e.g. `changelog/v0.1.0.md`). Create the file if it doesn't exist; use the heading `# vX.Y.Z`. The file uses
+   grouped sections (`## Features`, `## UI`, `## Fixes`, `## Refactor`). Each entry must include today's date:
+   `- YYYY-MM-DD: Description`. Append new entries below older ones within each section. Never commit without
+   doing this first. Never read the `changelog/` files — they are an append-only archive.
 
 **Blocked entry format** (required fields):
 
