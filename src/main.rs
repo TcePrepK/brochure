@@ -64,8 +64,8 @@ async fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()
     {
         let tx_ver = tx.clone();
         tokio::spawn(async move {
-            if let Some(version) = fetch::check_latest_version().await {
-                let _ = tx_ver.send(AppEvent::UpdateAvailable(version));
+            if let Some(info) = fetch::check_latest_version().await {
+                let _ = tx_ver.send(AppEvent::UpdateAvailable(info));
             }
         });
     }
@@ -229,8 +229,8 @@ async fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()
                 }
             }
 
-            AppEvent::UpdateAvailable(version) => {
-                app.update_available = Some(version);
+            AppEvent::UpdateAvailable(info) => {
+                app.update_available = Some(info);
             }
         }
     }

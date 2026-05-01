@@ -9,7 +9,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, Paragraph, ScrollbarState},
+    widgets::{Block, Borders, Clear, Paragraph, ScrollbarState, Wrap},
 };
 
 use ratatui::prelude::Stylize;
@@ -580,28 +580,41 @@ pub(super) fn draw_confirm_delete_saved_cat(f: &mut Frame, app: &App) {
 
 /// Renders the update-available popup when a newer version has been found on crates.io.
 pub(super) fn draw_update_popup(f: &mut Frame, app: &App) {
-    let Some(ref version) = app.update_available else {
+    let Some(ref info) = app.update_available else {
         return;
     };
+    let version = &info.version;
+    let date = &info.date;
+    let highlights = &info.highlights;
+
     let area = f.area();
+
+    // Compute dynamic height: 4 base lines + highlights count, capped at 18
+    let content_lines = 4 + highlights.len() as u16;
+    let popup_height = (content_lines + 2).min(18);
+
+    // Vertical centering with fixed popup height
     let vertical = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Percentage(38),
-            Constraint::Length(7),
-            Constraint::Percentage(38),
+            Constraint::Fill(1),
+            Constraint::Length(popup_height + 2),
+            Constraint::Fill(1),
         ])
         .split(area);
-    let center = Layout::default()
+
+    // Horizontal centering with fixed width
+    let horizontal = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Percentage(15),
-            Constraint::Percentage(70),
-            Constraint::Percentage(15),
+            Constraint::Fill(1),
+            Constraint::Length(54),
+            Constraint::Fill(1),
         ])
-        .split(vertical[1])[1];
+        .split(vertical[1]);
+    let popup_area = horizontal[1];
 
-    f.render_widget(Clear, center);
+    f.render_widget(Clear, popup_area);
     let block = Block::default()
         .border_set(border_set(app.user_data.border_rounded))
         .borders(Borders::ALL)
@@ -611,26 +624,57 @@ pub(super) fn draw_update_popup(f: &mut Frame, app: &App) {
             "  Update Available ",
             Style::default().fg(MAUVE).add_modifier(Modifier::BOLD),
         ));
+
     let current = env!("CARGO_PKG_VERSION");
-    let text = vec![
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("  ", Style::default()),
-            Span::styled(format!("v{current}"), Style::default().fg(SUBTEXT0)),
-            Span::styled("  →  ", Style::default().fg(SUBTEXT0)),
-            Span::styled(
-                format!("v{version}"),
-                Style::default().fg(GREEN).add_modifier(Modifier::BOLD),
-            ),
-        ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled(
-                "  [Any key] ",
-                Style::default().fg(MAUVE).add_modifier(Modifier::BOLD),
-            ),
-            Span::styled("Dismiss", Style::default().fg(TEXT)),
-        ]),
-    ];
-    f.render_widget(Paragraph::new(text).block(block), center);
+
+    let mut text = Vec::new();
+
+    // Line 1: empty
+    text.push(Line::from(""));
+
+    // Line 2: version and date on the same line
+    text.push(Line::from(vec![
+        Span::styled(
+            format!("  v{current}  →  v{version}    {date}"),
+            Style::default(),
+        )
+        .patch_style(Style::default().fg(TEXT)),
+    ]));
+
+    // Line 3: empty
+    text.push(Line::from(""));
+
+    // Highlights section
+    if !highlights.is_empty() {
+        // Line 4: "What's new:" header
+        text.push(Line::from(Span::styled(
+            "  What's new:",
+            Style::default().fg(MAUVE),
+        )));
+
+        // Lines 5+: each highlight
+        for highlight in highlights {
+            text.push(Line::from(Span::styled(
+                format!("  • {highlight}"),
+                Style::default().fg(TEXT),
+            )));
+        }
+    }
+
+    // Bottom padding: one empty line
+    text.push(Line::from(""));
+
+    // Final line: dismiss hint
+    text.push(Line::from(vec![
+        Span::styled(
+            "  [Any key] ",
+            Style::default().fg(MAUVE).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled("Dismiss", Style::default().fg(TEXT)),
+    ]));
+
+    f.render_widget(
+        Paragraph::new(text).block(block).wrap(Wrap { trim: false }),
+        popup_area,
+    );
 }

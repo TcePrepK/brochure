@@ -1,7 +1,7 @@
 //! Async network I/O for brochure: feed fetching, image URL extraction, and Readability-based
 //! article content retrieval. All HTTP requests share a single lazily-initialised client.
 
-use crate::models::Article;
+use crate::models::{Article, UpdateInfo};
 use std::sync::OnceLock;
 
 /// Returns the shared, lazily-initialised HTTP client used for all outgoing requests.
@@ -132,9 +132,10 @@ pub async fn fetch_readable_content(url: &str) -> Result<String, String> {
         .map_err(|e| format!("Readability error: {e}"))
 }
 
-/// Fetch the latest published version of brochure from crates.io.
-/// Returns `Some(version)` if a newer version exists, `None` if already up to date or on error.
-pub async fn check_latest_version() -> Option<String> {
+/// Fetch the latest published version of brochure from crates.io and GitHub releases.
+/// Returns `Some(UpdateInfo)` if a newer version exists, `None` if already up to date or on error.
+/// GitHub release fetch failures are graceful — returns `Some` with empty date/highlights.
+pub async fn check_latest_version() -> Option<UpdateInfo> {
     let resp = http_client()
         .get("https://crates.io/api/v1/crates/brochure")
         .header(
@@ -148,9 +149,77 @@ pub async fn check_latest_version() -> Option<String> {
     let json: serde_json::Value = serde_json::from_str(&text).ok()?;
     let latest = json["crate"]["newest_version"].as_str()?.to_string();
     let current = env!("CARGO_PKG_VERSION");
-    if latest != current {
-        Some(latest)
-    } else {
-        None
+    if latest == current {
+        return None;
     }
+
+    // GitHub release fetch (graceful failure)
+    let date = if let Ok(gh_resp) = http_client()
+        .get("https://api.github.com/repos/Sylviromi/brochure/releases/latest")
+        .header(
+            "User-Agent",
+            concat!("brochure/", env!("CARGO_PKG_VERSION"), " (version-check)"),
+        )
+        .send()
+        .await
+    {
+        if let Ok(gh_text) = gh_resp.text().await {
+            if let Ok(gh_json) = serde_json::from_str::<serde_json::Value>(&gh_text) {
+                gh_json["published_at"]
+                    .as_str()
+                    .map(|s| s.chars().take(10).collect::<String>())
+                    .unwrap_or_default()
+            } else {
+                String::new()
+            }
+        } else {
+            String::new()
+        }
+    } else {
+        String::new()
+    };
+
+    // Parse highlights from GitHub release body
+    let highlights = if let Ok(gh_resp) = http_client()
+        .get("https://api.github.com/repos/Sylviromi/brochure/releases/latest")
+        .header(
+            "User-Agent",
+            concat!("brochure/", env!("CARGO_PKG_VERSION"), " (version-check)"),
+        )
+        .send()
+        .await
+    {
+        if let Ok(gh_text) = gh_resp.text().await {
+            if let Ok(gh_json) = serde_json::from_str::<serde_json::Value>(&gh_text) {
+                if let Some(body) = gh_json["body"].as_str() {
+                    let mut highlights_vec = Vec::new();
+                    let mut in_highlights_section = false;
+                    for line in body.lines() {
+                        if line.starts_with("## Highlights") {
+                            in_highlights_section = true;
+                        } else if line.starts_with("## ") {
+                            in_highlights_section = false;
+                        } else if in_highlights_section && line.starts_with("- ") {
+                            highlights_vec.push(line[2..].to_string());
+                        }
+                    }
+                    highlights_vec
+                } else {
+                    Vec::new()
+                }
+            } else {
+                Vec::new()
+            }
+        } else {
+            Vec::new()
+        }
+    } else {
+        Vec::new()
+    };
+
+    Some(UpdateInfo {
+        version: latest,
+        date,
+        highlights,
+    })
 }

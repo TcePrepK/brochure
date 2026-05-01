@@ -5,7 +5,7 @@
 
 use crate::models::{
     AddFeedStep, AppState, Article, Category, CategoryId, EditorPanel, FAVORITES_URL, Feed,
-    FeedEditorMode, FeedTreeItem, ListScroll, SettingsItem, Tab, TextScroll, UserData,
+    FeedEditorMode, FeedTreeItem, ListScroll, SettingsItem, Tab, TextScroll, UpdateInfo, UserData,
 };
 use crate::storage::{article_cache_size, load_categories, load_feeds, load_user_data};
 use ratatui::widgets::ListState;
@@ -137,7 +137,7 @@ pub struct App {
     // ── Status message animation ─────────────────────────────────────────────
     /// Latest version available on crates.io, if newer than the running version. `None` until the
     /// background check completes or if already up to date.
-    pub update_available: Option<String>,
+    pub update_available: Option<UpdateInfo>,
     /// Value of `tick` when `status_msg` was last set — used to compute per-message scroll offset.
     pub status_msg_start_tick: usize,
 

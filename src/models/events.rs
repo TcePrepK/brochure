@@ -1,6 +1,6 @@
 //! Events flowing over the MPSC channel into the main event loop.
 
-use super::{Article, FeedSource};
+use super::{Article, FeedSource, UpdateInfo};
 
 /// Events flowing over the MPSC channel into the main event loop.
 #[derive(Debug)]
@@ -16,5 +16,5 @@ pub enum AppEvent {
     /// Result of background feed-title fetch during the AddFeed flow.
     FeedTitleFetched(Result<String, String>),
     /// A newer version of brochure is available on crates.io.
-    UpdateAvailable(String),
+    UpdateAvailable(UpdateInfo),
 }
