@@ -152,6 +152,17 @@ pub struct App {
     pub article_title_start_tick: usize,
 }
 
+/// Sorts `(feed_idx, article_idx, published_secs)` triples newest-first.
+/// Entries with no timestamp sort after those with one.
+fn sort_articles_by_date(triples: &mut [(usize, usize, Option<i64>)]) {
+    triples.sort_by(|a, b| match (a.2, b.2) {
+        (Some(x), Some(y)) => y.cmp(&x),
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (None, None) => std::cmp::Ordering::Equal,
+    });
+}
+
 impl App {
     /// Construct a fresh `App`, loading feeds, categories, and user data from disk.
     pub fn new() -> Self {
@@ -620,12 +631,7 @@ impl App {
                 triples.push((fi, ai, self.feeds[fi].articles[ai].published_secs));
             }
         }
-        triples.sort_by(|a, b| match (a.2, b.2) {
-            (Some(x), Some(y)) => y.cmp(&x),
-            (Some(_), None) => std::cmp::Ordering::Less,
-            (None, Some(_)) => std::cmp::Ordering::Greater,
-            (None, None) => std::cmp::Ordering::Equal,
-        });
+        sort_articles_by_date(&mut triples);
         self.category_view_articles = triples.into_iter().map(|(fi, ai, _)| (fi, ai)).collect();
     }
 
@@ -651,12 +657,7 @@ impl App {
                 triples.push((fi, ai, feed.articles[ai].published_secs));
             }
         }
-        triples.sort_by(|a, b| match (a.2, b.2) {
-            (Some(x), Some(y)) => y.cmp(&x),
-            (Some(_), None) => std::cmp::Ordering::Less,
-            (None, Some(_)) => std::cmp::Ordering::Greater,
-            (None, None) => std::cmp::Ordering::Equal,
-        });
+        sort_articles_by_date(&mut triples);
         self.category_view_articles = triples.into_iter().map(|(fi, ai, _)| (fi, ai)).collect();
         self.in_category_context = true;
     }
