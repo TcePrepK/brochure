@@ -468,6 +468,17 @@ fn draw_category_article_list(f: &mut Frame, app: &mut App, area: Rect) {
         return;
     }
 
+    let total = app.category_view_articles.len();
+    let has_scrollbar = total > inner.height as usize;
+    let list_render_area = if has_scrollbar {
+        Rect {
+            width: inner.width.saturating_sub(1),
+            ..inner
+        }
+    } else {
+        inner
+    };
+
     let items: Vec<ListItem> = app
         .category_view_articles
         .iter()
@@ -480,22 +491,14 @@ fn draw_category_article_list(f: &mut Frame, app: &mut App, area: Rect) {
             };
             ListItem::new(Line::from(vec![
                 Span::styled(article.get_icon(), article.get_icon_style()),
-                Span::raw(truncate_title(&article.title, inner.width as usize - 2)),
+                Span::raw(truncate_title(
+                    &article.title,
+                    list_render_area.width.saturating_sub(2) as usize,
+                )),
             ]))
             .style(style)
         })
         .collect();
-
-    let total = app.category_view_articles.len();
-    let has_scrollbar = total > inner.height as usize;
-    let list_render_area = if has_scrollbar {
-        Rect {
-            width: inner.width.saturating_sub(1),
-            ..inner
-        }
-    } else {
-        inner
-    };
     app.article_list_state.select(None);
     f.render_stateful_widget(
         List::new(items),
