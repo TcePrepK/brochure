@@ -1,3 +1,5 @@
+//! Display helpers for Feed and Article types (rendering symbols and formatting).
+
 use super::{Article, Feed};
 use crate::ui::{BLUE, SUBTEXT0, YELLOW};
 use ratatui::prelude::Style;
@@ -14,6 +16,7 @@ impl Feed {
 }
 
 impl Article {
+    /// Returns a symbol indicating the article's read/saved state: filled/empty circle/square.
     pub fn get_icon(&self) -> &'static str {
         if self.is_saved {
             if self.is_read { "□ " } else { "■ " }
@@ -22,6 +25,7 @@ impl Article {
         }
     }
 
+    /// Returns the color for the article's state icon.
     pub fn get_icon_style(&self) -> Style {
         if self.is_saved {
             Style::default().fg(YELLOW)
