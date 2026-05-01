@@ -348,7 +348,7 @@ fn update_is_saved_flag(app: &mut App, is_saved: bool) {
 ///
 /// Handles regular feed, category, and saved-view contexts. Does nothing when content is
 /// already at full length.
-fn prefetch_article_if_stub(app: &mut App, tx: &UnboundedSender<AppEvent>) {
+pub(super) fn prefetch_article_if_stub(app: &mut App, tx: &UnboundedSender<AppEvent>) {
     if app.in_category_context {
         let (feed_idx, art_idx) = match app
             .category_view_articles

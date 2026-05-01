@@ -45,7 +45,13 @@ pub async fn handle_key(app: &mut App, key: KeyEvent, tx: &UnboundedSender<AppEv
         AppState::ArticleList | AppState::ArticleDetail => {
             return article::handle_article(app, key, tx).await;
         }
-        AppState::FeedList => return feed_list::handle_feed_list(app, key, tx),
+        AppState::FeedList => {
+            let should_quit = feed_list::handle_feed_list(app, key, tx);
+            if app.state == AppState::ArticleList {
+                article::prefetch_article_if_stub(app, tx);
+            }
+            return should_quit;
+        }
         AppState::SavedCategoryList => return feed_list::handle_saved_feed_list(app, key),
         AppState::FeedEditor | AppState::FeedEditorRename => {
             feed_editor::handle_feed_editor(app, key, tx)
