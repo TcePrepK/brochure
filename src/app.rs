@@ -240,13 +240,7 @@ impl App {
             article_title_start_tick: 0,
         };
 
-        // Sidebar cursor starts at 0 = AllFeeds; populate the all-feeds view immediately.
-        match initial_sidebar.first() {
-            Some(FeedTreeItem::AllFeeds) => app.populate_all_feeds_view(),
-            Some(FeedTreeItem::Category { id, .. }) => app.populate_category_view(*id),
-            _ => {}
-        }
-
+        app.populate_all_feeds_view();
         app
     }
 
@@ -272,6 +266,7 @@ impl App {
 
     /// Synchronise `state` and saved-context flags to match `selected_tab` after a tab switch.
     fn apply_tab_state(&mut self) {
+        self.clear_category_view();
         self.in_saved_context = false;
         self.state = match self.selected_tab {
             Tab::Feeds => AppState::FeedList,
