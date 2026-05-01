@@ -643,50 +643,18 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
                 } else {
                     Style::default().fg(TEXT)
                 };
-                // Compute short age string (e.g. " 42m", " 2h", " 3d") for display.
-                let age_str: Option<String> = article.published_secs.map(|secs| {
-                    let now = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .map(|d| d.as_secs() as i64)
-                        .unwrap_or(secs);
-                    let diff = (now - secs).max(0) as u64;
-                    if diff < 60 {
-                        " now".to_string()
-                    } else if diff < 3600 {
-                        format!(" {}m", diff / 60)
-                    } else if diff < 86400 {
-                        format!(" {}h", diff / 3600)
-                    } else {
-                        format!(" {}d", diff / 86400)
-                    }
-                });
-                let age_width = age_str.as_ref().map(|s| s.chars().count()).unwrap_or(0);
-
-                // Subtract icon width (2) and age width from available title space.
-                let title_available = (inner.width as usize)
-                    .saturating_sub(2)
-                    .saturating_sub(age_width);
+                let title_available = (inner.width as usize).saturating_sub(2);
                 let displayed_title = if is_selected {
                     let elapsed = app.tick.saturating_sub(app.article_title_start_tick);
                     scroll_title(&article.title, title_available, elapsed)
                 } else {
-                    truncate_title(&article.title, title_available)
+                    article.title.clone()
                 };
-
-                let mut spans = vec![
+                ListItem::new(Line::from(vec![
                     Span::styled(article.get_icon(), article.get_icon_style()),
                     Span::raw(displayed_title),
-                ];
-                if let Some(ref age) = age_str {
-                    spans.push(Span::styled(
-                        age.clone(),
-                        Style::default()
-                            .fg(age_color(article.published_secs.unwrap()))
-                            .add_modifier(Modifier::DIM),
-                    ));
-                }
-
-                ListItem::new(Line::from(spans)).style(style)
+                ]))
+                .style(style)
             })
             .collect();
 
