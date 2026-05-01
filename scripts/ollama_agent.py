@@ -17,7 +17,7 @@ import urllib.request
 import urllib.error
 
 OLLAMA_BASE = "http://localhost:11434"
-DEFAULT_MODEL = "qwen2.5-coder:7b"
+DEFAULT_MODEL = "gemma4:e4b"
 
 SYSTEM_PROMPT = (
     "You are a precise Rust code editor. You will receive a file and an instruction.\n"
