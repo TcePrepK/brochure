@@ -97,20 +97,20 @@ Break it into independent subtasks. For each subtask identify:
 
 Score each subtask on three axes (0–3 each), sum them, and map to a model:
 
-| Axis | 0 | 1 | 2 | 3 |
-|------|---|---|---|---|
-| **Scope** | One function body, no new items | Multi-fn or adds private items in one file | 1–2 files, may add pub items | 3+ files or pub API surface across modules |
-| **Context** | Fully specified — no reasoning needed | Follows a pattern visible in the same file | Cross-file pattern or touches module boundary | Needs architectural or convention knowledge |
-| **Risk** | UI, display logic, constants, doc comments | Business logic, handlers, standard data flow | `storage.rs`, `fetch.rs`, state transitions | `AppState`, `AppEvent`, event loop, persisted types |
+| Axis        | 0                                          | 1                                            | 2                                             | 3                                                   |
+|-------------|--------------------------------------------|----------------------------------------------|-----------------------------------------------|-----------------------------------------------------|
+| **Scope**   | One function body, no new items            | Multi-fn or adds private items in one file   | 1–2 files, may add pub items                  | 3+ files or pub API surface across modules          |
+| **Context** | Fully specified — no reasoning needed      | Follows a pattern visible in the same file   | Cross-file pattern or touches module boundary | Needs architectural or convention knowledge         |
+| **Risk**    | UI, display logic, constants, doc comments | Business logic, handlers, standard data flow | `storage.rs`, `fetch.rs`, state transitions   | `AppState`, `AppEvent`, event loop, persisted types |
 
 **Score → Model:**
 
-| Score | Model | Typical work |
-|-------|-------|--------------|
-| 0–2   | `ollama (local)` | Single-fn edits, private helpers, UI tweaks, constants |
+| Score | Model            | Typical work                                                    |
+|-------|------------------|-----------------------------------------------------------------|
+| 0–2   | `ollama (local)` | Single-fn edits, private helpers, UI tweaks, constants          |
 | 3–5   | `haiku`          | Read-only research, pub fn additions, cross-file pattern follow |
-| 6–7   | `sonnet`         | Multi-file logic, new handlers, state machine additions |
-| 8–9   | `opus`           | Architectural decisions, large refactors, new persisted types |
+| 6–7   | `sonnet`         | Multi-file logic, new handlers, state machine additions         |
+| 8–9   | `opus`           | Architectural decisions, large refactors, new persisted types   |
 
 **Scoring examples:**
 
@@ -123,10 +123,10 @@ Score each subtask on three axes (0–3 each), sum them, and map to a model:
 **Dispatch syntax for ollama tasks:**
 
 ```bash
-echo '{"file":"src/path/to/file.rs","instruction":"your instruction here","context_files":[]}' | python scripts/ollama_agent.py
+python scripts/ollama_agent.py --file src/path/to/file.rs --instruction "your instruction here"
 ```
 
-Default model is `gemma4:e4b`. Override with `--model <name>` if needed. Result is JSON
+Add `--context src/other.rs` for read-only reference files. Override model with `--model <name>`. Result is JSON
 `{"path": "...", "content": "..."}`. Apply with `Edit` or `Write` tool.
 
 **Fallback:** If `ollama_agent.py` returns `{"error": "..."}`, escalate the task to `haiku`. Never silently drop the
