@@ -108,7 +108,7 @@ fn draw_three_panel(f: &mut Frame, app: &mut App, right_area: Rect, is_preview: 
     // Carve shared footer from the bottom before splitting into panels.
     let rows = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(0), Constraint::Length(2)])
+        .constraints([Constraint::Min(0), Constraint::Length(1)])
         .split(right_area);
     let panels_area = rows[0];
     let footer_area = rows[1];
@@ -521,7 +521,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
     let (area, footer_area) = if show_footer {
         let cf = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(0), Constraint::Length(2)])
+            .constraints([Constraint::Min(0), Constraint::Length(1)])
             .split(area);
         (cf[0], cf[1])
     } else {
@@ -935,7 +935,8 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
 /// Unified footer renderer used by both `draw_article_list` and `draw_article_detail`.
 ///
 /// When `is_article_view` is `true`, renders article info (link, publish date, scroll %).
-/// When `is_article_view` is `false`, renders feed stats (URL, counts, fetch age).
+/// When `is_article_view` is `false`, renders feed stats (counts, fetch age) on a single row.
+/// `area` must be exactly 1 row tall.
 fn draw_article_footer(f: &mut Frame, app: &App, area: Rect, is_article_view: bool) {
     if is_article_view {
         // ── Article detail footer: link, publish date, scroll % ──
@@ -952,13 +953,6 @@ fn draw_article_footer(f: &mut Frame, app: &App, area: Rect, is_article_view: bo
                 .and_then(|f| f.articles.get(app.selected_article))
                 .cloned()
         };
-
-        let bar_block = Block::default()
-            .borders(Borders::TOP)
-            .border_style(Style::default().fg(SURFACE0))
-            .bg(BASE);
-        let bar_inner = bar_block.inner(area);
-        f.render_widget(bar_block, area);
 
         let Some(article) = article else { return };
 
@@ -996,7 +990,7 @@ fn draw_article_footer(f: &mut Frame, app: &App, area: Rect, is_article_view: bo
             let bar_chunks = Layout::default()
                 .direction(Direction::Horizontal)
                 .constraints([Constraint::Min(0), Constraint::Length(pct_width)])
-                .split(bar_inner);
+                .split(area);
             f.render_widget(
                 Paragraph::new(Line::from(link_spans)).bg(BASE),
                 bar_chunks[0],
@@ -1008,57 +1002,27 @@ fn draw_article_footer(f: &mut Frame, app: &App, area: Rect, is_article_view: bo
                 bar_chunks[1],
             );
         } else {
-            f.render_widget(Paragraph::new(Line::from(link_spans)).bg(BASE), bar_inner);
+            f.render_widget(Paragraph::new(Line::from(link_spans)).bg(BASE), area);
         }
     } else {
-        // ── Feed stats footer: URL, article count, unread, fetch age ──
+        // ── Feed stats footer: article count, unread, fetch age on a single row ──
         if app.in_category_context {
-            // Render a minimal footer for the category view.
-            let bar_block = Block::default()
-                .borders(Borders::TOP)
-                .border_style(Style::default().fg(SURFACE0))
-                .bg(BASE);
-            f.render_widget(bar_block, area);
             return;
         }
 
-        let (feed_url, articles, feed_updated_secs, last_fetched_secs): (
-            &str,
+        let (articles, feed_updated_secs, last_fetched_secs): (
             &[crate::models::Article],
             Option<i64>,
             Option<i64>,
         ) = if app.in_saved_context {
-            ("", app.saved_view_articles.as_slice(), None, None)
+            (app.saved_view_articles.as_slice(), None, None)
         } else {
             let feed = app.feeds.get(app.selected_feed);
-            let url: &str = feed.map(|f| f.url.as_str()).unwrap_or("");
             let updated = feed.and_then(|f| f.feed_updated_secs);
             let fetched = feed.and_then(|f| f.last_fetched_secs);
             let arts = feed.map(|f| f.articles.as_slice()).unwrap_or(&[]);
-            (url, arts, updated, fetched)
+            (arts, updated, fetched)
         };
-
-        // Info bar: separator + 2 rows (URL, stats).
-        let bar_block = Block::default()
-            .borders(Borders::TOP)
-            .border_style(Style::default().fg(SURFACE0))
-            .bg(BASE);
-        let bar_inner = bar_block.inner(area);
-        f.render_widget(bar_block, area);
-
-        let bar_rows = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Length(1), Constraint::Length(1)])
-            .split(bar_inner);
-
-        f.render_widget(
-            Paragraph::new(Line::from(vec![
-                Span::raw(" "),
-                Span::styled(feed_url, Style::default().fg(SUBTEXT0)),
-            ]))
-            .bg(BASE),
-            bar_rows[0],
-        );
 
         let article_count = articles.len();
         let unread_count = articles.iter().filter(|a| !a.is_read).count();
@@ -1095,11 +1059,10 @@ fn draw_article_footer(f: &mut Frame, app: &App, area: Rect, is_article_view: bo
                 ));
                 stat_spans.push(Span::styled(" ago", Style::default().fg(SUBTEXT0)));
             } else {
-                // "just now" — color the whole phrase
                 stat_spans.push(Span::styled(age, Style::default().fg(color)));
             }
         }
-        f.render_widget(Paragraph::new(Line::from(stat_spans)).bg(BASE), bar_rows[1]);
+        f.render_widget(Paragraph::new(Line::from(stat_spans)).bg(BASE), area);
     }
 }
 
@@ -1188,7 +1151,7 @@ pub(super) fn draw_article_detail(
     let (content_area, bar_area) = if show_footer {
         let layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(0), Constraint::Length(2)])
+            .constraints([Constraint::Min(0), Constraint::Length(1)])
             .split(inner_area);
         (layout[0], layout[1])
     } else {
