@@ -23,6 +23,14 @@ use super::{
     border_set, tree_connector, tree_indent,
 };
 
+/// Returns the accent color for the editor mode label — yellow during moves, green otherwise.
+fn editor_mode_color(mode: &FeedEditorMode) -> ratatui::style::Color {
+    match mode {
+        FeedEditorMode::Moving { .. } => YELLOW,
+        _ => GREEN,
+    }
+}
+
 /// Renders the full-screen feed editor with feeds and categories panels.
 pub(super) fn draw_feed_editor(f: &mut Frame, app: &mut App, area: Rect) {
     // Background-only outer block (no borders)
@@ -62,10 +70,7 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
     } else {
         ""
     };
-    let mode_color = match &app.editor_mode {
-        FeedEditorMode::Moving { .. } => YELLOW,
-        _ => GREEN,
-    };
+    let mode_color = editor_mode_color(&app.editor_mode);
 
     let border_color = if is_active { MAUVE } else { SURFACE0 };
     let block = Block::default()
@@ -156,25 +161,13 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
                 full_idx_to_visual.insert(full_idx, visual_idx);
                 visual_idx += 1;
 
-                // Inline rename input
+                // Inline rename/URL-edit input
                 if is_rename
                     && selected
-                    && matches!(app.editor_mode, FeedEditorMode::Renaming { .. })
-                {
-                    items.push(ListItem::new(Line::from(vec![
-                        Span::styled(indent, Style::default().fg(SURFACE0)),
-                        Span::styled(connector, connector_style),
-                        Span::styled("  ✎ ", Style::default().fg(GREEN)),
-                        Span::styled(app.editor_input.clone(), Style::default().fg(TEXT)),
-                        Span::styled("█", Style::default().fg(GREEN)),
-                    ])));
-                    continue;
-                }
-
-                // Inline URL edit input
-                if is_rename
-                    && selected
-                    && matches!(app.editor_mode, FeedEditorMode::EditingUrl { .. })
+                    && matches!(
+                        app.editor_mode,
+                        FeedEditorMode::Renaming { .. } | FeedEditorMode::EditingUrl { .. }
+                    )
                 {
                     items.push(ListItem::new(Line::from(vec![
                         Span::styled(indent, Style::default().fg(SURFACE0)),
@@ -347,10 +340,7 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
     } else {
         ""
     };
-    let mode_color = match &app.editor_mode {
-        FeedEditorMode::Moving { .. } => YELLOW,
-        _ => GREEN,
-    };
+    let mode_color = editor_mode_color(&app.editor_mode);
 
     let border_color = if is_active { MAUVE } else { SURFACE0 };
     let block = Block::default()
