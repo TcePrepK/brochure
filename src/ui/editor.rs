@@ -56,6 +56,7 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
             FeedEditorMode::Normal => "",
             FeedEditorMode::Moving { .. } => " MOVE — j/k navigate, Space drop, Esc cancel ",
             FeedEditorMode::Renaming { .. } => " RENAME ",
+            FeedEditorMode::EditingUrl { .. } => " EDIT URL ",
             _ => "",
         }
     } else {
@@ -84,6 +85,13 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
         ]));
     let inner = block.inner(area);
     f.render_widget(block, area);
+
+    let vert = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(0), Constraint::Length(1)])
+        .split(inner);
+    let list_area = vert[0];
+    let url_area = vert[1];
 
     let tree = visible_tree_items(&app.categories, &app.feeds, &app.editor_collapsed);
     let rounded = app.user_data.border_rounded;
@@ -160,6 +168,21 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
                     continue;
                 }
 
+                // Inline URL edit input
+                if is_rename
+                    && selected
+                    && matches!(app.editor_mode, FeedEditorMode::EditingUrl { .. })
+                {
+                    items.push(ListItem::new(Line::from(vec![
+                        Span::styled(indent, Style::default().fg(SURFACE0)),
+                        Span::styled(connector, connector_style),
+                        Span::styled("  ✎ ", Style::default().fg(GREEN)),
+                        Span::styled(app.editor_input.clone(), Style::default().fg(TEXT)),
+                        Span::styled("█", Style::default().fg(GREEN)),
+                    ])));
+                    continue;
+                }
+
                 let style = if is_on_origin {
                     Style::default().fg(SUBTEXT0).bg(SURFACE0)
                 } else if is_ghost {
@@ -196,7 +219,7 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
     if !has_any_feed {
         f.render_widget(
             Paragraph::new(" No feeds. Press [a] to add one.").style(Style::default().fg(SUBTEXT0)),
-            inner,
+            list_area,
         );
         return;
     }
@@ -259,9 +282,29 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
     }
     f.render_stateful_widget(
         List::new(final_items),
-        inner,
+        list_area,
         &mut app.editor_feeds_list_state,
     );
+
+    // URL footer: show the selected feed's URL when on a Feed item.
+    let url_text = if is_active {
+        tree.get(app.editor_cursor).and_then(|item| match item {
+            FeedTreeItem::Feed { feeds_idx, .. } => {
+                app.feeds.get(*feeds_idx).map(|f| f.url.clone())
+            }
+            _ => None,
+        })
+    } else {
+        None
+    };
+    if let Some(url) = url_text {
+        let max_chars = url_area.width as usize;
+        let truncated: String = url.chars().take(max_chars.saturating_sub(1)).collect();
+        f.render_widget(
+            Paragraph::new(format!(" {truncated}")).style(Style::default().fg(SUBTEXT0)),
+            url_area,
+        );
+    }
 }
 
 /// Render the right panel: categories-only tree with add/rename/delete controls.
@@ -296,6 +339,7 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
             }
             FeedEditorMode::Renaming { .. } => " RENAME ",
             FeedEditorMode::NewCategory { .. } => " NEW CATEGORY ",
+            FeedEditorMode::EditingUrl { .. } => " EDIT URL ",
         }
     } else {
         ""
