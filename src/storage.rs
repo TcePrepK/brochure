@@ -457,7 +457,6 @@ pub fn default_export_path() -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::models::{Article, UserData};
 
     fn stub_article(link: &str) -> Article {
