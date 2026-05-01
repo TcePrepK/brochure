@@ -180,10 +180,10 @@ pub(super) fn handle_confirm_clear_cache(app: &mut App, key: KeyEvent) {
         KeyCode::Enter => {
             let _ = clear_article_cache();
             app.article_cache_size = 0;
-            // Reset in-memory article state so feeds don't appear fetched
+            // Reset in-memory article state; keep fetched=true so spinner doesn't show
             for feed in app.feeds.iter_mut() {
                 feed.articles.clear();
-                feed.fetched = false;
+                feed.fetched = true;
                 feed.fetch_error = None;
                 feed.unread_count = 0;
             }
