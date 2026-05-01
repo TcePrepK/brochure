@@ -222,6 +222,8 @@ pub(super) fn handle_opml_path(app: &mut App, key: KeyEvent, tx: &UnboundedSende
                         let feed_count = new_feeds.len();
                         let cat_count = new_cats.len();
                         let first_new_idx = app.feeds.len();
+                        app.feeds_total += feed_count;
+                        app.feeds_pending += feed_count;
                         for (i, feed) in new_feeds.iter().enumerate() {
                             let tx2 = tx.clone();
                             let url = feed.url.clone();
