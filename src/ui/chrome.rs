@@ -141,7 +141,10 @@ pub(super) fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
         AppState::SavedCategoryEditor => {
             " [↑/↓] Navigate   [r] Rename   [d] Delete   [Esc] Back "
         }
-        AppState::SavedCategoryEditorRename => " [Enter] Confirm   [Esc] Cancel ",
+        AppState::SavedCategoryEditorRename | AppState::SavedCategoryEditorNew => {
+            " [Enter] Confirm   [Esc] Cancel "
+        }
+        AppState::SavedCategoryEditorDeleteConfirm => " [Enter] Confirm   [Esc] Cancel ",
         AppState::FeedList => {
             " [↑/↓] Navigate   [Space] Expand   [Enter] Open   [r] Refresh   [R] Fetch All   [e] Edit   [Tab/Shift+Tab] Switch Tab   [q] Quit "
         }
