@@ -241,14 +241,11 @@ fn draw_saved_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
     };
     items.push(ListItem::new(Line::from(vec![
         Span::styled("🞴 All Saved ", all_style),
-        Span::styled(format!("[{total_saved}]"), Style::default().fg(SUBTEXT0)),
+        format!("[{total_saved}]").fg(SUBTEXT0),
     ])));
 
     // Separator
-    items.push(ListItem::new(Line::from(Span::styled(
-        "──────────────",
-        Style::default().fg(SURFACE0),
-    ))));
+    items.push(ListItem::new(Line::from("──────────────".fg(SURFACE0))));
 
     // Category entries (cursor 1+)
     for (i, cat) in app.user_data.saved_categories.iter().enumerate() {
@@ -266,16 +263,15 @@ fn draw_saved_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
         };
         items.push(ListItem::new(Line::from(vec![
             Span::styled(format!("  {} ", cat.name), style),
-            Span::styled(format!("[{count}]"), Style::default().fg(SUBTEXT0)),
+            format!("[{count}]").fg(SUBTEXT0),
         ])));
     }
 
     // Empty state
     if app.user_data.saved_categories.is_empty() && app.user_data.saved_articles.is_empty() {
-        items.push(ListItem::new(Line::from(Span::styled(
-            "  No saved articles",
-            Style::default().fg(SUBTEXT0),
-        ))));
+        items.push(ListItem::new(Line::from(
+            "  No saved articles".fg(SUBTEXT0),
+        )));
     }
 
     let block = Block::default()
@@ -306,10 +302,7 @@ pub(super) fn draw_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(if is_navigating { MAUVE } else { SURFACE0 }))
         .bg(BASE)
-        .title(Span::styled(
-            " Feeds ",
-            Style::default().fg(BLUE).add_modifier(Modifier::BOLD),
-        ));
+        .title(" Feeds ".fg(BLUE).bold());
 
     let inner = block.inner(area);
     f.render_widget(block, area);
@@ -348,7 +341,7 @@ pub(super) fn draw_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
                     };
                     ListItem::new(Line::from(vec![
                         Span::styled("🞴 All Feeds ", style),
-                        Span::styled(format!("[{total_unread}]"), Style::default().fg(SUBTEXT0)),
+                        format!("[{total_unread}]").fg(SUBTEXT0),
                     ]))
                 }
                 FeedTreeItem::Category {
@@ -381,7 +374,7 @@ pub(super) fn draw_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
                         Style::default().fg(SURFACE0)
                     };
                     ListItem::new(Line::from(vec![
-                        Span::styled(indent, Style::default().fg(SURFACE0)),
+                        indent.fg(SURFACE0),
                         Span::styled(connector, connector_style),
                         Span::styled(cat_name, style),
                         Span::styled(arrow, style),
@@ -420,29 +413,23 @@ pub(super) fn draw_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
                         truncate_title(&feed.title, title_available)
                     };
                     let mut spans = vec![
-                        Span::styled(indent, Style::default().fg(SURFACE0)),
+                        indent.fg(SURFACE0),
                         Span::styled(connector, connector_style),
                         Span::styled(displayed_title, style),
-                        Span::styled(
-                            count_str,
-                            Style::default().fg(YELLOW).add_modifier(Modifier::BOLD),
-                        ),
+                        count_str.fg(YELLOW).bold(),
                     ];
                     if !feed.fetched
                         && feed.fetch_error.is_none()
                         && app.state != AppState::ArticleDetail
                     {
                         let spinner = SPINNER_FRAMES[app.tick % SPINNER_FRAMES.len()];
-                        spans.push(Span::styled(
-                            format!(" {spinner}"),
-                            Style::default().fg(YELLOW),
-                        ));
+                        spans.push(format!(" {spinner}").fg(YELLOW));
                     } else if feed.fetch_error.is_some() {
                         // ⚠ (red) when feed is empty — broken; ! (yellow) when stale cached data exists.
                         if feed.articles.is_empty() {
-                            spans.push(Span::styled(" ⚠", Style::default().fg(RED)));
+                            spans.push(" ⚠".fg(RED));
                         } else {
-                            spans.push(Span::styled(" !", Style::default().fg(YELLOW)));
+                            spans.push(" !".fg(YELLOW));
                         }
                     }
                     ListItem::new(Line::from(spans))
@@ -452,31 +439,7 @@ pub(super) fn draw_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
         .collect();
 
     app.sidebar_list_state.select(Some(cursor));
-    let total = tree.len();
-    let has_scrollbar = total > list_area.height as usize;
-    let list_render_area = if has_scrollbar {
-        Rect {
-            width: list_area.width.saturating_sub(1),
-            ..list_area
-        }
-    } else {
-        list_area
-    };
-    f.render_stateful_widget(
-        List::new(items),
-        list_render_area,
-        &mut app.sidebar_list_state,
-    );
-
-    if has_scrollbar {
-        let mut scrollbar_state = ScrollbarState::new(total).position(cursor);
-        f.render_stateful_widget(
-            Scrollbar::new(ScrollbarOrientation::VerticalRight)
-                .style(Style::default().fg(SURFACE0)),
-            list_area,
-            &mut scrollbar_state,
-        );
-    }
+    render_scrollable_list!(f, items, list_area, app.sidebar_list_state, cursor);
 
     if let Some(pb) = maybe_progress {
         super::chrome::draw_progress_bar(f, app, pb);
@@ -510,7 +473,7 @@ fn build_article_list_item(
 
     let mut title_spans: Vec<Span> = Vec::new();
     if article.published_secs.is_none() {
-        title_spans.push(Span::styled("⚠ ", Style::default().fg(YELLOW)));
+        title_spans.push("⚠ ".fg(YELLOW));
     }
     let title_available = (list_width as usize).saturating_sub(
         2 + age_width
@@ -528,12 +491,11 @@ fn build_article_list_item(
     };
     title_spans.push(Span::raw(displayed_title));
     if let Some(ref age) = age_str {
-        title_spans.push(Span::styled(
-            age.clone(),
-            Style::default()
+        title_spans.push(
+            age.clone()
                 .fg(age_color(article.published_secs.unwrap()))
-                .add_modifier(Modifier::DIM),
-        ));
+                .dim(),
+        );
     }
 
     ListItem::new(Line::from(
@@ -572,10 +534,7 @@ fn draw_category_article_list(f: &mut Frame, app: &mut App, area: Rect) {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(SURFACE0))
         .bg(BASE)
-        .title(Span::styled(
-            format!(" {} ", cat_name),
-            Style::default().fg(BLUE).add_modifier(Modifier::BOLD),
-        ));
+        .title(format!(" {} ", cat_name).fg(BLUE).bold());
 
     let inner = block.inner(content_area);
     f.render_widget(block, content_area);
@@ -625,12 +584,11 @@ fn draw_category_article_list(f: &mut Frame, app: &mut App, area: Rect) {
                 Span::raw(truncate_title(&article.title, title_available)),
             ];
             if let Some(ref age) = age_str {
-                spans.push(Span::styled(
-                    age.clone(),
-                    Style::default()
+                spans.push(
+                    age.clone()
                         .fg(age_color(article.published_secs.unwrap()))
-                        .add_modifier(Modifier::DIM),
-                ));
+                        .dim(),
+                );
             }
 
             ListItem::new(Line::from(spans)).style(style)
@@ -688,10 +646,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
             .borders(Borders::ALL)
             .border_style(Style::default().fg(if is_navigating { MAUVE } else { SURFACE0 }))
             .bg(BASE)
-            .title(Span::styled(
-                format!(" {} ", cat_name),
-                Style::default().fg(BLUE).add_modifier(Modifier::BOLD),
-            ));
+            .title(format!(" {} ", cat_name).fg(BLUE).bold());
         let inner = block.inner(area);
         f.render_widget(block, area);
 
@@ -739,31 +694,14 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
             })
             .collect();
 
-        let total = app.category_view_articles.len();
-        let has_scrollbar = total > inner.height as usize;
-        let list_render_area = if has_scrollbar {
-            Rect {
-                width: inner.width.saturating_sub(1),
-                ..inner
-            }
-        } else {
-            inner
-        };
         app.article_list_state.select(Some(app.selected_article));
-        f.render_stateful_widget(
-            List::new(items),
-            list_render_area,
-            &mut app.article_list_state,
+        render_scrollable_list!(
+            f,
+            items,
+            inner,
+            app.article_list_state,
+            app.selected_article
         );
-        if has_scrollbar {
-            let mut sb_state = ScrollbarState::new(total).position(app.selected_article);
-            f.render_stateful_widget(
-                Scrollbar::new(ScrollbarOrientation::VerticalRight)
-                    .style(Style::default().fg(SURFACE0)),
-                inner,
-                &mut sb_state,
-            );
-        }
         if show_footer {
             draw_article_footer(f, app, footer_area, false);
         }
@@ -821,10 +759,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
         .borders(Borders::ALL)
         .border_style(Style::default().fg(if is_navigating { MAUVE } else { SURFACE0 }))
         .bg(BASE)
-        .title(Span::styled(
-            feed_title,
-            Style::default().fg(BLUE).add_modifier(Modifier::BOLD),
-        ));
+        .title(feed_title.fg(BLUE).bold());
 
     let inner = block.inner(area);
     f.render_widget(block, area);
@@ -836,10 +771,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
             && let Some(feed) = app.feeds.get(app.selected_feed)
             && let Some(err) = &feed.fetch_error
         {
-            let text = Line::from(vec![
-                Span::styled(" ⚠ ", Style::default().fg(RED)),
-                Span::styled(err.clone(), Style::default().fg(TEXT)),
-            ]);
+            let text = Line::from(vec![" ⚠ ".fg(RED), err.clone().fg(TEXT)]);
             f.render_widget(
                 Paragraph::new(vec![text]).wrap(Wrap { trim: false }),
                 list_area,
@@ -883,10 +815,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
 
     // Add separator if there are archived articles
     if has_archived {
-        items.push(ListItem::new(Line::from(Span::styled(
-            " ── Archived ──",
-            Style::default().fg(SUBTEXT0),
-        ))));
+        items.push(ListItem::new(Line::from(" ── Archived ──".fg(SUBTEXT0))));
     }
 
     // Add archived articles
@@ -924,31 +853,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
         };
 
     app.article_list_state.select(Some(visual_selected));
-    let total = items.len();
-    let has_scrollbar = total > list_area.height as usize;
-    let list_render_area = if has_scrollbar {
-        Rect {
-            width: list_area.width.saturating_sub(1),
-            ..list_area
-        }
-    } else {
-        list_area
-    };
-    f.render_stateful_widget(
-        List::new(items),
-        list_render_area,
-        &mut app.article_list_state,
-    );
-
-    if has_scrollbar {
-        let mut scrollbar_state = ScrollbarState::new(total).position(visual_selected);
-        f.render_stateful_widget(
-            Scrollbar::new(ScrollbarOrientation::VerticalRight)
-                .style(Style::default().fg(SURFACE0)),
-            list_area,
-            &mut scrollbar_state,
-        );
-    }
+    render_scrollable_list!(f, items, list_area, app.article_list_state, visual_selected);
 
     if show_footer {
         draw_article_footer(f, app, footer_area, false);
@@ -967,22 +872,16 @@ fn draw_article_footer(f: &mut Frame, app: &App, area: Rect, is_article_view: bo
             return;
         };
 
-        let mut link_spans = vec![
-            Span::raw(" "),
-            Span::styled(article.link.clone(), Style::default().fg(SUBTEXT0)),
-        ];
+        let mut link_spans = vec![Span::raw(" "), article.link.clone().fg(SUBTEXT0)];
         if let Some(secs) = article.published_secs {
             let age = format_age(secs);
             let color = age_color(secs);
-            link_spans.push(Span::styled("  •  ", Style::default().fg(SUBTEXT0)));
+            link_spans.push("  •  ".fg(SUBTEXT0));
             if let Some(number_part) = age.strip_suffix(" ago") {
-                link_spans.push(Span::styled(
-                    number_part.to_string(),
-                    Style::default().fg(color),
-                ));
-                link_spans.push(Span::styled(" ago", Style::default().fg(SUBTEXT0)));
+                link_spans.push(number_part.to_string().fg(color));
+                link_spans.push(" ago".fg(SUBTEXT0));
             } else {
-                link_spans.push(Span::styled(age, Style::default().fg(color)));
+                link_spans.push(age.fg(color));
             }
         }
 
@@ -1034,11 +933,11 @@ fn draw_article_footer(f: &mut Frame, app: &App, area: Rect, is_article_view: bo
                 .count();
             let unread_color = if unread_count > 0 { YELLOW } else { GREEN };
             let stat_spans = vec![
-                Span::styled(" ", Style::default().fg(SUBTEXT0)),
-                Span::styled(article_count.to_string(), Style::default().fg(BLUE)),
-                Span::styled(" articles  •  ", Style::default().fg(SUBTEXT0)),
-                Span::styled(unread_count.to_string(), Style::default().fg(unread_color)),
-                Span::styled(" unread", Style::default().fg(SUBTEXT0)),
+                " ".fg(SUBTEXT0),
+                article_count.to_string().fg(BLUE),
+                " articles  •  ".fg(SUBTEXT0),
+                unread_count.to_string().fg(unread_color),
+                " unread".fg(SUBTEXT0),
             ];
             f.render_widget(Paragraph::new(Line::from(stat_spans)).bg(BASE), area);
             return;
@@ -1058,24 +957,21 @@ fn draw_article_footer(f: &mut Frame, app: &App, area: Rect, is_article_view: bo
         let unread_count = articles.iter().filter(|a| !a.is_read).count();
         let unread_color = if unread_count > 0 { YELLOW } else { GREEN };
         let mut stat_spans = vec![
-            Span::styled(" ", Style::default().fg(SUBTEXT0)),
-            Span::styled(article_count.to_string(), Style::default().fg(BLUE)),
-            Span::styled(" articles  •  ", Style::default().fg(SUBTEXT0)),
-            Span::styled(unread_count.to_string(), Style::default().fg(unread_color)),
-            Span::styled(" unread", Style::default().fg(SUBTEXT0)),
+            " ".fg(SUBTEXT0),
+            article_count.to_string().fg(BLUE),
+            " articles  •  ".fg(SUBTEXT0),
+            unread_count.to_string().fg(unread_color),
+            " unread".fg(SUBTEXT0),
         ];
         if let Some(secs) = last_fetched_secs {
             let age = format_age(secs);
             let color = age_color(secs);
-            stat_spans.push(Span::styled("  •  fetched ", Style::default().fg(SUBTEXT0)));
+            stat_spans.push("  •  fetched ".fg(SUBTEXT0));
             if let Some(number_part) = age.strip_suffix(" ago") {
-                stat_spans.push(Span::styled(
-                    number_part.to_string(),
-                    Style::default().fg(color),
-                ));
-                stat_spans.push(Span::styled(" ago", Style::default().fg(SUBTEXT0)));
+                stat_spans.push(number_part.to_string().fg(color));
+                stat_spans.push(" ago".fg(SUBTEXT0));
             } else {
-                stat_spans.push(Span::styled(age, Style::default().fg(color)));
+                stat_spans.push(age.fg(color));
             }
         }
         f.render_widget(Paragraph::new(Line::from(stat_spans)).bg(BASE), area);
@@ -1144,10 +1040,7 @@ pub(super) fn draw_article_detail(
         .borders(Borders::ALL)
         .border_style(Style::default().fg(if is_preview { SURFACE0 } else { MAUVE }))
         .bg(BASE)
-        .title(Span::styled(
-            detail_title,
-            Style::default().fg(MAUVE).add_modifier(Modifier::BOLD),
-        ));
+        .title(detail_title.fg(MAUVE).bold());
 
     let inner_area = block.inner(area);
     f.render_widget(block, area);
