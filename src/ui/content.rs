@@ -8,10 +8,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{
-        Block, Borders, List, ListItem, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState,
-        Wrap,
-    },
+    widgets::{List, ListItem, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap},
 };
 
 use ratatui::prelude::Stylize;
@@ -23,7 +20,7 @@ use crate::{
 
 use super::{
     BASE, BLUE, CATEGORY_COLORS, GREEN, MANTLE, MAUVE, RED, SPINNER_FRAMES, SUBTEXT0, SURFACE0,
-    TEXT, YELLOW, border_set, editor::draw_feed_editor, tree_connector, tree_indent,
+    TEXT, YELLOW, content_block, editor::draw_feed_editor, tree_connector, tree_indent,
 };
 
 /// Formats a Unix timestamp as a human-readable age string (e.g., "42m ago", "2d ago").
@@ -227,7 +224,6 @@ pub(super) fn draw_saved_tab(f: &mut Frame, app: &mut App, area: Rect) {
 /// Renders the saved-categories sidebar with "All Saved" entry, categories, and article counts.
 fn draw_saved_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
     let is_navigating = app.state == AppState::SavedCategoryList;
-    let rounded = app.user_data.border_rounded;
 
     let total_saved = app.user_data.saved_articles.len();
 
@@ -274,17 +270,7 @@ fn draw_saved_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
         )));
     }
 
-    let block = Block::default()
-        .title(" Saved ")
-        .borders(Borders::ALL)
-        .border_set(border_set(rounded))
-        .border_style(if is_navigating {
-            Style::default().fg(MAUVE)
-        } else {
-            Style::default().fg(SURFACE0)
-        })
-        .bg(BASE);
-
+    let block = content_block(" Saved ", is_navigating, app.user_data.border_rounded);
     let list = List::new(items).block(block);
     app.saved_sidebar_list_state
         .select(Some(app.saved_sidebar_cursor));
@@ -297,13 +283,11 @@ pub(super) fn draw_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
     let is_navigating = app.state == AppState::FeedList;
     let cursor = app.sidebar_cursor;
 
-    let block = Block::default()
-        .border_set(border_set(app.user_data.border_rounded))
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(if is_navigating { MAUVE } else { SURFACE0 }))
-        .bg(BASE)
-        .title(" Feeds ".fg(BLUE).bold());
-
+    let block = content_block(
+        " Feeds ".fg(BLUE).bold(),
+        is_navigating,
+        app.user_data.border_rounded,
+    );
     let inner = block.inner(area);
     f.render_widget(block, area);
 
@@ -529,13 +513,11 @@ fn draw_category_article_list(f: &mut Frame, app: &mut App, area: Rect) {
     let content_area = rows[0];
     let footer_area = rows[1];
 
-    let block = Block::default()
-        .border_set(border_set(app.user_data.border_rounded))
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(SURFACE0))
-        .bg(BASE)
-        .title(format!(" {} ", cat_name).fg(BLUE).bold());
-
+    let block = content_block(
+        format!(" {} ", cat_name).fg(BLUE).bold(),
+        false,
+        app.user_data.border_rounded,
+    );
     let inner = block.inner(content_area);
     f.render_widget(block, content_area);
 
@@ -641,12 +623,11 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
         };
 
         let is_navigating = app.state == AppState::ArticleList;
-        let block = Block::default()
-            .border_set(border_set(app.user_data.border_rounded))
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(if is_navigating { MAUVE } else { SURFACE0 }))
-            .bg(BASE)
-            .title(format!(" {} ", cat_name).fg(BLUE).bold());
+        let block = content_block(
+            format!(" {} ", cat_name).fg(BLUE).bold(),
+            is_navigating,
+            app.user_data.border_rounded,
+        );
         let inner = block.inner(area);
         f.render_widget(block, area);
 
@@ -710,15 +691,11 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
 
     // In the Saved tab but no category is selected (cursor on a category or nothing).
     if app.selected_tab == Tab::Saved && !app.in_saved_context {
-        let block = Block::default()
-            .border_set(border_set(app.user_data.border_rounded))
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(SURFACE0))
-            .bg(BASE)
-            .title(Span::styled(
-                " ★ Saved ",
-                Style::default().fg(BLUE).add_modifier(Modifier::BOLD),
-            ));
+        let block = content_block(
+            " ★ Saved ".fg(BLUE).bold(),
+            false,
+            app.user_data.border_rounded,
+        );
         let inner = block.inner(area);
         f.render_widget(block, area);
         f.render_widget(
@@ -754,12 +731,11 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
     };
 
     let is_navigating = app.state == AppState::ArticleList;
-    let block = Block::default()
-        .border_set(border_set(app.user_data.border_rounded))
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(if is_navigating { MAUVE } else { SURFACE0 }))
-        .bg(BASE)
-        .title(feed_title.fg(BLUE).bold());
+    let block = content_block(
+        feed_title.fg(BLUE).bold(),
+        is_navigating,
+        app.user_data.border_rounded,
+    );
 
     let inner = block.inner(area);
     f.render_widget(block, area);
@@ -991,11 +967,7 @@ pub(super) fn draw_article_detail(
 ) {
     let article = get_current_article(app);
     if article.is_none() && is_preview {
-        let block = Block::default()
-            .border_set(border_set(app.user_data.border_rounded))
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(SURFACE0))
-            .bg(BASE);
+        let block = content_block("", false, app.user_data.border_rounded);
         let inner = block.inner(area);
         f.render_widget(block, area);
         f.render_widget(
@@ -1035,13 +1007,11 @@ pub(super) fn draw_article_detail(
     } else {
         format!(" {}{age_suffix} ", article.title)
     };
-    let block = Block::default()
-        .border_set(border_set(app.user_data.border_rounded))
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(if is_preview { SURFACE0 } else { MAUVE }))
-        .bg(BASE)
-        .title(detail_title.fg(MAUVE).bold());
-
+    let block = content_block(
+        detail_title.fg(MAUVE).bold(),
+        !is_preview,
+        app.user_data.border_rounded,
+    );
     let inner_area = block.inner(area);
     f.render_widget(block, area);
 
@@ -1056,7 +1026,7 @@ pub(super) fn draw_article_detail(
     };
 
     // Convert images to inline text (![alt](url) → 🖼 alt), then strip hyperlinks.
-    let no_images = regex::Regex::new(r"!\[([^\]]*)\]\([^\)]+\)")
+    let no_images = regex::Regex::new(r"!\[([^]]*)]\([^)]+\)")
         .unwrap()
         .replace_all(&article.content, |caps: &regex::Captures| {
             let alt = caps[1].trim();

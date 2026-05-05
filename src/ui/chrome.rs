@@ -9,7 +9,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{List, ListItem, Paragraph},
 };
 
 use crate::{
@@ -19,7 +19,7 @@ use crate::{
 
 use ratatui::prelude::Stylize;
 
-use super::{BASE, GREEN, MANTLE, MAUVE, SUBTEXT0, SURFACE0, YELLOW, border_set};
+use super::{BASE, GREEN, MANTLE, MAUVE, SUBTEXT0, SURFACE0, YELLOW, content_block};
 
 /// Renders the top tab bar showing the currently selected tab, feed/article counts, and help text.
 pub(super) fn draw_tab_bar(f: &mut Frame, app: &App, area: Rect) {
@@ -73,11 +73,7 @@ pub(super) fn draw_tab_bar(f: &mut Frame, app: &App, area: Rect) {
     ]));
     let stats_width = stats.width() as u16;
 
-    let block = Block::default()
-        .border_set(border_set(app.user_data.border_rounded))
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(SURFACE0))
-        .bg(BASE);
+    let block = content_block("", false, app.user_data.border_rounded);
     let inner = block.inner(area);
     f.render_widget(block, area);
 
@@ -159,11 +155,7 @@ pub(super) fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
         AppState::Changelog => " [↑/↓] Scroll   [Tab/Shift+Tab] Switch Tab   [q] Quit ",
     };
 
-    let block = Block::default()
-        .border_set(border_set(app.user_data.border_rounded))
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(SURFACE0))
-        .bg(BASE);
+    let block = content_block("", false, app.user_data.border_rounded);
     let inner = block.inner(area);
     f.render_widget(block, area);
 

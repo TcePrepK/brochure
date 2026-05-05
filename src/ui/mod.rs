@@ -30,7 +30,7 @@ macro_rules! render_scrollable_list {
             let mut sb_state = ScrollbarState::new(total).position($cursor);
             $f.render_stateful_widget(
                 Scrollbar::new(ScrollbarOrientation::VerticalRight)
-                    .style(ratatui::style::Style::default().fg(SURFACE0)),
+                    .style(Style::default().fg(SURFACE0)),
                 $inner,
                 &mut sb_state,
             );
@@ -47,6 +47,9 @@ mod settings;
 
 use crate::app::App;
 use crate::models::{AppState, FeedTreeItem, Tab};
+use ratatui::prelude::{Line, Stylize};
+use ratatui::style::Style;
+use ratatui::widgets::{Block, Borders};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout},
@@ -171,17 +174,16 @@ pub(crate) fn tree_connector(
 ///
 /// `title` is shown in the top-left corner; `focused` controls border color (MAUVE vs SURFACE0).
 /// `rounded` controls border symbols (rounded vs plain).
-pub(crate) fn content_block(
-    title: &str,
-    focused: bool,
-    rounded: bool,
-) -> ratatui::widgets::Block<'_> {
-    use ratatui::widgets::{Block, Borders};
+pub(crate) fn content_block<'a, T>(title: T, focused: bool, rounded: bool) -> Block<'a>
+where
+    T: Into<Line<'a>>,
+{
     Block::default()
         .title(title)
         .borders(Borders::ALL)
         .border_set(border_set(rounded))
-        .border_style(ratatui::style::Style::default().fg(if focused { MAUVE } else { SURFACE0 }))
+        .border_style(Style::default().fg(if focused { MAUVE } else { SURFACE0 }))
+        .bg(BASE)
 }
 
 /// Top-level draw dispatcher that renders the entire UI frame.

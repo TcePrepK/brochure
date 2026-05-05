@@ -22,7 +22,7 @@ use crate::{
     models::{AddFeedStep, AppState, CategoryId},
 };
 
-use super::{BASE, BLUE, GREEN, MAUVE, RED, SUBTEXT0, SURFACE0, TEXT, border_set};
+use super::{BASE, BLUE, GREEN, MAUVE, RED, SUBTEXT0, SURFACE0, TEXT, border_set, content_block};
 
 /// Renders the add-feed popup with URL and title input fields.
 pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
@@ -273,15 +273,11 @@ pub(super) fn draw_opml_path_popup(f: &mut Frame, app: &App) {
         .split(vertical[1])[1];
 
     f.render_widget(Clear, center);
-    let block = Block::default()
-        .border_set(border_set(app.user_data.border_rounded))
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(MAUVE))
-        .bg(BASE)
-        .title(Span::styled(
-            title,
-            Style::default().fg(BLUE).add_modifier(Modifier::BOLD),
-        ));
+    let block = content_block(
+        title.fg(BLUE).bold(),
+        true,
+        app.user_data.border_rounded,
+    );
 
     f.render_widget(
         Paragraph::new(app.opml_path_input.clone())
@@ -331,15 +327,9 @@ pub(super) fn draw_category_picker(f: &mut Frame, app: &App) {
         height,
     };
 
-    let rounded = app.user_data.border_rounded;
-    let block = Block::default()
-        .title(" Save Article To… ")
-        .borders(Borders::ALL)
-        .border_set(border_set(rounded))
-        .border_style(Style::default().fg(MAUVE))
-        .style(Style::default().bg(BASE));
+    let block = content_block(" Save Article To… ", true, app.user_data.border_rounded);
 
-    f.render_widget(ratatui::widgets::Clear, popup_area);
+    f.render_widget(Clear, popup_area);
     f.render_widget(block.clone(), popup_area);
 
     let inner = block.inner(popup_area);
@@ -478,15 +468,7 @@ pub(super) fn draw_update_popup(f: &mut Frame, app: &App) {
         format!("  Update Available — v{latest}  ({count} new versions) ")
     };
 
-    let block = Block::default()
-        .border_set(border_set(app.user_data.border_rounded))
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(MAUVE))
-        .bg(BASE)
-        .title(Span::styled(
-            title,
-            Style::default().fg(MAUVE).add_modifier(Modifier::BOLD),
-        ));
+    let block = content_block(title.fg(MAUVE).bold(), true, app.user_data.border_rounded);
 
     // Inner area split: scrollable content (top) + dismiss hint (bottom, 1 line)
     let inner = block.inner(popup_area);

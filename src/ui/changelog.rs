@@ -9,12 +9,12 @@ use ratatui::{
     prelude::Stylize,
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph},
+    widgets::Paragraph,
 };
 
 use crate::app::App;
 
-use super::{BASE, BLUE, MAUVE, PEACH, SUBTEXT0, SURFACE0, TEXT, border_set};
+use super::{BASE, BLUE, MAUVE, PEACH, SUBTEXT0, SURFACE0, TEXT, content_block};
 
 const CHANGELOG_JSON: &str = include_str!("../../changelog.json");
 
@@ -41,13 +41,11 @@ pub(super) fn draw_changelog_tab(f: &mut Frame, app: &mut App, area: Rect) {
 fn draw_about_block(f: &mut Frame, app: &App, area: Rect) {
     let version = env!("CARGO_PKG_VERSION");
 
-    let block = Block::default()
-        .border_set(border_set(app.user_data.border_rounded))
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(SURFACE0))
-        .title(" About ")
-        .title_style(Style::default().fg(PEACH))
-        .bg(BASE);
+    let block = content_block(
+        " About ".fg(PEACH).bold(),
+        false,
+        app.user_data.border_rounded,
+    );
     let inner = block.inner(area);
     f.render_widget(block, area);
 
@@ -101,13 +99,11 @@ fn draw_about_block(f: &mut Frame, app: &App, area: Rect) {
 
 /// Renders the scrollable changelog entries block.
 fn draw_changelog_block(f: &mut Frame, app: &mut App, area: Rect) {
-    let block = Block::default()
-        .border_set(border_set(app.user_data.border_rounded))
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(MAUVE))
-        .title(" Changelog ")
-        .title_style(Style::default().fg(PEACH))
-        .bg(BASE);
+    let block = content_block(
+        " Changelog ".fg(PEACH).bold(),
+        true,
+        app.user_data.border_rounded,
+    );
     let inner = block.inner(area);
     f.render_widget(block, area);
 
