@@ -8,9 +8,7 @@ use ratatui::{
     layout::Rect,
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{
-        Block, Borders, List, ListItem, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState,
-    },
+    widgets::{Block, Borders, List, ListItem, Paragraph},
 };
 
 use ratatui::prelude::Stylize;
@@ -174,11 +172,8 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
                     " ├─"
                 };
                 ListItem::new(Line::from(vec![
-                    Span::styled(connector, Style::default().fg(SURFACE0)),
-                    Span::styled(
-                        *label,
-                        Style::default().fg(PEACH).add_modifier(Modifier::BOLD),
-                    ),
+                    connector.fg(SURFACE0),
+                    label.fg(PEACH).bold(),
                 ]))
             }
             Row::Item {
@@ -197,7 +192,7 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
                     Style::default().fg(TEXT)
                 };
                 ListItem::new(Line::from(vec![
-                    Span::styled(prefix, Style::default().fg(SURFACE0)),
+                    prefix.fg(SURFACE0),
                     Span::styled(*label, style),
                 ]))
             }
@@ -228,7 +223,7 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
                     Style::default().fg(SUBTEXT0)
                 };
                 ListItem::new(Line::from(vec![
-                    Span::styled(prefix, Style::default().fg(SURFACE0)),
+                    prefix.fg(SURFACE0),
                     Span::styled(*label, base_style),
                     Span::styled(if *on { "  ON " } else { "  OFF " }, badge_style),
                 ]))
@@ -258,7 +253,7 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
                     Style::default().fg(YELLOW).add_modifier(Modifier::BOLD)
                 };
                 ListItem::new(Line::from(vec![
-                    Span::styled(prefix, Style::default().fg(SURFACE0)),
+                    prefix.fg(SURFACE0),
                     Span::styled(*label, base_style),
                     Span::styled(format!("  {}", value), badge_style),
                 ]))
@@ -286,15 +281,12 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
                     Style::default().fg(RED)
                 };
                 ListItem::new(Line::from(vec![
-                    Span::styled(prefix, Style::default().fg(SURFACE0)),
+                    prefix.fg(SURFACE0),
                     Span::styled("[ Clear Article Cache ]", base_style),
                     Span::styled(format!("  {} ", size_label), badge_style),
                 ]))
             }
-            Row::Spacer => ListItem::new(Line::from(Span::styled(
-                " │",
-                Style::default().fg(SURFACE0),
-            ))),
+            Row::Spacer => ListItem::new(Line::from(" │".fg(SURFACE0))),
         })
         .collect();
 
@@ -307,10 +299,7 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
             SURFACE0
         }))
         .bg(BASE)
-        .title(Span::styled(
-            " Settings ",
-            Style::default().fg(PEACH).add_modifier(Modifier::BOLD),
-        ));
+        .title(" Settings ".fg(PEACH).bold());
 
     f.render_widget(List::new(list_items).block(block), area);
 }
@@ -374,30 +363,13 @@ pub(super) fn draw_saved_category_editor(f: &mut Frame, app: &mut App, area: Rec
         })
         .collect();
 
-    let total = app.user_data.saved_categories.len();
-    let has_scrollbar = total > inner.height as usize;
-    let list_render_area = if has_scrollbar {
-        Rect {
-            width: inner.width.saturating_sub(1),
-            ..inner
-        }
-    } else {
-        inner
-    };
-    f.render_stateful_widget(
-        List::new(items),
-        list_render_area,
-        &mut app.saved_cat_editor_scroll.list_state,
+    render_scrollable_list!(
+        f,
+        items,
+        inner,
+        app.saved_cat_editor_scroll.list_state,
+        app.saved_cat_editor_scroll.cursor
     );
-    if has_scrollbar {
-        let mut sb_state = ScrollbarState::new(total).position(app.saved_cat_editor_scroll.cursor);
-        f.render_stateful_widget(
-            Scrollbar::new(ScrollbarOrientation::VerticalRight)
-                .style(Style::default().fg(super::SURFACE0)),
-            inner,
-            &mut sb_state,
-        );
-    }
 
     // Render input row when creating a new category.
     if app.state == AppState::SavedCategoryEditorNew {

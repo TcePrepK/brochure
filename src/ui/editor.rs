@@ -79,14 +79,8 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
         .border_style(Style::default().fg(border_color))
         .bg(BASE)
         .title(Line::from(vec![
-            Span::styled(
-                " Feeds ",
-                Style::default().fg(BLUE).add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(
-                mode_label,
-                Style::default().fg(mode_color).add_modifier(Modifier::BOLD),
-            ),
+            " Feeds ".fg(BLUE).bold(),
+            mode_label.fg(mode_color).bold(),
         ]));
     let inner = block.inner(area);
     f.render_widget(block, area);
@@ -133,12 +127,9 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
                 // During a feed move the drop-preview arrow (inserted after) shows the target.
                 full_idx_to_visual.insert(full_idx, visual_idx);
                 items.push(ListItem::new(Line::from(vec![
-                    Span::styled(indent, Style::default().fg(SURFACE0)),
-                    Span::styled(connector, Style::default().fg(SURFACE0)),
-                    Span::styled(
-                        format!("{cat_name} {icon}"),
-                        Style::default().fg(color).add_modifier(Modifier::BOLD),
-                    ),
+                    indent.fg(SURFACE0),
+                    connector.fg(SURFACE0),
+                    format!("{cat_name} {icon}").fg(color).bold(),
                 ])));
                 visual_idx += 1;
             }
@@ -170,11 +161,11 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
                     )
                 {
                     items.push(ListItem::new(Line::from(vec![
-                        Span::styled(indent, Style::default().fg(SURFACE0)),
+                        indent.fg(SURFACE0),
                         Span::styled(connector, connector_style),
-                        Span::styled("  ✎ ", Style::default().fg(GREEN)),
-                        Span::styled(app.editor_input.clone(), Style::default().fg(TEXT)),
-                        Span::styled("█", Style::default().fg(GREEN)),
+                        "  ✎ ".fg(GREEN),
+                        app.editor_input.clone().fg(TEXT),
+                        "█".fg(GREEN),
                     ])));
                     continue;
                 }
@@ -202,11 +193,11 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
                 };
 
                 items.push(ListItem::new(Line::from(vec![
-                    Span::styled(indent, Style::default().fg(SURFACE0)),
+                    indent.fg(SURFACE0),
                     Span::styled(connector, connector_style),
                     drop_marker,
                     Span::styled(format!("{}{origin_hint}", feed.title), style),
-                    Span::styled(feed.unread_badge(), Style::default().fg(YELLOW)),
+                    feed.unread_badge().fg(YELLOW),
                 ])));
             }
         }
@@ -239,20 +230,11 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
                     let indent = tree_indent(&tree, origin, *depth);
                     let connector = tree_connector(&tree, origin, *depth, rounded, "   ");
                     Some(ListItem::new(Line::from(vec![
-                        Span::styled(indent, Style::default().fg(SURFACE0)),
-                        Span::styled(
-                            connector,
-                            Style::default().fg(YELLOW).add_modifier(Modifier::BOLD),
-                        ),
-                        Span::styled(
-                            "➤ ",
-                            Style::default().fg(YELLOW).add_modifier(Modifier::BOLD),
-                        ),
-                        Span::styled(
-                            f.title.clone(),
-                            Style::default().fg(YELLOW).add_modifier(Modifier::BOLD),
-                        ),
-                        Span::styled(f.unread_badge(), Style::default().fg(YELLOW)),
+                        indent.fg(SURFACE0),
+                        connector.fg(YELLOW).bold(),
+                        "➤ ".fg(YELLOW).bold(),
+                        f.title.clone().fg(YELLOW).bold(),
+                        f.unread_badge().fg(YELLOW),
                     ])))
                 }
                 _ => None,
@@ -349,14 +331,8 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
         .border_style(Style::default().fg(border_color))
         .bg(BASE)
         .title(Line::from(vec![
-            Span::styled(
-                " Categories ",
-                Style::default().fg(BLUE).add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(
-                mode_label,
-                Style::default().fg(mode_color).add_modifier(Modifier::BOLD),
-            ),
+            " Categories ".fg(BLUE).bold(),
+            mode_label.fg(mode_color).bold(),
         ]));
     let inner = block.inner(area);
     f.render_widget(block, area);
@@ -412,11 +388,11 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
             // Rename input row
             if renamed_cat_id == Some(*id) {
                 return ListItem::new(Line::from(vec![
-                    Span::styled(indent, Style::default().fg(SURFACE0)),
-                    Span::styled(connector, Style::default().fg(SURFACE0)),
-                    Span::styled("  ✎ ", Style::default().fg(color)),
-                    Span::styled(app.editor_input.clone(), Style::default().fg(TEXT)),
-                    Span::styled("█", Style::default().fg(color)),
+                    indent.fg(SURFACE0),
+                    connector.fg(SURFACE0),
+                    "  ✎ ".fg(color),
+                    app.editor_input.clone().fg(TEXT),
+                    "█".fg(color),
                 ]));
             }
 
@@ -459,7 +435,7 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
             };
 
             ListItem::new(Line::from(vec![
-                Span::styled(indent, Style::default().fg(SURFACE0)),
+                indent.fg(SURFACE0),
                 Span::styled(connector, connector_style),
                 Span::styled(format!("{cat_name} {icon}"), style),
                 Span::styled(badge, badge_style),
@@ -486,10 +462,10 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
         final_items.insert(
             insert_at,
             ListItem::new(Line::from(vec![
-                Span::styled(indent, Style::default().fg(SURFACE0)),
-                Span::styled("  ✎ ", Style::default().fg(GREEN)),
-                Span::styled(app.editor_input.clone(), Style::default().fg(TEXT)),
-                Span::styled("█", Style::default().fg(GREEN)),
+                indent.fg(SURFACE0),
+                "  ✎ ".fg(GREEN),
+                app.editor_input.clone().fg(TEXT),
+                "█".fg(GREEN),
             ])),
         );
     }
@@ -522,15 +498,9 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
             let preview_depth = (cursor_depth + depth_delta).max(0) as u8;
             let indent = "  ".repeat(preview_depth as usize);
             let preview = ListItem::new(Line::from(vec![
-                Span::styled(indent, Style::default().fg(SURFACE0)),
-                Span::styled(
-                    "➤ ",
-                    Style::default().fg(YELLOW).add_modifier(Modifier::BOLD),
-                ),
-                Span::styled(
-                    format!("{src_name} ▼"),
-                    Style::default().fg(YELLOW).add_modifier(Modifier::BOLD),
-                ),
+                indent.fg(SURFACE0),
+                "➤ ".fg(YELLOW).bold(),
+                format!("{src_name} ▼").fg(YELLOW).bold(),
             ]));
             let insert_at = (cursor + 1).min(final_items.len());
             final_items.insert(insert_at, preview);

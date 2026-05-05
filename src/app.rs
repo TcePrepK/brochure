@@ -163,6 +163,36 @@ fn sort_articles_by_date(triples: &mut [(usize, usize, Option<i64>)]) {
     });
 }
 
+// ── Navigation macros ──────────────────────────────────────────────────────
+
+/// Advance a cursor index forward, wrapping or clamping based on `$loop`.
+/// Exits the calling function early (via `return`) when already at the end and not looping.
+macro_rules! cursor_next {
+    ($cursor:expr, $len:expr, $loop:expr) => {
+        if $loop {
+            $cursor = ($cursor + 1) % $len;
+        } else if $cursor < $len - 1 {
+            $cursor += 1;
+        } else {
+            return;
+        }
+    };
+}
+
+/// Retreat a cursor index backward, wrapping or clamping based on `$loop`.
+/// Exits the calling function early (via `return`) when already at the start and not looping.
+macro_rules! cursor_prev {
+    ($cursor:expr, $len:expr, $loop:expr) => {
+        if $loop {
+            $cursor = $cursor.checked_sub(1).unwrap_or($len - 1);
+        } else if $cursor > 0 {
+            $cursor -= 1;
+        } else {
+            return;
+        }
+    };
+}
+
 impl App {
     /// Construct a fresh `App`, loading feeds, categories, and user data from disk.
     pub fn new() -> Self {
@@ -307,68 +337,10 @@ impl App {
     /// Advance selection forward (wraps around).
     pub fn next(&mut self) {
         match self.state {
-            AppState::FeedList => {
-                let items =
-                    sidebar_tree_items(&self.categories, &self.feeds, &self.sidebar_collapsed);
-                if items.is_empty() {
-                    return;
-                }
-
-                if self.user_data.scroll_loop {
-                    self.sidebar_cursor = (self.sidebar_cursor + 1) % items.len();
-                } else if self.sidebar_cursor < items.len() - 1 {
-                    self.sidebar_cursor += 1;
-                } else {
-                    return;
-                }
-                self.sidebar_title_start_tick = self.tick;
-                match items.get(self.sidebar_cursor) {
-                    Some(FeedTreeItem::AllFeeds) => {
-                        self.populate_all_feeds_view();
-                    }
-                    Some(FeedTreeItem::Feed { feeds_idx, .. }) => {
-                        self.selected_feed = *feeds_idx;
-                        self.selected_article = 0;
-                        self.clear_category_view();
-                    }
-                    Some(FeedTreeItem::Category { id, .. }) => {
-                        self.populate_category_view(*id);
-                    }
-                    None => {}
-                }
-            }
-            AppState::ArticleList => {
-                let len = if self.in_category_context {
-                    self.category_view_articles.len()
-                } else if self.in_saved_context {
-                    self.saved_view_articles.len()
-                } else {
-                    self.feeds
-                        .get(self.selected_feed)
-                        .map_or(0, |f| f.articles.len())
-                };
-                if len > 0 {
-                    if self.user_data.scroll_loop {
-                        self.selected_article = (self.selected_article + 1) % len;
-                    } else {
-                        self.selected_article = (self.selected_article + 1).min(len - 1);
-                    }
-                    self.article_title_start_tick = self.tick;
-                }
-            }
-            AppState::SettingsList => {
-                self.settings_selected = self.settings_selected.next();
-            }
-            AppState::SavedCategoryList => {
-                let count = 1 + self.user_data.saved_categories.len();
-                if self.user_data.scroll_loop {
-                    self.saved_sidebar_cursor = (self.saved_sidebar_cursor + 1) % count;
-                } else {
-                    self.saved_sidebar_cursor = (self.saved_sidebar_cursor + 1).min(count - 1);
-                }
-                self.sidebar_title_start_tick = self.tick;
-                self.sync_saved_preview();
-            }
+            AppState::FeedList => self.move_sidebar_cursor(true),
+            AppState::ArticleList => self.move_article_cursor(true),
+            AppState::SettingsList => self.settings_selected = self.settings_selected.next(),
+            AppState::SavedCategoryList => self.move_saved_cursor(true),
             AppState::FeedEditor => {
                 if self.editor_panel == EditorPanel::Categories {
                     let cats = visible_cat_only_items(
@@ -424,76 +396,10 @@ impl App {
     /// Advance selection backward (wraps around).
     pub fn previous(&mut self) {
         match self.state {
-            AppState::FeedList => {
-                let items =
-                    sidebar_tree_items(&self.categories, &self.feeds, &self.sidebar_collapsed);
-                if items.is_empty() {
-                    return;
-                }
-
-                if self.user_data.scroll_loop {
-                    self.sidebar_cursor = self
-                        .sidebar_cursor
-                        .checked_sub(1)
-                        .unwrap_or(items.len() - 1);
-                } else if self.sidebar_cursor > 0 {
-                    self.sidebar_cursor -= 1;
-                } else {
-                    return;
-                }
-                self.sidebar_title_start_tick = self.tick;
-
-                match items.get(self.sidebar_cursor) {
-                    Some(FeedTreeItem::AllFeeds) => {
-                        self.populate_all_feeds_view();
-                    }
-                    Some(FeedTreeItem::Feed { feeds_idx, .. }) => {
-                        self.selected_feed = *feeds_idx;
-                        self.selected_article = 0;
-                        self.clear_category_view();
-                    }
-                    Some(FeedTreeItem::Category { id, .. }) => {
-                        self.populate_category_view(*id);
-                    }
-                    None => {}
-                }
-            }
-            AppState::ArticleList => {
-                let len = if self.in_category_context {
-                    self.category_view_articles.len()
-                } else if self.in_saved_context {
-                    self.saved_view_articles.len()
-                } else {
-                    self.feeds
-                        .get(self.selected_feed)
-                        .map_or(0, |f| f.articles.len())
-                };
-                if len > 0 {
-                    if self.user_data.scroll_loop {
-                        self.selected_article =
-                            self.selected_article.checked_sub(1).unwrap_or(len - 1);
-                    } else {
-                        self.selected_article = self.selected_article.saturating_sub(1);
-                    }
-                    self.article_title_start_tick = self.tick;
-                }
-            }
-            AppState::SettingsList => {
-                self.settings_selected = self.settings_selected.prev();
-            }
-            AppState::SavedCategoryList => {
-                let count = 1 + self.user_data.saved_categories.len();
-                if self.user_data.scroll_loop {
-                    self.saved_sidebar_cursor = self
-                        .saved_sidebar_cursor
-                        .checked_sub(1)
-                        .unwrap_or(count - 1);
-                } else {
-                    self.saved_sidebar_cursor = self.saved_sidebar_cursor.saturating_sub(1);
-                }
-                self.sidebar_title_start_tick = self.tick;
-                self.sync_saved_preview();
-            }
+            AppState::FeedList => self.move_sidebar_cursor(false),
+            AppState::ArticleList => self.move_article_cursor(false),
+            AppState::SettingsList => self.settings_selected = self.settings_selected.prev(),
+            AppState::SavedCategoryList => self.move_saved_cursor(false),
             AppState::FeedEditor => {
                 if self.editor_panel == EditorPanel::Categories {
                     let cats = visible_cat_only_items(
@@ -548,6 +454,95 @@ impl App {
             }
             _ => {}
         }
+    }
+
+    /// Move the sidebar (FeedList) cursor forward or backward one step.
+    ///
+    /// Rebuilds the visible tree, advances or retreats `sidebar_cursor` with wrap/clamp
+    /// according to `scroll_loop`, then updates the article preview to match the new item.
+    /// Returns early without resetting the tick if already at the boundary and not looping.
+    fn move_sidebar_cursor(&mut self, forward: bool) {
+        let items = sidebar_tree_items(&self.categories, &self.feeds, &self.sidebar_collapsed);
+        if items.is_empty() {
+            return;
+        }
+        let len = items.len();
+        let loop_ = self.user_data.scroll_loop;
+        if forward {
+            cursor_next!(self.sidebar_cursor, len, loop_);
+        } else {
+            cursor_prev!(self.sidebar_cursor, len, loop_);
+        }
+        self.sidebar_title_start_tick = self.tick;
+        match items.get(self.sidebar_cursor) {
+            Some(FeedTreeItem::AllFeeds) => self.populate_all_feeds_view(),
+            Some(FeedTreeItem::Feed { feeds_idx, .. }) => {
+                self.selected_feed = *feeds_idx;
+                self.selected_article = 0;
+                self.clear_category_view();
+            }
+            Some(FeedTreeItem::Category { id, .. }) => self.populate_category_view(*id),
+            None => {}
+        }
+    }
+
+    /// Move the article list cursor forward or backward one step.
+    ///
+    /// Determines the article count from whichever context is active (category, saved, or feed),
+    /// then advances or retreats `selected_article`. Always resets the title animation tick,
+    /// even when already at a boundary (clamp behaviour when not looping).
+    fn move_article_cursor(&mut self, forward: bool) {
+        let len = if self.in_category_context {
+            self.category_view_articles.len()
+        } else if self.in_saved_context {
+            self.saved_view_articles.len()
+        } else {
+            self.feeds
+                .get(self.selected_feed)
+                .map_or(0, |f| f.articles.len())
+        };
+        if len == 0 {
+            return;
+        }
+        let loop_ = self.user_data.scroll_loop;
+        if forward {
+            if loop_ {
+                self.selected_article = (self.selected_article + 1) % len;
+            } else {
+                self.selected_article = (self.selected_article + 1).min(len - 1);
+            }
+        } else if loop_ {
+            self.selected_article = self.selected_article.checked_sub(1).unwrap_or(len - 1);
+        } else {
+            self.selected_article = self.selected_article.saturating_sub(1);
+        }
+        self.article_title_start_tick = self.tick;
+    }
+
+    /// Move the saved-categories sidebar cursor forward or backward one step.
+    ///
+    /// Advances or retreats `saved_sidebar_cursor` with wrap/clamp according to `scroll_loop`,
+    /// resets the sidebar title animation tick, and refreshes the saved article preview.
+    /// Always resets the tick and calls `sync_saved_preview`, even at a boundary when clamping.
+    fn move_saved_cursor(&mut self, forward: bool) {
+        let count = 1 + self.user_data.saved_categories.len();
+        let loop_ = self.user_data.scroll_loop;
+        if forward {
+            if loop_ {
+                self.saved_sidebar_cursor = (self.saved_sidebar_cursor + 1) % count;
+            } else {
+                self.saved_sidebar_cursor = (self.saved_sidebar_cursor + 1).min(count - 1);
+            }
+        } else if loop_ {
+            self.saved_sidebar_cursor = self
+                .saved_sidebar_cursor
+                .checked_sub(1)
+                .unwrap_or(count - 1);
+        } else {
+            self.saved_sidebar_cursor = self.saved_sidebar_cursor.saturating_sub(1);
+        }
+        self.sidebar_title_start_tick = self.tick;
+        self.sync_saved_preview();
     }
 
     /// Descend into the next layer of the navigation hierarchy.

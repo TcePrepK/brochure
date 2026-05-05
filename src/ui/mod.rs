@@ -3,6 +3,41 @@
 //! This module owns all rendering logic, including Catppuccin Mocha color constants,
 //! tree indentation helpers, and the main `draw()` function that dispatches to per-tab renderers.
 
+// ── Shared rendering macros ──────────────────────────────────────────────────
+/// Render a list with an optional vertical scrollbar.
+///
+/// When item count exceeds `$inner.height`, reserves 1 column for the scrollbar
+/// and renders a `ScrollbarState` positioned at `$cursor`.
+macro_rules! render_scrollable_list {
+    ($f:expr, $items:expr, $inner:expr, $list_state:expr, $cursor:expr) => {{
+        use ratatui::widgets::{Scrollbar, ScrollbarOrientation, ScrollbarState};
+        let total = $items.len();
+        let has_scrollbar = total > $inner.height as usize;
+        let list_render_area = if has_scrollbar {
+            ratatui::layout::Rect {
+                width: $inner.width.saturating_sub(1),
+                ..$inner
+            }
+        } else {
+            $inner
+        };
+        $f.render_stateful_widget(
+            ratatui::widgets::List::new($items),
+            list_render_area,
+            &mut $list_state,
+        );
+        if has_scrollbar {
+            let mut sb_state = ScrollbarState::new(total).position($cursor);
+            $f.render_stateful_widget(
+                Scrollbar::new(ScrollbarOrientation::VerticalRight)
+                    .style(ratatui::style::Style::default().fg(SURFACE0)),
+                $inner,
+                &mut sb_state,
+            );
+        }
+    }};
+}
+
 mod changelog;
 mod chrome;
 mod content;
@@ -130,6 +165,23 @@ pub(crate) fn tree_connector(
     } else {
         "├─ "
     }
+}
+
+/// Build a titled border block with the project's standard style.
+///
+/// `title` is shown in the top-left corner; `focused` controls border color (MAUVE vs SURFACE0).
+/// `rounded` controls border symbols (rounded vs plain).
+pub(crate) fn content_block(
+    title: &str,
+    focused: bool,
+    rounded: bool,
+) -> ratatui::widgets::Block<'_> {
+    use ratatui::widgets::{Block, Borders};
+    Block::default()
+        .title(title)
+        .borders(Borders::ALL)
+        .border_set(border_set(rounded))
+        .border_style(ratatui::style::Style::default().fg(if focused { MAUVE } else { SURFACE0 }))
 }
 
 /// Top-level draw dispatcher that renders the entire UI frame.
