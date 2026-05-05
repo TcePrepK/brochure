@@ -29,5 +29,16 @@
       "Saved list now grows when footer is empty",
       "Minor bug fixes and UI improvements"
     ]
+  },
+  {
+    "version": "0.4.0",
+    "date": "2026-05-05",
+    "summary": "Introduces version checking, an \"All Feeds\" virtual entry, improved navigation controls, and various UI fixes and enhancements.",
+    "highlights": [
+      "Version check popup with release highlights",
+      "\"All Feeds\" virtual entry showing all articles",
+      "Arrow keys toggle boolean settings consistently",
+      "Minor bug fixes and UI improvements"
+    ]
   }
 ]
