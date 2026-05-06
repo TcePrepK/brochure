@@ -3,6 +3,7 @@
 //! Displays a static About block (app name, version, description) above a
 //! scrollable list of changelog entries parsed from the embedded `changelog.json`.
 
+use crate::app::App;
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
@@ -12,9 +13,7 @@ use ratatui::{
     widgets::Paragraph,
 };
 
-use crate::app::App;
-
-use super::{BASE, BLUE, MAUVE, PEACH, SUBTEXT0, SURFACE0, TEXT, content_block};
+use super::{content_block, render_scrollbar};
 
 const CHANGELOG_JSON: &str = include_str!("../../changelog.json");
 
@@ -42,9 +41,10 @@ fn draw_about_block(f: &mut Frame, app: &App, area: Rect) {
     let version = env!("CARGO_PKG_VERSION");
 
     let block = content_block(
-        " About ".fg(PEACH).bold(),
+        " About ".fg(app.theme.peach).bold(),
         false,
         app.user_data.border_rounded,
+        &app.theme,
     );
     let inner = block.inner(area);
     f.render_widget(block, area);
@@ -53,33 +53,37 @@ fn draw_about_block(f: &mut Frame, app: &App, area: Rect) {
         Span::raw("  "),
         Span::styled(
             "Brochure",
-            Style::default().fg(TEXT).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(app.theme.text)
+                .add_modifier(Modifier::BOLD),
         ),
         Span::raw("  "),
         Span::styled(
             format!("v{version}"),
-            Style::default().fg(MAUVE).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(app.theme.mauve)
+                .add_modifier(Modifier::BOLD),
         ),
     ]);
     let desc_line = Line::from(vec![Span::styled(
         "  A terminal RSS reader built with Ratatui",
-        Style::default().fg(SUBTEXT0),
+        Style::default().fg(app.theme.subtext0),
     )]);
 
     let blank_line = Line::raw("");
     let author_line = Line::from(vec![
-        Span::styled("  Author:      ", Style::default().fg(SUBTEXT0)),
-        Span::styled("Sylviromi", Style::default().fg(TEXT)),
+        Span::styled("  Author:      ", Style::default().fg(app.theme.subtext0)),
+        Span::styled("Sylviromi", Style::default().fg(app.theme.text)),
     ]);
     let license_line = Line::from(vec![
-        Span::styled("  License:     ", Style::default().fg(SUBTEXT0)),
-        Span::styled("MIT", Style::default().fg(TEXT)),
+        Span::styled("  License:     ", Style::default().fg(app.theme.subtext0)),
+        Span::styled("MIT", Style::default().fg(app.theme.text)),
     ]);
     let repo_line = Line::from(vec![
-        Span::styled("  Repository:  ", Style::default().fg(SUBTEXT0)),
+        Span::styled("  Repository:  ", Style::default().fg(app.theme.subtext0)),
         Span::styled(
             "https://github.com/Sylviromi/brochure",
-            Style::default().fg(BLUE),
+            Style::default().fg(app.theme.blue),
         ),
     ]);
 
@@ -92,7 +96,7 @@ fn draw_about_block(f: &mut Frame, app: &App, area: Rect) {
             license_line,
             repo_line,
         ])
-        .bg(BASE),
+        .bg(app.theme.base),
         inner,
     );
 }
@@ -100,9 +104,10 @@ fn draw_about_block(f: &mut Frame, app: &App, area: Rect) {
 /// Renders the scrollable changelog entries block.
 fn draw_changelog_block(f: &mut Frame, app: &mut App, area: Rect) {
     let block = content_block(
-        " Changelog ".fg(PEACH).bold(),
+        " Changelog ".fg(app.theme.peach).bold(),
         true,
         app.user_data.border_rounded,
+        &app.theme,
     );
     let inner = block.inner(area);
     f.render_widget(block, area);
@@ -112,8 +117,8 @@ fn draw_changelog_block(f: &mut Frame, app: &mut App, area: Rect) {
         Err(e) => {
             f.render_widget(
                 Paragraph::new(format!("Error parsing changelog.json: {e}"))
-                    .style(Style::default().fg(TEXT))
-                    .bg(BASE),
+                    .style(Style::default().fg(app.theme.text))
+                    .bg(app.theme.base),
                 inner,
             );
             return;
@@ -137,40 +142,59 @@ fn draw_changelog_block(f: &mut Frame, app: &mut App, area: Rect) {
 
         // Version line with connector
         lines.push(Line::from(vec![
-            Span::styled(format!("{connector} "), Style::default().fg(SURFACE0)),
+            Span::styled(
+                format!("{connector} "),
+                Style::default().fg(app.theme.surface0),
+            ),
             Span::styled(
                 format!("v{}", entry.version),
-                Style::default().fg(MAUVE).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(app.theme.mauve)
+                    .add_modifier(Modifier::BOLD),
             ),
-            Span::styled("  ·  ", Style::default().fg(SURFACE0)),
-            Span::styled(entry.date.clone(), Style::default().fg(SUBTEXT0)),
+            Span::styled("  ·  ", Style::default().fg(app.theme.surface0)),
+            Span::styled(entry.date.clone(), Style::default().fg(app.theme.subtext0)),
         ]));
         // Summary line with vertical bar
         lines.push(Line::from(vec![
-            Span::styled(prefix, Style::default().fg(SURFACE0)),
-            Span::styled(entry.summary.clone(), Style::default().fg(TEXT)),
+            Span::styled(prefix, Style::default().fg(app.theme.surface0)),
+            Span::styled(entry.summary.clone(), Style::default().fg(app.theme.text)),
         ]));
         // Highlights with vertical bar
         for highlight in &entry.highlights {
             lines.push(Line::from(vec![
-                Span::styled(prefix, Style::default().fg(SURFACE0)),
-                Span::styled(format!("  • {highlight}"), Style::default().fg(SUBTEXT0)),
+                Span::styled(prefix, Style::default().fg(app.theme.surface0)),
+                Span::styled(
+                    format!("  • {highlight}"),
+                    Style::default().fg(app.theme.subtext0),
+                ),
             ]));
         }
         // Separator line (vertical bar or nothing after last entry)
         if i + 1 < total {
             lines.push(Line::from(vec![Span::styled(
                 prefix,
-                Style::default().fg(SURFACE0),
+                Style::default().fg(app.theme.surface0),
             )]));
         }
     }
 
     let viewport_height = inner.height as usize;
-    let max_scroll = lines.len().saturating_sub(viewport_height) as u16;
+    let total_lines = lines.len();
+    let max_scroll = total_lines.saturating_sub(viewport_height) as u16;
     if app.changelog_scroll > max_scroll {
         app.changelog_scroll = max_scroll;
     }
+
+    let has_scrollbar = total_lines > viewport_height;
+    let text_area = if has_scrollbar {
+        Rect {
+            width: inner.width.saturating_sub(1),
+            ..inner
+        }
+    } else {
+        inner
+    };
 
     let visible: Vec<Line> = lines
         .into_iter()
@@ -178,5 +202,21 @@ fn draw_changelog_block(f: &mut Frame, app: &mut App, area: Rect) {
         .take(viewport_height)
         .collect();
 
-    f.render_widget(Paragraph::new(visible).bg(BASE), inner);
+    f.render_widget(Paragraph::new(visible).bg(app.theme.base), text_area);
+
+    if has_scrollbar {
+        let bar_area = Rect {
+            x: inner.x + inner.width.saturating_sub(1),
+            width: 1,
+            ..inner
+        };
+        render_scrollbar(
+            f,
+            bar_area,
+            total_lines,
+            viewport_height,
+            app.changelog_scroll as usize,
+            &app.theme,
+        );
+    }
 }
