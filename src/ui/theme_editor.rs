@@ -387,7 +387,7 @@ fn draw_text_input_popup(f: &mut Frame, app: &App) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Fill(1),
-            Constraint::Length(7),
+            Constraint::Length(6),
             Constraint::Fill(1),
         ])
         .split(area);
