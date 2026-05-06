@@ -40,5 +40,15 @@
       "Arrow keys toggle boolean settings consistently",
       "Minor bug fixes and UI improvements"
     ]
+  },
+  {
+    "version": "0.5.0",
+    "date": "2026-05-07",
+    "summary": "Introducing a full theme editor with live customization and improved UI navigation features.",
+    "highlights": [
+      "Full theme editor for browsing, creating, and exporting themes",
+      "Scrollbars now show fractional position indicators for smoother navigation",
+      "Visible text cursor in all input fields with arrow key support"
+    ]
   }
 ]
