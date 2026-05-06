@@ -15,6 +15,7 @@ use crate::{
         expand_home_dir, export_opml_to_path, import_opml_from_path, save_categories, save_feeds,
         save_user_data,
     },
+    ui::theme::Theme,
 };
 
 /// Toggle a boolean field in `app.user_data`, persist, and show status.
@@ -54,10 +55,12 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
         KeyCode::Enter => match app.settings_selected {
             SettingsItem::ImportOpml => {
                 app.opml_path_input.clear();
+                app.input_cursor = 0;
                 app.state = AppState::OPMLImportPath;
             }
             SettingsItem::ExportOpml => {
                 app.opml_path_input = default_export_path();
+                app.input_cursor = app.opml_path_input.chars().count();
                 app.state = AppState::OPMLExportPath;
             }
             SettingsItem::ClearData => {
@@ -102,6 +105,25 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
             SettingsItem::BorderStyle => {
                 toggle_setting!(app, app.user_data.border_rounded, "Rounded Borders");
             }
+            SettingsItem::Theme => {
+                // Position cursor on the currently active theme.
+                let builtin_names = Theme::builtin_names();
+                app.theme_editor_cursor = if app.user_data.selected_theme == "custom" {
+                    let custom_pos = app
+                        .user_data
+                        .custom_themes
+                        .iter()
+                        .position(|t| Some(t.id) == app.user_data.selected_custom_id)
+                        .unwrap_or(0);
+                    builtin_names.len() + custom_pos
+                } else {
+                    builtin_names
+                        .iter()
+                        .position(|n| Theme::slug(n) == app.user_data.selected_theme)
+                        .unwrap_or(0)
+                };
+                app.state = AppState::ThemeEditor;
+            }
         },
         KeyCode::Left | KeyCode::Char('h') => {
             if app.settings_selected == SettingsItem::ArchivePolicy {
@@ -142,6 +164,7 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
             if app.settings_selected == SettingsItem::BorderStyle {
                 set_setting!(app, app.user_data.border_rounded, false, "Rounded Borders");
             }
+            // Theme is now managed in the full-screen editor (Enter on Theme row).
         }
         KeyCode::Right | KeyCode::Char('l') => {
             if app.settings_selected == SettingsItem::ArchivePolicy {
@@ -182,6 +205,7 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
             if app.settings_selected == SettingsItem::BorderStyle {
                 set_setting!(app, app.user_data.border_rounded, true, "Rounded Borders");
             }
+            // Theme is managed in the full-screen editor (Enter on Theme row).
         }
         _ => {}
     }
@@ -203,6 +227,7 @@ pub(super) fn handle_add_feed(app: &mut App, key: KeyEvent, tx: &UnboundedSender
                 }
                 app.add_feed_url = url.clone();
                 app.input.clear();
+                app.input_cursor = 0;
                 app.add_feed_fetched_title = None;
                 app.add_feed_step = AddFeedStep::Title;
                 let tx2 = tx.clone();
@@ -211,12 +236,8 @@ pub(super) fn handle_add_feed(app: &mut App, key: KeyEvent, tx: &UnboundedSender
                     let _ = tx2.send(AppEvent::FeedTitleFetched(result));
                 });
             }
-            KeyCode::Char(c) => app.input.push(c),
-            KeyCode::Backspace => {
-                app.input.pop();
-            }
             KeyCode::Esc => app.unselect(),
-            _ => {}
+            _ => super::handle_text_input(&mut app.input, &mut app.input_cursor, key.code),
         }
     } else {
         match key.code {
@@ -267,17 +288,14 @@ pub(super) fn handle_add_feed(app: &mut App, key: KeyEvent, tx: &UnboundedSender
                     let _ = tx2.send(AppEvent::FeedFetched(idx, result));
                 });
                 app.input.clear();
+                app.input_cursor = 0;
                 app.add_feed_step = AddFeedStep::Url;
                 app.add_feed_url.clear();
                 app.add_feed_fetched_title = None;
                 app.state = app.add_feed_return_state.clone();
             }
-            KeyCode::Char(c) => app.input.push(c),
-            KeyCode::Backspace => {
-                app.input.pop();
-            }
             KeyCode::Esc => app.unselect(),
-            _ => {}
+            _ => super::handle_text_input(&mut app.input, &mut app.input_cursor, key.code),
         }
     }
 }
@@ -382,14 +400,11 @@ pub(super) fn handle_opml_path(app: &mut App, key: KeyEvent, tx: &UnboundedSende
                 }
             }
             app.opml_path_input.clear();
+            app.input_cursor = 0;
             app.state = AppState::SettingsList;
         }
-        KeyCode::Char(c) => app.opml_path_input.push(c),
-        KeyCode::Backspace => {
-            app.opml_path_input.pop();
-        }
         KeyCode::Esc => app.unselect(),
-        _ => {}
+        _ => super::handle_text_input(&mut app.opml_path_input, &mut app.input_cursor, key.code),
     }
 }
 
@@ -410,6 +425,7 @@ pub(super) fn handle_saved_category_editor(app: &mut App, key: KeyEvent) {
             let cursor = app.saved_cat_editor_scroll.cursor;
             if cursor < app.user_data.saved_categories.len() {
                 app.editor_input = app.user_data.saved_categories[cursor].name.clone();
+                app.input_cursor = app.editor_input.chars().count();
                 app.state = AppState::SavedCategoryEditorRename;
             }
         }
@@ -421,6 +437,7 @@ pub(super) fn handle_saved_category_editor(app: &mut App, key: KeyEvent) {
         }
         KeyCode::Char('n') => {
             app.editor_input.clear();
+            app.input_cursor = 0;
             app.state = AppState::SavedCategoryEditorNew;
         }
         KeyCode::Esc | KeyCode::Char('q') => {
@@ -503,17 +520,15 @@ pub(super) fn handle_saved_category_editor_new(app: &mut App, key: KeyEvent) {
                 }
             }
             app.editor_input.clear();
+            app.input_cursor = 0;
             app.state = AppState::SavedCategoryEditor;
-        }
-        KeyCode::Char(c) => app.editor_input.push(c),
-        KeyCode::Backspace => {
-            app.editor_input.pop();
         }
         KeyCode::Esc => {
             app.editor_input.clear();
+            app.input_cursor = 0;
             app.state = AppState::SavedCategoryEditor;
         }
-        _ => {}
+        _ => super::handle_text_input(&mut app.editor_input, &mut app.input_cursor, key.code),
     }
 }
 
@@ -537,16 +552,14 @@ pub(super) fn handle_saved_category_editor_rename(app: &mut App, key: KeyEvent) 
                 app.set_status("Category renamed.".to_string());
             }
             app.editor_input.clear();
+            app.input_cursor = 0;
             app.state = AppState::SavedCategoryEditor;
-        }
-        KeyCode::Char(c) => app.editor_input.push(c),
-        KeyCode::Backspace => {
-            app.editor_input.pop();
         }
         KeyCode::Esc => {
             app.editor_input.clear();
+            app.input_cursor = 0;
             app.state = AppState::SavedCategoryEditor;
         }
-        _ => {}
+        _ => super::handle_text_input(&mut app.editor_input, &mut app.input_cursor, key.code),
     }
 }
