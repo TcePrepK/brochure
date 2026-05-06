@@ -85,15 +85,12 @@ pub(super) fn handle_feed_editor(app: &mut App, key: KeyEvent, _tx: &UnboundedSe
                     }
                 }
                 app.editor_input.clear();
+                app.input_cursor = 0;
                 app.editor_mode = FeedEditorMode::Normal;
                 app.state = AppState::FeedEditor;
             }
             KeyCode::Esc => app.unselect(),
-            KeyCode::Char(c) => app.editor_input.push(c),
-            KeyCode::Backspace => {
-                app.editor_input.pop();
-            }
-            _ => {}
+            _ => super::handle_text_input(&mut app.editor_input, &mut app.input_cursor, key.code),
         },
         AppState::FeedEditor => {
             // ── Pending category-delete confirmation (right panel) ─────────────
@@ -237,6 +234,7 @@ pub(super) fn handle_feed_editor(app: &mut App, key: KeyEvent, _tx: &UnboundedSe
                                     None
                                 };
                                 app.editor_input.clear();
+                                app.input_cursor = 0;
                                 app.editor_mode = FeedEditorMode::NewCategory { parent_id };
                                 app.state = AppState::FeedEditorRename;
                             }
@@ -267,6 +265,7 @@ pub(super) fn handle_feed_editor(app: &mut App, key: KeyEvent, _tx: &UnboundedSe
                                         .find(|c| c.id == cat_id)
                                         .map(|c| c.name.clone())
                                         .unwrap_or_default();
+                                    app.input_cursor = app.editor_input.chars().count();
                                     app.editor_mode = FeedEditorMode::Renaming {
                                         render_idx: full_idx,
                                     };
@@ -362,6 +361,7 @@ pub(super) fn handle_feed_editor(app: &mut App, key: KeyEvent, _tx: &UnboundedSe
                                     _ => None,
                                 };
                                 app.input.clear();
+                                app.input_cursor = 0;
                                 app.add_feed_step = AddFeedStep::Url;
                                 app.add_feed_url.clear();
                                 app.add_feed_fetched_title = None;
@@ -384,6 +384,7 @@ pub(super) fn handle_feed_editor(app: &mut App, key: KeyEvent, _tx: &UnboundedSe
                                         .map(|f| f.title.clone())
                                         .unwrap_or_default();
                                     app.editor_input = current_name;
+                                    app.input_cursor = app.editor_input.chars().count();
                                     app.editor_mode = FeedEditorMode::Renaming {
                                         render_idx: app.editor_cursor,
                                     };
@@ -405,6 +406,7 @@ pub(super) fn handle_feed_editor(app: &mut App, key: KeyEvent, _tx: &UnboundedSe
                                         .map(|f| f.url.clone())
                                         .unwrap_or_default();
                                     app.editor_input = current_url;
+                                    app.input_cursor = app.editor_input.chars().count();
                                     app.editor_mode = FeedEditorMode::EditingUrl {
                                         render_idx: app.editor_cursor,
                                     };
