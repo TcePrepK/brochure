@@ -7,6 +7,7 @@ mod changelog;
 mod feed_editor;
 mod feed_list;
 mod settings;
+mod theme_editor;
 
 use crossterm::event::{KeyCode, KeyEvent};
 use tokio::sync::mpsc::UnboundedSender;
@@ -15,6 +16,38 @@ use crate::{
     app::App,
     models::{AppEvent, AppState},
 };
+
+/// Cursor-aware text input: handles Left/Right movement, Backspace (delete before cursor),
+/// and Char insertion at cursor. Shared by all text-input handler modules.
+pub(super) fn handle_text_input(input: &mut String, cursor: &mut usize, key: KeyCode) {
+    match key {
+        KeyCode::Left if *cursor > 0 => {
+            *cursor -= 1;
+        }
+        KeyCode::Right if *cursor < input.chars().count() => {
+            *cursor += 1;
+        }
+        KeyCode::Backspace if *cursor > 0 => {
+            let byte_idx = input
+                .char_indices()
+                .nth(*cursor - 1)
+                .map(|(i, _)| i)
+                .unwrap_or(input.len());
+            input.remove(byte_idx);
+            *cursor -= 1;
+        }
+        KeyCode::Char(c) => {
+            let byte_idx = input
+                .char_indices()
+                .nth(*cursor)
+                .map(|(i, _)| i)
+                .unwrap_or(input.len());
+            input.insert(byte_idx, c);
+            *cursor += 1;
+        }
+        _ => {}
+    }
+}
 
 /// Route a key event to the correct handler based on the current app state.
 pub async fn handle_key(app: &mut App, key: KeyEvent, tx: &UnboundedSender<AppEvent>) -> bool {
@@ -66,6 +99,13 @@ pub async fn handle_key(app: &mut App, key: KeyEvent, tx: &UnboundedSender<AppEv
         }
         AppState::SavedCategoryEditorNew => settings::handle_saved_category_editor_new(app, key),
         AppState::Changelog => return changelog::handle_changelog(app, key),
+        AppState::ThemeEditor => theme_editor::handle_theme_editor(app, key),
+        AppState::ThemeEditorNew => theme_editor::handle_theme_editor_new(app, key),
+        AppState::ThemeEditorColorEdit => theme_editor::handle_theme_editor_color_edit(app, key),
+        AppState::ThemeEditorHexInput => theme_editor::handle_theme_editor_hex_input(app, key),
+        AppState::ThemeEditorRename => theme_editor::handle_theme_editor_rename(app, key),
+        AppState::ThemeEditorExport => theme_editor::handle_theme_editor_export(app, key),
+        AppState::ThemeEditorImport => theme_editor::handle_theme_editor_import(app, key),
     }
     false
 }
