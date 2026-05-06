@@ -3,7 +3,6 @@
 
 use crate::models::{Article, Category, CategoryId, FAVORITES_URL, Feed, FetchPolicy, UserData};
 use std::{collections::HashMap, fs, path::PathBuf};
-
 // ── Data directory ────────────────────────────────────────────────────────────
 
 /// Returns (and creates if needed) the platform-appropriate data directory:
@@ -91,6 +90,35 @@ pub fn load_user_data() -> UserData {
     if !data.legacy_auto_fetch_on_start && data.fetch_policy == FetchPolicy::OnStart {
         data.fetch_policy = FetchPolicy::Never;
         let _ = save_user_data(&data);
+    }
+
+    // Migrate legacy custom_theme_path → inline TOML text.
+    if let Some(path) = data.custom_theme_path.take()
+        && data.custom_theme.is_none()
+    {
+        let expanded = expand_home_dir(&path);
+        if let Ok(src) = fs::read_to_string(&expanded) {
+            data.custom_theme = Some(src);
+            data.selected_theme = "custom".to_string();
+        }
+    }
+
+    // Migrate legacy single inline TOML → custom_themes vec.
+    if let Some(src) = data.custom_theme.take()
+        && data.custom_themes.is_empty()
+    {
+        use crate::ui::theme::Theme;
+        if let Ok(theme) = Theme::from_toml_str(&src) {
+            let colors = theme.to_custom_colors();
+            data.custom_themes.push(crate::models::CustomTheme {
+                id: 1,
+                name: theme.name,
+                colors,
+            });
+            data.selected_custom_id = Some(1);
+            data.selected_theme = "custom".to_string();
+            let _ = save_user_data(&data);
+        }
     }
 
     data
