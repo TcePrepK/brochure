@@ -24,7 +24,7 @@ Built with [Ratatui](https://ratatui.rs) · Catppuccin Mocha theme · Full RSS/A
 - **Readability fetch** — pulls full article body when the feed only provides a summary
 - **Fetch policy** — choose when brochure refreshes: on start, every hour, every day, or never
 - **Feed editor** — rename, move, and delete feeds and categories without leaving the TUI
-- **Catppuccin Mocha** — soft purple colour theme throughout
+- **Themes** — five built-in colour themes (Catppuccin Mocha, Gruvbox Dark, Dracula, Nord, GNOME) plus custom TOML themes
 
 ## Installation
 
@@ -53,6 +53,51 @@ brochure stores all data in the platform data directory — no config files to m
 Files: `feeds.json`, `articles.json`, `categories.json`, `user_data.json`.
 
 OPML exports go to your **Downloads** folder by default.
+
+## Themes
+
+brochure ships five built-in themes: **Catppuccin Mocha**, **Gruvbox Dark**, **Dracula**, **Nord**, and **GNOME**.
+
+Open the theme editor from **Settings → Theme**.
+
+### Theme editor
+
+| Key | Action |
+|-----|--------|
+| `↑/↓` | Navigate theme list |
+| `Enter` | Activate selected theme |
+| `n` | New custom theme (clone from any existing theme) |
+| `e` | Edit colors (custom themes only) |
+| `r` | Rename (custom themes only) |
+| `d` | Delete (custom themes only) |
+| `x` | Export theme to a `.toml` file |
+| `i` | Import a `.toml` file as a new custom theme |
+
+When editing colors, navigate with `↑/↓`, press `Enter` on a slot to type a new `#rrggbb` hex value. A live color swatch previews your input. Press `s` or `Esc` to return.
+
+### Custom theme TOML format
+
+```toml
+name = "My Theme"
+
+[colors]
+mauve    = "#cba6f7"   # accent / focused border
+blue     = "#89b4fa"   # links / highlights
+green    = "#a6e3a1"   # success / read indicator
+peach    = "#fab387"   # section headers / warnings
+base     = "#1e1e2e"   # main background
+mantle   = "#181825"   # darkest background (tab bar, footer)
+text     = "#cdd6f4"   # primary foreground
+subtext0 = "#a6adc8"   # secondary / muted text
+surface0 = "#313244"   # unfocused borders
+yellow   = "#f9e2af"   # warnings / stars / unread accent
+teal     = "#94e2d5"   # teal accent
+sky      = "#89dceb"   # lighter blue accent
+pink     = "#f5c2e7"   # pink accent
+red      = "#f38ba8"   # errors / delete actions
+```
+
+All 14 keys are required. Custom themes are stored inline in `user_data.json` — no external file needed after import. You can have any number of custom themes.
 
 ## Contributing
 
