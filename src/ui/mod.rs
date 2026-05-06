@@ -1,16 +1,16 @@
-//! Terminal UI rendering: color constants, tree utilities, and top-level draw dispatcher.
+//! Terminal UI rendering: tree utilities, and top-level draw dispatcher.
 //!
-//! This module owns all rendering logic, including Catppuccin Mocha color constants,
-//! tree indentation helpers, and the main `draw()` function that dispatches to per-tab renderers.
+//! This module owns all rendering logic, including tree indentation helpers,
+//! and the main `draw()` function that dispatches to per-tab renderers.
 
 // ── Shared rendering macros ──────────────────────────────────────────────────
 /// Render a list with an optional vertical scrollbar.
 ///
 /// When item count exceeds `$inner.height`, reserves 1 column for the scrollbar
-/// and renders a `ScrollbarState` positioned at `$cursor`.
+/// and renders a fractional `ScrollBar` (tui-scrollbar) positioned at `$cursor`.
+/// `$theme` must be a reference to the active [`crate::ui::theme::Theme`].
 macro_rules! render_scrollable_list {
-    ($f:expr, $items:expr, $inner:expr, $list_state:expr, $cursor:expr) => {{
-        use ratatui::widgets::{Scrollbar, ScrollbarOrientation, ScrollbarState};
+    ($f:expr, $items:expr, $inner:expr, $list_state:expr, $cursor:expr, $theme:expr) => {{
         let total = $items.len();
         let has_scrollbar = total > $inner.height as usize;
         let list_render_area = if has_scrollbar {
@@ -27,12 +27,19 @@ macro_rules! render_scrollable_list {
             &mut $list_state,
         );
         if has_scrollbar {
-            let mut sb_state = ScrollbarState::new(total).position($cursor);
-            $f.render_stateful_widget(
-                Scrollbar::new(ScrollbarOrientation::VerticalRight)
-                    .style(Style::default().fg(SURFACE0)),
-                $inner,
-                &mut sb_state,
+            let bar_area = ratatui::layout::Rect {
+                x: $inner.right().saturating_sub(1),
+                y: $inner.y,
+                width: 1,
+                height: $inner.height,
+            };
+            crate::ui::render_scrollbar(
+                $f,
+                bar_area,
+                total,
+                $inner.height as usize,
+                $cursor,
+                $theme,
             );
         }
     }};
@@ -44,6 +51,8 @@ mod content;
 mod editor;
 mod popups;
 mod settings;
+pub(crate) mod theme;
+mod theme_editor;
 
 use crate::app::App;
 use crate::models::{AppState, FeedTreeItem, Tab};
@@ -53,39 +62,8 @@ use ratatui::widgets::{Block, Borders};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout},
-    style::Color,
     symbols,
 };
-
-// ── Catppuccin Mocha palette ──────────────────────────────────────────────────
-/// Catppuccin Mocha mauve color.
-pub(crate) const MAUVE: Color = Color::Rgb(203, 166, 247);
-/// Catppuccin Mocha blue color.
-pub(crate) const BLUE: Color = Color::Rgb(137, 180, 250);
-/// Catppuccin Mocha green color.
-pub(crate) const GREEN: Color = Color::Rgb(166, 227, 161);
-/// Catppuccin Mocha peach color.
-pub(crate) const PEACH: Color = Color::Rgb(250, 179, 135);
-/// Catppuccin Mocha base (dark background) color.
-pub(crate) const BASE: Color = Color::Rgb(30, 30, 46);
-/// Catppuccin Mocha mantle (darkest background) color.
-pub(crate) const MANTLE: Color = Color::Rgb(24, 24, 37);
-/// Catppuccin Mocha text (foreground) color.
-pub(crate) const TEXT: Color = Color::Rgb(205, 214, 244);
-/// Catppuccin Mocha subtext0 (muted text) color.
-pub(crate) const SUBTEXT0: Color = Color::Rgb(166, 173, 200);
-/// Catppuccin Mocha surface0 (light background) color.
-pub(crate) const SURFACE0: Color = Color::Rgb(49, 50, 68);
-/// Catppuccin Mocha yellow color.
-pub(crate) const YELLOW: Color = Color::Rgb(249, 226, 175);
-/// Catppuccin Mocha teal color.
-pub(crate) const TEAL: Color = Color::Rgb(148, 226, 213);
-/// Catppuccin Mocha sky color.
-pub(crate) const SKY: Color = Color::Rgb(137, 220, 235);
-/// Catppuccin Mocha pink color.
-pub(crate) const PINK: Color = Color::Rgb(245, 194, 231);
-/// Catppuccin Mocha red color.
-pub(crate) const RED: Color = Color::Rgb(243, 139, 168);
 
 /// Braille spinner animation frames for loading indicators.
 pub(crate) const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -98,9 +76,6 @@ pub(crate) fn border_set(rounded: bool) -> symbols::border::Set<'static> {
         symbols::border::PLAIN
     }
 }
-
-/// Fixed color palette that cycles through category IDs to assign unique colors to categories.
-pub(crate) const CATEGORY_COLORS: &[Color] = &[MAUVE, BLUE, GREEN, PEACH, YELLOW, TEAL, SKY, PINK];
 
 /// Compute the leading indent string for a tree item at `depth` positioned at `render_idx`.
 /// For each ancestor level (1 to depth-1), emits "│  " if that level still has siblings
@@ -172,9 +147,14 @@ pub(crate) fn tree_connector(
 
 /// Build a titled border block with the project's standard style.
 ///
-/// `title` is shown in the top-left corner; `focused` controls border color (MAUVE vs SURFACE0).
+/// `title` is shown in the top-left corner; `focused` controls border color (mauve vs surface0).
 /// `rounded` controls border symbols (rounded vs plain).
-pub(crate) fn content_block<'a, T>(title: T, focused: bool, rounded: bool) -> Block<'a>
+pub(crate) fn content_block<'a, T>(
+    title: T,
+    focused: bool,
+    rounded: bool,
+    theme: &crate::ui::theme::Theme,
+) -> Block<'a>
 where
     T: Into<Line<'a>>,
 {
@@ -182,8 +162,35 @@ where
         .title(title)
         .borders(Borders::ALL)
         .border_set(border_set(rounded))
-        .border_style(Style::default().fg(if focused { MAUVE } else { SURFACE0 }))
-        .bg(BASE)
+        .border_style(Style::default().fg(if focused { theme.mauve } else { theme.surface0 }))
+        .bg(theme.base)
+}
+
+/// Renders a themed vertical scrollbar into `area`.
+///
+/// Applies the standard arrow, thumb, and track styling from the active theme.
+/// Call this whenever `content_len > viewport_len` to show a scrollbar.
+pub(crate) fn render_scrollbar(
+    f: &mut Frame,
+    area: ratatui::layout::Rect,
+    content_len: usize,
+    viewport_len: usize,
+    offset: usize,
+    theme: &crate::ui::theme::Theme,
+) {
+    use tui_scrollbar::{ScrollBar, ScrollBarArrows, ScrollLengths};
+    f.render_widget(
+        &ScrollBar::vertical(ScrollLengths {
+            content_len,
+            viewport_len,
+        })
+        .arrows(ScrollBarArrows::Both)
+        .arrow_style(Style::default().fg(theme.mantle).bg(theme.base))
+        .thumb_style(Style::default().fg(theme.surface0).bg(theme.mantle))
+        .track_style(Style::default().bg(theme.mantle))
+        .offset(offset),
+        area,
+    );
 }
 
 /// Top-level draw dispatcher that renders the entire UI frame.
@@ -211,10 +218,23 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             | AppState::SavedCategoryEditorNew
     ) {
         settings::draw_saved_category_editor(f, app, chunks[1]);
-        // For delete confirm, also overlay the confirmation popup.
         if app.state == AppState::SavedCategoryEditorDeleteConfirm {
             popups::draw_confirm_delete_saved_cat(f, app);
         }
+        return;
+    }
+
+    if matches!(
+        app.state,
+        AppState::ThemeEditor
+            | AppState::ThemeEditorNew
+            | AppState::ThemeEditorColorEdit
+            | AppState::ThemeEditorHexInput
+            | AppState::ThemeEditorRename
+            | AppState::ThemeEditorExport
+            | AppState::ThemeEditorImport
+    ) {
+        theme_editor::draw_theme_editor_screen(f, app, chunks[1]);
         return;
     }
 
