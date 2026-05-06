@@ -1,0 +1,528 @@
+//! Full-screen theme editor: browse, select, create, edit, rename, delete, export, and import themes.
+//!
+//! Renders `ThemeEditor`, `ThemeEditorNew` (clone picker), `ThemeEditorColorEdit`,
+//! `ThemeEditorHexInput`, `ThemeEditorRename`, `ThemeEditorExport`, and `ThemeEditorImport`.
+
+use ratatui::{
+    Frame,
+    layout::{Constraint, Direction, Layout, Rect},
+    style::{Modifier, Style},
+    text::{Line, Span},
+    widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph},
+};
+
+use ratatui::prelude::Stylize;
+
+use crate::{
+    app::App,
+    models::AppState,
+    ui::theme::{COLOR_SLOTS, Theme},
+};
+
+use super::{border_set, content_block};
+
+// ── Entry points ──────────────────────────────────────────────────────────────
+
+/// Top-level draw dispatcher for all `ThemeEditor*` states.
+pub(super) fn draw_theme_editor_screen(f: &mut Frame, app: &App, area: Rect) {
+    match app.state {
+        AppState::ThemeEditor | AppState::ThemeEditorExport | AppState::ThemeEditorImport => {
+            draw_main(f, app, area);
+            if matches!(
+                app.state,
+                AppState::ThemeEditorExport | AppState::ThemeEditorImport
+            ) {
+                draw_text_input_popup(f, app);
+            }
+        }
+        AppState::ThemeEditorNew => {
+            draw_main(f, app, area);
+            draw_clone_picker(f, app);
+        }
+        AppState::ThemeEditorColorEdit | AppState::ThemeEditorHexInput => {
+            draw_color_edit(f, app, area);
+            if app.state == AppState::ThemeEditorHexInput {
+                draw_hex_input_popup(f, app);
+            }
+        }
+        AppState::ThemeEditorRename => {
+            draw_main(f, app, area);
+            draw_text_input_popup(f, app);
+        }
+        _ => {}
+    }
+}
+
+// ── Main editor (theme list + color preview) ──────────────────────────────────
+
+fn draw_main(f: &mut Frame, app: &App, area: Rect) {
+    let bg = Block::default().bg(app.theme.base);
+    f.render_widget(bg, area);
+
+    let cols = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(38), Constraint::Percentage(62)])
+        .split(area);
+
+    draw_theme_list(f, app, cols[0]);
+    draw_color_preview(f, app, cols[1]);
+}
+
+fn draw_theme_list(f: &mut Frame, app: &App, area: Rect) {
+    let block = content_block(
+        Line::from(" Themes ").fg(app.theme.mauve).bold(),
+        true,
+        app.user_data.border_rounded,
+        &app.theme,
+    );
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+
+    let builtin_names = Theme::builtin_names();
+    let cursor = app.theme_editor_cursor;
+
+    let mut items: Vec<ListItem> = builtin_names
+        .iter()
+        .enumerate()
+        .map(|(i, name)| {
+            let is_active = app.user_data.selected_theme != "custom"
+                && Theme::slug(name) == app.user_data.selected_theme;
+            let is_cursor = i == cursor;
+            let style = if is_cursor {
+                Style::default()
+                    .fg(app.theme.mantle)
+                    .bg(app.theme.mauve)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(app.theme.text)
+            };
+            let marker = if is_active { " ●" } else { "  " };
+            ListItem::new(Line::from(format!("{marker} {name}")).style(style))
+        })
+        .collect();
+
+    // Separator
+    items.push(ListItem::new(
+        Line::from(format!(
+            "  {}",
+            "─".repeat(inner.width.saturating_sub(2) as usize)
+        ))
+        .fg(app.theme.surface0),
+    ));
+
+    let sep_idx = builtin_names.len();
+
+    for (i, ct) in app.user_data.custom_themes.iter().enumerate() {
+        let abs_idx = sep_idx + 1 + i; // +1 for separator row (display only)
+        let list_idx = builtin_names.len() + i; // index in cursor space (no separator)
+        let is_active = app.user_data.selected_theme == "custom"
+            && app.user_data.selected_custom_id == Some(ct.id);
+        let is_cursor = list_idx == cursor;
+        let style = if is_cursor {
+            Style::default()
+                .fg(app.theme.mantle)
+                .bg(app.theme.blue)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(app.theme.text)
+        };
+        let marker = if is_active { " ●" } else { "  " };
+        let _ = abs_idx; // used for layout only
+        items.push(ListItem::new(
+            Line::from(format!("{marker} {}", ct.name)).style(style),
+        ));
+    }
+
+    if app.user_data.custom_themes.is_empty() {
+        items.push(ListItem::new(
+            Line::from("  (no custom themes)").fg(app.theme.subtext0),
+        ));
+    }
+
+    // Adjust list_state cursor past separator row
+    let display_cursor = if cursor < builtin_names.len() {
+        cursor
+    } else {
+        cursor + 1 // skip separator row
+    };
+    let mut list_state = ListState::default();
+    list_state.select(Some(display_cursor));
+    f.render_stateful_widget(List::new(items), inner, &mut list_state);
+}
+
+fn draw_color_preview(f: &mut Frame, app: &App, area: Rect) {
+    let builtin_names = Theme::builtin_names();
+    let cursor = app.theme_editor_cursor;
+
+    let (title_str, colors) = if cursor < builtin_names.len() {
+        let name = builtin_names[cursor];
+        let slug = Theme::slug(name);
+        let cols = Theme::builtin(slug).map(|t| t.to_custom_colors());
+        (name.to_string(), cols)
+    } else {
+        let idx = cursor - builtin_names.len();
+        if let Some(ct) = app.user_data.custom_themes.get(idx) {
+            (ct.name.clone(), Some(ct.colors.clone()))
+        } else {
+            ("—".to_string(), None)
+        }
+    };
+
+    let block = content_block(
+        Line::from(format!(" {title_str} "))
+            .fg(app.theme.peach)
+            .bold(),
+        false,
+        app.user_data.border_rounded,
+        &app.theme,
+    );
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+
+    let Some(colors) = colors else {
+        return;
+    };
+
+    let lines: Vec<Line> = COLOR_SLOTS
+        .iter()
+        .enumerate()
+        .map(|(i, (slot, label))| {
+            let hex = colors.get(i);
+            let swatch = "███";
+            // Parse hex to get the actual color for the swatch.
+            let swatch_color = parse_hex_color(hex).unwrap_or(ratatui::style::Color::Reset);
+            Line::from(vec![
+                Span::styled(
+                    format!("  {slot:<8} "),
+                    Style::default().fg(app.theme.subtext0),
+                ),
+                Span::styled(swatch, Style::default().fg(swatch_color)),
+                Span::styled(format!("  {hex}  "), Style::default().fg(app.theme.text)),
+                Span::styled(label.to_string(), Style::default().fg(app.theme.surface0)),
+            ])
+        })
+        .collect();
+
+    f.render_widget(Paragraph::new(lines), inner);
+}
+
+// ── Clone picker popup ────────────────────────────────────────────────────────
+
+fn draw_clone_picker(f: &mut Frame, app: &App) {
+    let builtin_names = Theme::builtin_names();
+    let custom_count = app.user_data.custom_themes.len();
+    let total = builtin_names.len() + custom_count;
+    let popup_height = (total.min(16) + 2) as u16;
+    let popup_width = 40u16;
+
+    let area = f.area();
+    let vert = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Fill(1),
+            Constraint::Length(popup_height),
+            Constraint::Fill(1),
+        ])
+        .split(area);
+    let horiz = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Fill(1),
+            Constraint::Length(popup_width),
+            Constraint::Fill(1),
+        ])
+        .split(vert[1]);
+    let popup_area = horiz[1];
+
+    f.render_widget(Clear, popup_area);
+
+    let block = Block::default()
+        .title(Line::from(" Clone From ").fg(app.theme.blue).bold())
+        .borders(Borders::ALL)
+        .border_set(border_set(app.user_data.border_rounded))
+        .border_style(Style::default().fg(app.theme.blue))
+        .bg(app.theme.base);
+
+    let inner = block.inner(popup_area);
+    f.render_widget(block, popup_area);
+
+    let cursor = app.theme_editor_clone_cursor;
+    let mut items: Vec<ListItem> = builtin_names
+        .iter()
+        .enumerate()
+        .map(|(i, name)| {
+            let style = if i == cursor {
+                Style::default()
+                    .fg(app.theme.mantle)
+                    .bg(app.theme.blue)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(app.theme.text)
+            };
+            ListItem::new(Line::from(format!("  {name}")).style(style))
+        })
+        .collect();
+
+    for (i, ct) in app.user_data.custom_themes.iter().enumerate() {
+        let abs = builtin_names.len() + i;
+        let style = if abs == cursor {
+            Style::default()
+                .fg(app.theme.mantle)
+                .bg(app.theme.blue)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(app.theme.sky)
+        };
+        items.push(ListItem::new(
+            Line::from(format!("  {} (custom)", ct.name)).style(style),
+        ));
+    }
+
+    let mut list_state = ListState::default();
+    list_state.select(Some(cursor));
+    f.render_stateful_widget(List::new(items), inner, &mut list_state);
+}
+
+// ── Color-slot editor ─────────────────────────────────────────────────────────
+
+fn draw_color_edit(f: &mut Frame, app: &App, area: Rect) {
+    let bg = Block::default().bg(app.theme.base);
+    f.render_widget(bg, area);
+
+    let theme_name = app
+        .theme_editor_editing_id
+        .and_then(|id| {
+            app.user_data
+                .custom_themes
+                .iter()
+                .find(|t| t.id == id)
+                .map(|t| t.name.clone())
+        })
+        .unwrap_or_else(|| "—".to_string());
+
+    let block = content_block(
+        Line::from(format!(" Edit: {theme_name} "))
+            .fg(app.theme.blue)
+            .bold(),
+        true,
+        app.user_data.border_rounded,
+        &app.theme,
+    );
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+
+    let colors = app.theme_editor_editing_id.and_then(|id| {
+        app.user_data
+            .custom_themes
+            .iter()
+            .find(|t| t.id == id)
+            .map(|t| t.colors.clone())
+    });
+
+    let Some(colors) = colors else { return };
+    let cursor = app.theme_editor_color_cursor;
+
+    let lines: Vec<Line> = COLOR_SLOTS
+        .iter()
+        .enumerate()
+        .map(|(i, (slot, label))| {
+            let hex = colors.get(i);
+            let swatch_color = parse_hex_color(hex).unwrap_or(ratatui::style::Color::Reset);
+            let is_cursor = i == cursor;
+
+            let prefix = if is_cursor { " ▶ " } else { "   " };
+            let row_style = if is_cursor {
+                Style::default().bg(app.theme.surface0)
+            } else {
+                Style::default()
+            };
+
+            Line::from(vec![
+                Span::styled(
+                    format!("{prefix}{slot:<8} "),
+                    row_style.fg(if is_cursor {
+                        app.theme.mauve
+                    } else {
+                        app.theme.subtext0
+                    }),
+                ),
+                Span::styled("███", Style::default().fg(swatch_color)),
+                Span::styled(
+                    format!("  {hex}  "),
+                    row_style.fg(app.theme.text).add_modifier(if is_cursor {
+                        Modifier::BOLD
+                    } else {
+                        Modifier::empty()
+                    }),
+                ),
+                Span::styled(label.to_string(), Style::default().fg(app.theme.surface0)),
+            ])
+        })
+        .collect();
+
+    f.render_widget(Paragraph::new(lines), inner);
+}
+
+// ── Shared text-input popup ───────────────────────────────────────────────────
+
+/// Splits a string at the cursor position, returning (before, after).
+fn split_at_cursor(text: &str, cursor: usize) -> (String, String) {
+    let chars: Vec<char> = text.chars().collect();
+    let pos = cursor.min(chars.len());
+    let before: String = chars[..pos].iter().collect();
+    let after: String = chars[pos..].iter().collect();
+    (before, after)
+}
+
+fn draw_text_input_popup(f: &mut Frame, app: &App) {
+    let (title, prompt) = match app.state {
+        AppState::ThemeEditorRename => (" Rename Theme ", "New name:"),
+        AppState::ThemeEditorExport => (" Export Theme ", "Export to path:"),
+        AppState::ThemeEditorImport => (" Import Theme ", "Path to .toml file:"),
+        _ => (" Input ", "Value:"),
+    };
+
+    let area = f.area();
+    let vert = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Fill(1),
+            Constraint::Length(7),
+            Constraint::Fill(1),
+        ])
+        .split(area);
+    let horiz = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Fill(1),
+            Constraint::Length(60),
+            Constraint::Fill(1),
+        ])
+        .split(vert[1]);
+    let popup_area = horiz[1];
+
+    f.render_widget(Clear, popup_area);
+
+    let block = content_block(
+        Line::from(title).fg(app.theme.blue).bold(),
+        true,
+        app.user_data.border_rounded,
+        &app.theme,
+    );
+    let inner = block.inner(popup_area);
+    f.render_widget(block, popup_area);
+
+    let (before, after) = split_at_cursor(&app.opml_path_input, app.input_cursor);
+    let text = vec![
+        Line::from(prompt).fg(app.theme.subtext0),
+        Line::from(vec![
+            Span::styled(
+                before,
+                Style::default()
+                    .fg(app.theme.text)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "|",
+                Style::default()
+                    .fg(app.theme.mauve)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                after,
+                Style::default()
+                    .fg(app.theme.text)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        Line::from(""),
+        Line::from("Enter = confirm   Esc = cancel").fg(app.theme.surface0),
+    ];
+    f.render_widget(Paragraph::new(text), inner);
+}
+
+// ── Hex input popup (overlaid on color editor) ────────────────────────────────
+
+fn draw_hex_input_popup(f: &mut Frame, app: &App) {
+    let slot_name = COLOR_SLOTS
+        .get(app.theme_editor_color_cursor)
+        .map(|(s, _)| *s)
+        .unwrap_or("color");
+
+    let area = f.area();
+    let vert = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Fill(1),
+            Constraint::Length(6),
+            Constraint::Fill(1),
+        ])
+        .split(area);
+    let horiz = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Fill(1),
+            Constraint::Length(50),
+            Constraint::Fill(1),
+        ])
+        .split(vert[1]);
+    let popup_area = horiz[1];
+
+    f.render_widget(Clear, popup_area);
+
+    let block = content_block(
+        Line::from(format!(" Edit: {slot_name} "))
+            .fg(app.theme.mauve)
+            .bold(),
+        true,
+        app.user_data.border_rounded,
+        &app.theme,
+    );
+    let inner = block.inner(popup_area);
+    f.render_widget(block, popup_area);
+
+    let preview_color =
+        parse_hex_color(&app.opml_path_input).unwrap_or(ratatui::style::Color::Reset);
+
+    let (before, after) = split_at_cursor(&app.opml_path_input, app.input_cursor);
+    let text = vec![
+        Line::from("Hex color (#rrggbb):").fg(app.theme.subtext0),
+        Line::from(vec![
+            Span::styled(
+                before,
+                Style::default()
+                    .fg(app.theme.text)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "|",
+                Style::default()
+                    .fg(app.theme.mauve)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                after,
+                Style::default()
+                    .fg(app.theme.text)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("  ███", Style::default().fg(preview_color)),
+        ]),
+        Line::from("Enter = confirm   Esc = cancel").fg(app.theme.surface0),
+    ];
+    f.render_widget(Paragraph::new(text), inner);
+}
+
+// ── Color parsing helper ──────────────────────────────────────────────────────
+
+/// Parse a `#rrggbb` hex string into a ratatui `Color::Rgb` for swatches.
+fn parse_hex_color(hex: &str) -> Option<ratatui::style::Color> {
+    let h = hex.trim_start_matches('#');
+    if h.len() != 6 {
+        return None;
+    }
+    let r = u8::from_str_radix(&h[0..2], 16).ok()?;
+    let g = u8::from_str_radix(&h[2..4], 16).ok()?;
+    let b = u8::from_str_radix(&h[4..6], 16).ok()?;
+    Some(ratatui::style::Color::Rgb(r, g, b))
+}
