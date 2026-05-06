@@ -10,11 +10,10 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{
-        Block, Borders, Clear, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap,
-    },
+    widgets::{Block, Borders, Clear, Paragraph, Wrap},
 };
 
+use super::render_scrollbar;
 use ratatui::prelude::Stylize;
 
 use crate::{
@@ -22,7 +21,17 @@ use crate::{
     models::{AddFeedStep, AppState, CategoryId},
 };
 
-use super::{BASE, BLUE, GREEN, MAUVE, RED, SUBTEXT0, SURFACE0, TEXT, border_set, content_block};
+use super::{border_set, content_block};
+
+/// Splits text at the cursor position and returns (before, after) as strings.
+/// Used for rendering cursor in text input fields.
+fn split_at_cursor(text: &str, cursor: usize) -> (String, String) {
+    let chars: Vec<char> = text.chars().collect();
+    let pos = cursor.min(chars.len());
+    let before: String = chars[..pos].iter().collect();
+    let after: String = chars[pos..].iter().collect();
+    (before, after)
+}
 
 /// Renders the add-feed popup with URL and title input fields.
 pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
@@ -56,31 +65,41 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
     // URL field
     f.render_widget(Clear, url_area);
     let url_content = if app.add_feed_step == AddFeedStep::Url {
-        app.input.clone()
+        let (before, after) = split_at_cursor(&app.input, app.input_cursor);
+        Line::from(vec![
+            Span::styled(before, Style::default().fg(app.theme.text)),
+            Span::styled(
+                "|",
+                Style::default()
+                    .fg(app.theme.mauve)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(after, Style::default().fg(app.theme.text)),
+        ])
     } else {
-        app.add_feed_url.clone()
+        Line::from(Span::styled(
+            app.add_feed_url.clone(),
+            Style::default().fg(app.theme.text),
+        ))
     };
     let url_block = Block::default()
         .border_set(border_set(app.user_data.border_rounded))
         .borders(Borders::ALL)
         .border_style(
             Style::default().fg(if app.add_feed_step == AddFeedStep::Url {
-                MAUVE
+                app.theme.mauve
             } else {
-                SUBTEXT0
+                app.theme.subtext0
             }),
         )
-        .bg(BASE)
+        .bg(app.theme.base)
         .title(Span::styled(
             " Feed URL ",
-            Style::default().fg(BLUE).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(app.theme.blue)
+                .add_modifier(Modifier::BOLD),
         ));
-    f.render_widget(
-        Paragraph::new(url_content)
-            .block(url_block)
-            .style(Style::default().fg(TEXT)),
-        url_area,
-    );
+    f.render_widget(Paragraph::new(url_content).block(url_block), url_area);
 
     // Title field
     f.render_widget(Clear, title_area);
@@ -94,15 +113,17 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
         .borders(Borders::ALL)
         .border_style(
             Style::default().fg(if app.add_feed_step == AddFeedStep::Title {
-                MAUVE
+                app.theme.mauve
             } else {
-                SUBTEXT0
+                app.theme.subtext0
             }),
         )
-        .bg(BASE)
+        .bg(app.theme.base)
         .title(Span::styled(
             title_label,
-            Style::default().fg(BLUE).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(app.theme.blue)
+                .add_modifier(Modifier::BOLD),
         ));
 
     if app.add_feed_step == AddFeedStep::Title && app.input.is_empty() {
@@ -111,7 +132,7 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
                 f.render_widget(
                     Paragraph::new(t.as_str())
                         .block(title_block)
-                        .style(Style::default().fg(SUBTEXT0)),
+                        .style(Style::default().fg(app.theme.subtext0)),
                     title_area,
                 );
                 return;
@@ -120,7 +141,7 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
                 f.render_widget(
                     Paragraph::new("")
                         .block(title_block)
-                        .style(Style::default().fg(TEXT)),
+                        .style(Style::default().fg(app.theme.text)),
                     title_area,
                 );
             }
@@ -128,7 +149,7 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
                 f.render_widget(
                     Paragraph::new("⏳ Fetching title...")
                         .block(title_block)
-                        .style(Style::default().fg(TEXT)),
+                        .style(Style::default().fg(app.theme.text)),
                     title_area,
                 );
             }
@@ -136,17 +157,22 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
         return;
     }
 
-    let title_content = if app.add_feed_step == AddFeedStep::Title {
-        app.input.clone()
+    let title_content = if app.add_feed_step == AddFeedStep::Title && !app.input.is_empty() {
+        let (before, after) = split_at_cursor(&app.input, app.input_cursor);
+        Line::from(vec![
+            Span::styled(before, Style::default().fg(app.theme.text)),
+            Span::styled(
+                "|",
+                Style::default()
+                    .fg(app.theme.mauve)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(after, Style::default().fg(app.theme.text)),
+        ])
     } else {
-        String::new()
+        Line::from(String::new())
     };
-    f.render_widget(
-        Paragraph::new(title_content)
-            .block(title_block)
-            .style(Style::default().fg(TEXT)),
-        title_area,
-    );
+    f.render_widget(Paragraph::new(title_content).block(title_block), title_area);
 }
 
 /// Renders a centered confirmation dialog with a red bordered block.
@@ -175,27 +201,33 @@ fn draw_confirm_dialog(f: &mut Frame, app: &App, title: &str, body: String, hori
     let block = Block::default()
         .border_set(border_set(app.user_data.border_rounded))
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(RED))
-        .bg(BASE)
+        .border_style(Style::default().fg(app.theme.red))
+        .bg(app.theme.base)
         .title(Span::styled(
             title.to_string(),
-            Style::default().fg(RED).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(app.theme.red)
+                .add_modifier(Modifier::BOLD),
         ));
     let text = vec![
         Line::from(""),
-        Line::from(Span::styled(body, Style::default().fg(TEXT))),
+        Line::from(Span::styled(body, Style::default().fg(app.theme.text))),
         Line::from(""),
         Line::from(vec![
             Span::styled(
                 "  [Enter] ",
-                Style::default().fg(RED).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(app.theme.red)
+                    .add_modifier(Modifier::BOLD),
             ),
-            Span::styled("Confirm   ", Style::default().fg(TEXT)),
+            Span::styled("Confirm   ", Style::default().fg(app.theme.text)),
             Span::styled(
                 "[Esc] ",
-                Style::default().fg(GREEN).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(app.theme.green)
+                    .add_modifier(Modifier::BOLD),
             ),
-            Span::styled("Cancel", Style::default().fg(TEXT)),
+            Span::styled("Cancel", Style::default().fg(app.theme.text)),
         ]),
     ];
     f.render_widget(Paragraph::new(text).block(block), center);
@@ -274,15 +306,16 @@ pub(super) fn draw_opml_path_popup(f: &mut Frame, app: &App) {
 
     f.render_widget(Clear, center);
     let block = content_block(
-        title.fg(BLUE).bold(),
+        title.fg(app.theme.blue).bold(),
         true,
         app.user_data.border_rounded,
+        &app.theme,
     );
 
     f.render_widget(
         Paragraph::new(app.opml_path_input.clone())
             .block(block)
-            .style(Style::default().fg(TEXT)),
+            .style(Style::default().fg(app.theme.text)),
         center,
     );
 }
@@ -327,7 +360,12 @@ pub(super) fn draw_category_picker(f: &mut Frame, app: &App) {
         height,
     };
 
-    let block = content_block(" Save Article To… ", true, app.user_data.border_rounded);
+    let block = content_block(
+        " Save Article To… ",
+        true,
+        app.user_data.border_rounded,
+        &app.theme,
+    );
 
     f.render_widget(Clear, popup_area);
     f.render_widget(block.clone(), popup_area);
@@ -352,9 +390,9 @@ pub(super) fn draw_category_picker(f: &mut Frame, app: &App) {
         let real_idx = scroll_top + i;
         let is_selected = app.category_picker_cursor == real_idx;
         let style = if is_selected {
-            Style::default().bg(SURFACE0).fg(MAUVE)
+            Style::default().bg(app.theme.surface0).fg(app.theme.mauve)
         } else {
-            Style::default().fg(TEXT)
+            Style::default().fg(app.theme.text)
         };
         lines.push(Line::from(Span::styled(format!("  {}", cat.name), style)));
     }
@@ -362,17 +400,17 @@ pub(super) fn draw_category_picker(f: &mut Frame, app: &App) {
     let new_idx = cats_len;
     if app.category_picker_new_mode {
         lines.push(Line::from(vec![
-            Span::styled("  + ", Style::default().fg(BLUE)),
+            Span::styled("  + ", Style::default().fg(app.theme.blue)),
             Span::styled(
                 format!("{}|", app.category_picker_input),
-                Style::default().fg(TEXT),
+                Style::default().fg(app.theme.text),
             ),
         ]));
     } else {
         let new_style = if app.category_picker_cursor == new_idx {
-            Style::default().bg(SURFACE0).fg(BLUE)
+            Style::default().bg(app.theme.surface0).fg(app.theme.blue)
         } else {
-            Style::default().fg(BLUE)
+            Style::default().fg(app.theme.blue)
         };
         lines.push(Line::from(Span::styled("  + New category…", new_style)));
     }
@@ -380,14 +418,14 @@ pub(super) fn draw_category_picker(f: &mut Frame, app: &App) {
     if article_is_saved {
         lines.push(Line::from(Span::styled(
             "  ──────────────",
-            Style::default().fg(SURFACE0),
+            Style::default().fg(app.theme.surface0),
         )));
 
         let unsave_idx = cats_len + 1;
         let unsave_style = if app.category_picker_cursor == unsave_idx {
-            Style::default().bg(SURFACE0).fg(RED)
+            Style::default().bg(app.theme.surface0).fg(app.theme.red)
         } else {
-            Style::default().fg(RED)
+            Style::default().fg(app.theme.red)
         };
         lines.push(Line::from(Span::styled("  ✕ Unsave", unsave_style)));
     }
@@ -396,13 +434,18 @@ pub(super) fn draw_category_picker(f: &mut Frame, app: &App) {
     f.render_widget(para, inner);
 
     if cats_len > visible_cats {
-        let mut sb_state = ScrollbarState::new(cats_len)
-            .position(app.category_picker_cursor.min(cats_len.saturating_sub(1)));
-        f.render_stateful_widget(
-            ratatui::widgets::Scrollbar::new(ratatui::widgets::ScrollbarOrientation::VerticalRight)
-                .style(ratatui::style::Style::default().fg(super::SURFACE0)),
-            inner,
-            &mut sb_state,
+        let bar_area = Rect {
+            x: inner.x + inner.width.saturating_sub(1),
+            width: 1,
+            ..inner
+        };
+        render_scrollbar(
+            f,
+            bar_area,
+            cats_len,
+            inner.height as usize,
+            app.category_picker_cursor.min(cats_len.saturating_sub(1)),
+            &app.theme,
         );
     }
 }
@@ -468,7 +511,12 @@ pub(super) fn draw_update_popup(f: &mut Frame, app: &App) {
         format!("  Update Available — v{latest}  ({count} new versions) ")
     };
 
-    let block = content_block(title.fg(MAUVE).bold(), true, app.user_data.border_rounded);
+    let block = content_block(
+        title.fg(app.theme.mauve).bold(),
+        true,
+        app.user_data.border_rounded,
+        &app.theme,
+    );
 
     // Inner area split: scrollable content (top) + dismiss hint (bottom, 1 line)
     let inner = block.inner(popup_area);
@@ -497,13 +545,15 @@ pub(super) fn draw_update_popup(f: &mut Frame, app: &App) {
         };
         lines.push(Line::from(Span::styled(
             header,
-            Style::default().fg(MAUVE).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(app.theme.mauve)
+                .add_modifier(Modifier::BOLD),
         )));
         if !release.highlights.is_empty() {
             for h in &release.highlights {
                 lines.push(Line::from(Span::styled(
                     format!("  • {h}"),
-                    Style::default().fg(TEXT),
+                    Style::default().fg(app.theme.text),
                 )));
             }
         }
@@ -531,12 +581,13 @@ pub(super) fn draw_update_popup(f: &mut Frame, app: &App) {
 
     // Scrollbar
     if total_lines > visible_h {
-        let mut sb_state = ScrollbarState::new(total_lines as usize).position(scroll as usize);
-        f.render_stateful_widget(
-            Scrollbar::new(ScrollbarOrientation::VerticalRight)
-                .style(Style::default().fg(SURFACE0)),
+        render_scrollbar(
+            f,
             bar_area,
-            &mut sb_state,
+            total_lines as usize,
+            visible_h as usize,
+            scroll as usize,
+            &app.theme,
         );
     }
 
@@ -545,14 +596,18 @@ pub(super) fn draw_update_popup(f: &mut Frame, app: &App) {
         Paragraph::new(Line::from(vec![
             Span::styled(
                 "  [↑↓] ",
-                Style::default().fg(MAUVE).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(app.theme.mauve)
+                    .add_modifier(Modifier::BOLD),
             ),
-            Span::styled("Scroll   ", Style::default().fg(TEXT)),
+            Span::styled("Scroll   ", Style::default().fg(app.theme.text)),
             Span::styled(
                 "[Enter/Esc] ",
-                Style::default().fg(MAUVE).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(app.theme.mauve)
+                    .add_modifier(Modifier::BOLD),
             ),
-            Span::styled("Dismiss", Style::default().fg(TEXT)),
+            Span::styled("Dismiss", Style::default().fg(app.theme.text)),
         ])),
         hint_area,
     );

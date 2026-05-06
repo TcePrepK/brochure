@@ -18,23 +18,37 @@ use crate::{
     models::{AppState, EditorPanel, FeedEditorMode, FeedTreeItem},
 };
 
-use super::{
-    BASE, BLUE, CATEGORY_COLORS, GREEN, MANTLE, MAUVE, SUBTEXT0, SURFACE0, TEXT, YELLOW,
-    border_set, tree_connector, tree_indent,
-};
+use super::{border_set, tree_connector, tree_indent};
 
 /// Returns the accent color for the editor mode label — yellow during moves, green otherwise.
-fn editor_mode_color(mode: &FeedEditorMode) -> ratatui::style::Color {
+fn editor_mode_color(
+    mode: &FeedEditorMode,
+    theme: &crate::ui::theme::Theme,
+) -> ratatui::style::Color {
     match mode {
-        FeedEditorMode::Moving { .. } => YELLOW,
-        _ => GREEN,
+        FeedEditorMode::Moving { .. } => theme.yellow,
+        _ => theme.green,
     }
+}
+
+/// Splits text at cursor position, returning (before_cursor, cursor_char, after_cursor).
+/// The cursor_char is the character under the cursor, or a space if at end of text.
+fn split_cursor(text: &str, cursor: usize) -> (String, String, String) {
+    let chars: Vec<char> = text.chars().collect();
+    let pos = cursor.min(chars.len());
+    let before: String = chars[..pos].iter().collect();
+    let (cursor_ch, after): (String, String) = if pos < chars.len() {
+        (chars[pos].to_string(), chars[pos + 1..].iter().collect())
+    } else {
+        (" ".to_string(), String::new())
+    };
+    (before, cursor_ch, after)
 }
 
 /// Renders the full-screen feed editor with feeds and categories panels.
 pub(super) fn draw_feed_editor(f: &mut Frame, app: &mut App, area: Rect) {
     // Background-only outer block (no borders)
-    let bg_block = Block::default().bg(BASE);
+    let bg_block = Block::default().bg(app.theme.base);
     f.render_widget(bg_block, area);
 
     let cols = Layout::default()
@@ -70,16 +84,20 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
     } else {
         ""
     };
-    let mode_color = editor_mode_color(&app.editor_mode);
+    let mode_color = editor_mode_color(&app.editor_mode, &app.theme);
 
-    let border_color = if is_active { MAUVE } else { SURFACE0 };
+    let border_color = if is_active {
+        app.theme.mauve
+    } else {
+        app.theme.surface0
+    };
     let block = Block::default()
         .border_set(border_set(app.user_data.border_rounded))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(border_color))
-        .bg(BASE)
+        .bg(app.theme.base)
         .title(Line::from(vec![
-            " Feeds ".fg(BLUE).bold(),
+            " Feeds ".fg(app.theme.blue).bold(),
             mode_label.fg(mode_color).bold(),
         ]));
     let inner = block.inner(area);
@@ -118,7 +136,8 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
                     .find(|c| c.id == *id)
                     .map(|c| c.name.as_str())
                     .unwrap_or("?");
-                let color = CATEGORY_COLORS[(*id % CATEGORY_COLORS.len() as u64) as usize];
+                let cat_colors = app.theme.category_colors();
+                let color = cat_colors[(*id % cat_colors.len() as u64) as usize];
                 let indent = tree_indent(&tree, full_idx, *depth);
                 let connector = tree_connector(&tree, full_idx, *depth, rounded, "");
                 let icon = if *collapsed { "▶" } else { "▼" };
@@ -127,8 +146,8 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
                 // During a feed move the drop-preview arrow (inserted after) shows the target.
                 full_idx_to_visual.insert(full_idx, visual_idx);
                 items.push(ListItem::new(Line::from(vec![
-                    indent.fg(SURFACE0),
-                    connector.fg(SURFACE0),
+                    indent.fg(app.theme.surface0),
+                    connector.fg(app.theme.surface0),
                     format!("{cat_name} {icon}").fg(color).bold(),
                 ])));
                 visual_idx += 1;
@@ -144,9 +163,9 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
                 let show_selected = selected && !in_moving_mode && is_active;
 
                 let connector_style = if show_selected {
-                    Style::default().fg(MAUVE).bg(SURFACE0)
+                    Style::default().fg(app.theme.mauve).bg(app.theme.surface0)
                 } else {
-                    Style::default().fg(SURFACE0)
+                    Style::default().fg(app.theme.surface0)
                 };
 
                 full_idx_to_visual.insert(full_idx, visual_idx);
@@ -160,44 +179,56 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
                         FeedEditorMode::Renaming { .. } | FeedEditorMode::EditingUrl { .. }
                     )
                 {
+                    let (before, cursor_ch, after) =
+                        split_cursor(&app.editor_input, app.input_cursor);
                     items.push(ListItem::new(Line::from(vec![
-                        indent.fg(SURFACE0),
+                        indent.fg(app.theme.surface0),
                         Span::styled(connector, connector_style),
-                        "  ✎ ".fg(GREEN),
-                        app.editor_input.clone().fg(TEXT),
-                        "█".fg(GREEN),
+                        "  ✎ ".fg(app.theme.green),
+                        before.fg(app.theme.text),
+                        Span::styled(
+                            cursor_ch,
+                            Style::default().fg(app.theme.base).bg(app.theme.green),
+                        ),
+                        after.fg(app.theme.text),
                     ])));
                     continue;
                 }
 
                 let style = if is_on_origin {
-                    Style::default().fg(SUBTEXT0).bg(SURFACE0)
+                    Style::default()
+                        .fg(app.theme.subtext0)
+                        .bg(app.theme.surface0)
                 } else if is_ghost {
-                    Style::default().fg(SUBTEXT0).add_modifier(Modifier::DIM)
+                    Style::default()
+                        .fg(app.theme.subtext0)
+                        .add_modifier(Modifier::DIM)
                 } else if show_selected {
                     Style::default()
-                        .fg(MAUVE)
-                        .bg(SURFACE0)
+                        .fg(app.theme.mauve)
+                        .bg(app.theme.surface0)
                         .add_modifier(Modifier::BOLD)
                 } else {
-                    Style::default().fg(TEXT)
+                    Style::default().fg(app.theme.text)
                 };
                 let origin_hint = if is_on_origin { " ↩" } else { "" };
                 let drop_marker = if show_selected {
                     Span::styled(
                         "➤ ",
-                        Style::default().fg(YELLOW).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(app.theme.yellow)
+                            .add_modifier(Modifier::BOLD),
                     )
                 } else {
                     Span::raw("")
                 };
 
                 items.push(ListItem::new(Line::from(vec![
-                    indent.fg(SURFACE0),
+                    indent.fg(app.theme.surface0),
                     Span::styled(connector, connector_style),
                     drop_marker,
                     Span::styled(format!("{}{origin_hint}", feed.title), style),
-                    feed.unread_badge().fg(YELLOW),
+                    feed.unread_badge().fg(app.theme.yellow),
                 ])));
             }
         }
@@ -205,7 +236,8 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
 
     if !has_any_feed {
         f.render_widget(
-            Paragraph::new(" No feeds. Press [a] to add one.").style(Style::default().fg(SUBTEXT0)),
+            Paragraph::new(" No feeds. Press [a] to add one.")
+                .style(Style::default().fg(app.theme.subtext0)),
             list_area,
         );
         return;
@@ -230,11 +262,11 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
                     let indent = tree_indent(&tree, origin, *depth);
                     let connector = tree_connector(&tree, origin, *depth, rounded, "   ");
                     Some(ListItem::new(Line::from(vec![
-                        indent.fg(SURFACE0),
-                        connector.fg(YELLOW).bold(),
-                        "➤ ".fg(YELLOW).bold(),
-                        f.title.clone().fg(YELLOW).bold(),
-                        f.unread_badge().fg(YELLOW),
+                        indent.fg(app.theme.surface0),
+                        connector.fg(app.theme.yellow).bold(),
+                        "➤ ".fg(app.theme.yellow).bold(),
+                        f.title.clone().fg(app.theme.yellow).bold(),
+                        f.unread_badge().fg(app.theme.yellow),
                     ])))
                 }
                 _ => None,
@@ -279,7 +311,7 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
         let max_chars = url_area.width as usize;
         let truncated: String = url.chars().take(max_chars.saturating_sub(1)).collect();
         f.render_widget(
-            Paragraph::new(format!(" {truncated}")).style(Style::default().fg(SUBTEXT0)),
+            Paragraph::new(format!(" {truncated}")).style(Style::default().fg(app.theme.subtext0)),
             url_area,
         );
     }
@@ -322,16 +354,20 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
     } else {
         ""
     };
-    let mode_color = editor_mode_color(&app.editor_mode);
+    let mode_color = editor_mode_color(&app.editor_mode, &app.theme);
 
-    let border_color = if is_active { MAUVE } else { SURFACE0 };
+    let border_color = if is_active {
+        app.theme.mauve
+    } else {
+        app.theme.surface0
+    };
     let block = Block::default()
         .border_set(border_set(app.user_data.border_rounded))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(border_color))
-        .bg(BASE)
+        .bg(app.theme.base)
         .title(Line::from(vec![
-            " Categories ".fg(BLUE).bold(),
+            " Categories ".fg(app.theme.blue).bold(),
             mode_label.fg(mode_color).bold(),
         ]));
     let inner = block.inner(area);
@@ -342,7 +378,8 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
 
     if cats.is_empty() {
         f.render_widget(
-            Paragraph::new(" No categories. [n] Create one.").style(Style::default().fg(SUBTEXT0)),
+            Paragraph::new(" No categories. [n] Create one.")
+                .style(Style::default().fg(app.theme.subtext0)),
             inner,
         );
         return;
@@ -380,19 +417,22 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
             let selected =
                 is_active && app.editor_cat_cursor == idx && !in_new_cat_mode && !in_moving_mode;
             let is_ghost = moving_cat_id == Some(*id);
-            let color = CATEGORY_COLORS[(*id % CATEGORY_COLORS.len() as u64) as usize];
+            let cat_colors = app.theme.category_colors();
+            let color = cat_colors[(*id % cat_colors.len() as u64) as usize];
             let indent = tree_indent(&cats, idx, *depth);
             let connector = tree_connector(&cats, idx, *depth, rounded, "");
             let icon = if *collapsed { "▶" } else { "▼" };
 
             // Rename input row
             if renamed_cat_id == Some(*id) {
+                let (before, cursor_ch, after) = split_cursor(&app.editor_input, app.input_cursor);
                 return ListItem::new(Line::from(vec![
-                    indent.fg(SURFACE0),
-                    connector.fg(SURFACE0),
+                    indent.fg(app.theme.surface0),
+                    connector.fg(app.theme.surface0),
                     "  ✎ ".fg(color),
-                    app.editor_input.clone().fg(TEXT),
-                    "█".fg(color),
+                    before.fg(app.theme.text),
+                    Span::styled(cursor_ch, Style::default().fg(app.theme.base).bg(color)),
+                    after.fg(app.theme.text),
                 ]));
             }
 
@@ -414,28 +454,30 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
                 .unwrap_or("?");
 
             let style = if is_ghost {
-                Style::default().fg(SUBTEXT0).add_modifier(Modifier::DIM)
+                Style::default()
+                    .fg(app.theme.subtext0)
+                    .add_modifier(Modifier::DIM)
             } else if selected {
                 Style::default()
-                    .fg(MANTLE)
+                    .fg(app.theme.mantle)
                     .bg(color)
                     .add_modifier(Modifier::BOLD)
             } else {
                 Style::default().fg(color).add_modifier(Modifier::BOLD)
             };
             let connector_style = if selected && !is_ghost {
-                Style::default().fg(MANTLE).bg(color)
+                Style::default().fg(app.theme.mantle).bg(color)
             } else {
-                Style::default().fg(SURFACE0)
+                Style::default().fg(app.theme.surface0)
             };
             let badge_style = if selected && !is_ghost {
-                Style::default().fg(MANTLE).bg(color)
+                Style::default().fg(app.theme.mantle).bg(color)
             } else {
-                Style::default().fg(SUBTEXT0)
+                Style::default().fg(app.theme.subtext0)
             };
 
             ListItem::new(Line::from(vec![
-                indent.fg(SURFACE0),
+                indent.fg(app.theme.surface0),
                 Span::styled(connector, connector_style),
                 Span::styled(format!("{cat_name} {icon}"), style),
                 Span::styled(badge, badge_style),
@@ -459,13 +501,18 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
         };
         let indent = "  ".repeat(depth as usize);
         let insert_at = app.editor_cat_cursor.min(final_items.len());
+        let (before, cursor_ch, after) = split_cursor(&app.editor_input, app.input_cursor);
         final_items.insert(
             insert_at,
             ListItem::new(Line::from(vec![
-                indent.fg(SURFACE0),
-                "  ✎ ".fg(GREEN),
-                app.editor_input.clone().fg(TEXT),
-                "█".fg(GREEN),
+                indent.fg(app.theme.surface0),
+                "  ✎ ".fg(app.theme.green),
+                before.fg(app.theme.text),
+                Span::styled(
+                    cursor_ch,
+                    Style::default().fg(app.theme.base).bg(app.theme.green),
+                ),
+                after.fg(app.theme.text),
             ])),
         );
     }
@@ -498,9 +545,9 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
             let preview_depth = (cursor_depth + depth_delta).max(0) as u8;
             let indent = "  ".repeat(preview_depth as usize);
             let preview = ListItem::new(Line::from(vec![
-                indent.fg(SURFACE0),
-                "➤ ".fg(YELLOW).bold(),
-                format!("{src_name} ▼").fg(YELLOW).bold(),
+                indent.fg(app.theme.surface0),
+                "➤ ".fg(app.theme.yellow).bold(),
+                format!("{src_name} ▼").fg(app.theme.yellow).bold(),
             ]));
             let insert_at = (cursor + 1).min(final_items.len());
             final_items.insert(insert_at, preview);
