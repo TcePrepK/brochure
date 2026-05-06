@@ -154,17 +154,19 @@ pub(super) fn handle_category_picker(app: &mut App, key: KeyEvent, tx: &Unbounde
                 }
                 app.category_picker_new_mode = false;
                 app.category_picker_input.clear();
+                app.input_cursor = 0;
                 app.state = app.category_picker_return_state.clone();
-            }
-            KeyCode::Char(c) => app.category_picker_input.push(c),
-            KeyCode::Backspace => {
-                app.category_picker_input.pop();
             }
             KeyCode::Esc => {
                 app.category_picker_new_mode = false;
                 app.category_picker_input.clear();
+                app.input_cursor = 0;
             }
-            _ => {}
+            _ => super::handle_text_input(
+                &mut app.category_picker_input,
+                &mut app.input_cursor,
+                key.code,
+            ),
         }
         return;
     }
@@ -193,6 +195,7 @@ pub(super) fn handle_category_picker(app: &mut App, key: KeyEvent, tx: &Unbounde
                 // "New category..." — enter text input mode
                 app.category_picker_new_mode = true;
                 app.category_picker_input.clear();
+                app.input_cursor = 0;
             } else if article_is_saved {
                 // "Unsave"
                 unsave_article(app);
