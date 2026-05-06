@@ -1,8 +1,8 @@
 //! Display helpers for Feed and Article types (rendering symbols and formatting).
 
 use super::{Article, Feed};
-use crate::ui::{BLUE, SUBTEXT0, YELLOW};
 use ratatui::prelude::Style;
+use ratatui::style::Color;
 
 impl Feed {
     /// Returns `" [N]"` if there are unread articles, empty string otherwise.
@@ -25,14 +25,22 @@ impl Article {
         }
     }
 
-    /// Returns the color for the article's state icon.
-    pub fn get_icon_style(&self) -> Style {
+    /// Returns the color for the article's state icon given theme colors.
+    ///
+    /// Takes the three relevant theme colors: `saved_color` (e.g. yellow),
+    /// `read_color` (e.g. subtext0), and `unread_color` (e.g. blue).
+    pub fn get_icon_style(
+        &self,
+        saved_color: Color,
+        read_color: Color,
+        unread_color: Color,
+    ) -> Style {
         if self.is_saved {
-            Style::default().fg(YELLOW)
+            Style::default().fg(saved_color)
         } else if self.is_read {
-            Style::default().fg(SUBTEXT0)
+            Style::default().fg(read_color)
         } else {
-            Style::default().fg(BLUE)
+            Style::default().fg(unread_color)
         }
     }
 }
