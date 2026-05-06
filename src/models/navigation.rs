@@ -41,6 +41,20 @@ pub enum AppState {
     SavedCategoryEditorNew,
     /// Viewing the changelog and about screen.
     Changelog,
+    /// Full-screen theme editor (browse all themes, manage custom ones).
+    ThemeEditor,
+    /// Clone-from picker popup when creating a new custom theme.
+    ThemeEditorNew,
+    /// Full-screen color-slot editor for a custom theme.
+    ThemeEditorColorEdit,
+    /// Inline hex-value text input within the color-slot editor.
+    ThemeEditorHexInput,
+    /// Text input for renaming a custom theme.
+    ThemeEditorRename,
+    /// Text input for the export file path.
+    ThemeEditorExport,
+    /// Text input for the import file path.
+    ThemeEditorImport,
 }
 
 /// Which tab is active in the tab bar.
@@ -98,6 +112,8 @@ pub enum SettingsItem {
     ScrollLoop,
     /// Toggle rounded UI borders.
     BorderStyle,
+    /// Open the theme picker popup.
+    Theme,
 }
 
 impl SettingsItem {
@@ -113,14 +129,16 @@ impl SettingsItem {
             Self::AutoFetchOnStart => Self::ArchivePolicy,
             Self::ArchivePolicy => Self::ScrollLoop,
             Self::ScrollLoop => Self::BorderStyle,
-            Self::BorderStyle => Self::ImportOpml,
+            Self::BorderStyle => Self::Theme,
+            Self::Theme => Self::ImportOpml,
         }
     }
 
     /// Move to the previous settings item (wraps around).
     pub fn prev(self) -> Self {
         match self {
-            Self::ImportOpml => Self::BorderStyle,
+            Self::ImportOpml => Self::Theme,
+            Self::Theme => Self::BorderStyle,
             Self::ExportOpml => Self::ImportOpml,
             Self::ClearData => Self::ExportOpml,
             Self::SaveArticleContent => Self::ClearData,
