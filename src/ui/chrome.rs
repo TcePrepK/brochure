@@ -19,7 +19,7 @@ use crate::{
 
 use ratatui::prelude::Stylize;
 
-use super::{BASE, GREEN, MANTLE, MAUVE, SUBTEXT0, SURFACE0, YELLOW, content_block};
+use super::content_block;
 
 /// Renders the top tab bar showing the currently selected tab, feed/article counts, and help text.
 pub(super) fn draw_tab_bar(f: &mut Frame, app: &App, area: Rect) {
@@ -34,8 +34,8 @@ pub(super) fn draw_tab_bar(f: &mut Frame, app: &App, area: Rect) {
         Span::styled(
             " Brochure ",
             Style::default()
-                .fg(MANTLE)
-                .bg(MAUVE)
+                .fg(app.theme.mantle)
+                .bg(app.theme.mauve)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::raw("  "),
@@ -45,18 +45,21 @@ pub(super) fn draw_tab_bar(f: &mut Frame, app: &App, area: Rect) {
             tab_spans.push(Span::styled(
                 *label,
                 Style::default()
-                    .fg(MANTLE)
-                    .bg(MAUVE)
+                    .fg(app.theme.mantle)
+                    .bg(app.theme.mauve)
                     .add_modifier(Modifier::BOLD),
             ));
         } else {
-            tab_spans.push(Span::styled(*label, Style::default().fg(SUBTEXT0)));
+            tab_spans.push(Span::styled(
+                *label,
+                Style::default().fg(app.theme.subtext0),
+            ));
         }
         tab_spans.push(Span::raw("  "));
     }
     tab_spans.push(Span::styled(
         "  [Tab] switch tab",
-        Style::default().fg(SURFACE0),
+        Style::default().fg(app.theme.surface0),
     ));
 
     let feed_count = app.feeds.iter().filter(|f| f.url != FAVORITES_URL).count();
@@ -64,16 +67,25 @@ pub(super) fn draw_tab_bar(f: &mut Frame, app: &App, area: Rect) {
     let total_unread: usize = app.feeds.iter().map(|f| f.unread_count).sum();
     let stats = ListItem::new(Line::from(vec![
         Span::raw("Feeds: "),
-        Span::styled(feed_count.to_string(), Style::default().fg(YELLOW)),
+        Span::styled(
+            feed_count.to_string(),
+            Style::default().fg(app.theme.yellow),
+        ),
         Span::raw("  Total: "),
-        Span::styled(total_articles.to_string(), Style::default().fg(YELLOW)),
+        Span::styled(
+            total_articles.to_string(),
+            Style::default().fg(app.theme.yellow),
+        ),
         Span::raw("  Unread: "),
-        Span::styled(total_unread.to_string(), Style::default().fg(YELLOW)),
+        Span::styled(
+            total_unread.to_string(),
+            Style::default().fg(app.theme.yellow),
+        ),
         Span::raw(" "),
     ]));
     let stats_width = stats.width() as u16;
 
-    let block = content_block("", false, app.user_data.border_rounded);
+    let block = content_block("", false, app.user_data.border_rounded, &app.theme);
     let inner = block.inner(area);
     f.render_widget(block, area);
 
@@ -82,8 +94,11 @@ pub(super) fn draw_tab_bar(f: &mut Frame, app: &App, area: Rect) {
         .constraints([Constraint::Min(0), Constraint::Length(stats_width)])
         .split(inner);
 
-    f.render_widget(Paragraph::new(Line::from(tab_spans)).bg(BASE), cols[0]);
-    f.render_widget(List::new([stats]).bg(BASE), cols[1]);
+    f.render_widget(
+        Paragraph::new(Line::from(tab_spans)).bg(app.theme.base),
+        cols[0],
+    );
+    f.render_widget(List::new([stats]).bg(app.theme.base), cols[1]);
 }
 
 /// Renders a progress bar showing feed fetch completion (done/total).
@@ -98,24 +113,26 @@ pub(super) fn draw_progress_bar(f: &mut Frame, app: &App, area: Rect) {
         .split(area);
 
     let bar_width = cols[0].width as usize;
-    let filled = if app.feeds_total > 0 {
-        (bar_width * done / app.feeds_total).min(bar_width)
-    } else {
-        0
-    };
+    let filled = (bar_width * done)
+        .checked_div(app.feeds_total)
+        .unwrap_or(0)
+        .min(bar_width);
     let unfilled = bar_width.saturating_sub(filled);
     f.render_widget(
         Paragraph::new(Line::from(vec![
-            Span::styled("━".repeat(filled), Style::default().fg(YELLOW)),
-            Span::styled("─".repeat(unfilled), Style::default().fg(SURFACE0)),
+            Span::styled("━".repeat(filled), Style::default().fg(app.theme.yellow)),
+            Span::styled(
+                "─".repeat(unfilled),
+                Style::default().fg(app.theme.surface0),
+            ),
         ]))
-        .bg(BASE),
+        .bg(app.theme.base),
         cols[0],
     );
     f.render_widget(
         Paragraph::new(counter)
-            .style(Style::default().fg(SUBTEXT0))
-            .bg(BASE),
+            .style(Style::default().fg(app.theme.subtext0))
+            .bg(app.theme.base),
         cols[1],
     );
 }
@@ -153,9 +170,18 @@ pub(super) fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
             " [↑/↓] Navigate   [Space] Expand   [Enter] Open   [r] Refresh   [R] Fetch All   [e] Edit   [Tab/Shift+Tab] Switch Tab   [q] Quit "
         }
         AppState::Changelog => " [↑/↓] Scroll   [Tab/Shift+Tab] Switch Tab   [q] Quit ",
+        AppState::ThemeEditor => {
+            " [↑/↓] Navigate   [Enter] Select   [n] New   [e] Edit   [r] Rename   [d] Delete   [x] Export   [i] Import   [q] Back "
+        }
+        AppState::ThemeEditorNew => " [↑/↓] Navigate   [Enter] Clone from   [Esc] Cancel ",
+        AppState::ThemeEditorColorEdit => " [↑/↓] Navigate   [Enter] Edit slot   [s/Esc] Back ",
+        AppState::ThemeEditorHexInput
+        | AppState::ThemeEditorRename
+        | AppState::ThemeEditorExport
+        | AppState::ThemeEditorImport => " [Enter] Confirm   [Esc] Cancel ",
     };
 
-    let block = content_block("", false, app.user_data.border_rounded);
+    let block = content_block("", false, app.user_data.border_rounded, &app.theme);
     let inner = block.inner(area);
     f.render_widget(block, area);
 
@@ -181,26 +207,35 @@ pub(super) fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
         let viewport = status_width.saturating_sub(prefix_len + 1);
 
         if body_len <= viewport {
-            Span::styled(format!("{prefix}{body} "), Style::default().fg(GREEN))
+            Span::styled(
+                format!("{prefix}{body} "),
+                Style::default().fg(app.theme.green),
+            )
         } else {
             // Scroll 1 char per tick (~250 ms), stop at end.
             let max_offset = body_len.saturating_sub(viewport);
             let elapsed = app.tick.saturating_sub(app.status_msg_start_tick);
             let start = elapsed.min(max_offset);
             let visible: String = body_chars[start..].iter().take(viewport).collect();
-            Span::styled(format!("{prefix}{visible} "), Style::default().fg(GREEN))
+            Span::styled(
+                format!("{prefix}{visible} "),
+                Style::default().fg(app.theme.green),
+            )
         }
     } else {
         Span::raw("")
     };
 
-    f.render_widget(Paragraph::new(Line::from(vec![status])).bg(BASE), cols[0]);
+    f.render_widget(
+        Paragraph::new(Line::from(vec![status])).bg(app.theme.base),
+        cols[0],
+    );
 
     f.render_widget(
         Paragraph::new(hints)
-            .style(Style::default().fg(SUBTEXT0))
+            .style(Style::default().fg(app.theme.subtext0))
             .alignment(Alignment::Right)
-            .bg(BASE),
+            .bg(app.theme.base),
         cols[1],
     );
 }
