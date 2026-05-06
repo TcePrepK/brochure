@@ -75,6 +75,11 @@ fn default_true() -> bool {
     true
 }
 
+/// Default serde function that returns `"catppuccin-mocha"`.
+fn default_theme() -> String {
+    String::from("catppuccin-mocha")
+}
+
 /// Controls how long articles are kept after they disappear from a feed's latest fetch.
 ///
 /// Articles not in the newest fetch are marked archived. Archived articles older than
@@ -256,4 +261,115 @@ pub struct UserData {
     /// Whether list navigation wraps around at the top/bottom (scrollbar loop).
     #[serde(default = "default_true")]
     pub scroll_loop: bool,
+    /// Slug of the active theme (e.g. `"catppuccin-mocha"`, `"gruvbox-dark"`, `"custom"`).
+    #[serde(default = "default_theme")]
+    pub selected_theme: String,
+    /// ID of the active custom theme when `selected_theme == "custom"`.
+    #[serde(default)]
+    pub selected_custom_id: Option<u32>,
+    /// All user-created custom themes.
+    #[serde(default)]
+    pub custom_themes: Vec<CustomTheme>,
+    /// Legacy: inline TOML of a single custom theme. Migrated on load; never re-written.
+    #[serde(default, skip_serializing)]
+    pub custom_theme: Option<String>,
+    /// Legacy: path to a custom `.toml` theme file. Migrated on load; never re-written.
+    #[serde(default, skip_serializing)]
+    pub custom_theme_path: Option<String>,
+}
+
+/// A user-created color theme stored as 14 named hex strings.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomTheme {
+    /// Unique identifier (monotonically increasing per session).
+    pub id: u32,
+    /// Display name shown in the theme editor.
+    pub name: String,
+    /// The 14 color slots for this theme.
+    pub colors: CustomThemeColors,
+}
+
+/// The 14 named color slots that make up a theme palette, stored as `#rrggbb` hex strings.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomThemeColors {
+    pub mauve: String,
+    pub blue: String,
+    pub green: String,
+    pub peach: String,
+    pub base: String,
+    pub mantle: String,
+    pub text: String,
+    pub subtext0: String,
+    pub surface0: String,
+    pub yellow: String,
+    pub teal: String,
+    pub sky: String,
+    pub pink: String,
+    pub red: String,
+}
+
+impl CustomThemeColors {
+    /// Get a color slot's hex value by index (0–13, matching `COLOR_SLOTS` order).
+    pub fn get(&self, idx: usize) -> &str {
+        match idx {
+            0 => &self.mauve,
+            1 => &self.blue,
+            2 => &self.green,
+            3 => &self.peach,
+            4 => &self.base,
+            5 => &self.mantle,
+            6 => &self.text,
+            7 => &self.subtext0,
+            8 => &self.surface0,
+            9 => &self.yellow,
+            10 => &self.teal,
+            11 => &self.sky,
+            12 => &self.pink,
+            13 => &self.red,
+            _ => "#000000",
+        }
+    }
+
+    /// Set a color slot by index. No-op for out-of-range indices.
+    pub fn set(&mut self, idx: usize, hex: String) {
+        match idx {
+            0 => self.mauve = hex,
+            1 => self.blue = hex,
+            2 => self.green = hex,
+            3 => self.peach = hex,
+            4 => self.base = hex,
+            5 => self.mantle = hex,
+            6 => self.text = hex,
+            7 => self.subtext0 = hex,
+            8 => self.surface0 = hex,
+            9 => self.yellow = hex,
+            10 => self.teal = hex,
+            11 => self.sky = hex,
+            12 => self.pink = hex,
+            13 => self.red = hex,
+            _ => {}
+        }
+    }
+
+    /// Serialize to TOML text compatible with `Theme::from_toml_str`.
+    pub fn to_toml(&self, name: &str) -> String {
+        format!(
+            "name = \"{name}\"\n\n[colors]\nmauve    = \"{mauve}\"\nblue     = \"{blue}\"\ngreen    = \"{green}\"\npeach    = \"{peach}\"\nbase     = \"{base}\"\nmantle   = \"{mantle}\"\ntext     = \"{text}\"\nsubtext0 = \"{subtext0}\"\nsurface0 = \"{surface0}\"\nyellow   = \"{yellow}\"\nteal     = \"{teal}\"\nsky      = \"{sky}\"\npink     = \"{pink}\"\nred      = \"{red}\"\n",
+            name = name,
+            mauve = self.mauve,
+            blue = self.blue,
+            green = self.green,
+            peach = self.peach,
+            base = self.base,
+            mantle = self.mantle,
+            text = self.text,
+            subtext0 = self.subtext0,
+            surface0 = self.surface0,
+            yellow = self.yellow,
+            teal = self.teal,
+            sky = self.sky,
+            pink = self.pink,
+            red = self.red,
+        )
+    }
 }
