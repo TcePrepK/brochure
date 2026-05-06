@@ -8,8 +8,26 @@ use crate::models::{
     FeedEditorMode, FeedTreeItem, ListScroll, SettingsItem, Tab, TextScroll, UpdateInfo, UserData,
 };
 use crate::storage::{article_cache_size, load_categories, load_feeds, load_user_data};
+use crate::ui::theme::Theme;
 use ratatui::widgets::ListState;
 use std::collections::HashSet;
+
+/// Build the active [`Theme`] from persisted user preferences.
+///
+/// Uses the selected built-in slug, or finds the custom theme by `selected_custom_id`.
+/// Falls back to Catppuccin Mocha on any error or missing theme.
+pub(crate) fn resolve_theme(user_data: &UserData) -> Theme {
+    if user_data.selected_theme != "custom" {
+        return Theme::builtin(&user_data.selected_theme).unwrap_or_else(Theme::catppuccin_mocha);
+    }
+    if let Some(id) = user_data.selected_custom_id
+        && let Some(ct) = user_data.custom_themes.iter().find(|t| t.id == id)
+        && let Ok(t) = Theme::from_custom_theme(ct)
+    {
+        return t;
+    }
+    Theme::catppuccin_mocha()
+}
 
 /// Central application state passed to every frame draw and event handler.
 pub struct App {
@@ -85,6 +103,9 @@ pub struct App {
     // ── OPML path input ──────────────────────────────────────────────────────
     /// File path typed by the user in OPMLExportPath / OPMLImportPath states.
     pub opml_path_input: String,
+    /// Cursor position (in chars) within the active text input field.
+    /// Shared across all mutually-exclusive text-input states.
+    pub input_cursor: usize,
 
     // ── Fetch progress ───────────────────────────────────────────────────────
     /// Total feeds being fetched in the current batch.
@@ -150,6 +171,18 @@ pub struct App {
     pub sidebar_title_start_tick: usize,
     /// Value of `tick` when the article selection last changed — used to scroll long article titles.
     pub article_title_start_tick: usize,
+
+    // ── Theme editor ─────────────────────────────────────────────────────────
+    /// Active color theme — derived from `user_data.selected_theme` on startup.
+    pub theme: Theme,
+    /// Cursor in the theme editor list (builtins first, then custom themes).
+    pub theme_editor_cursor: usize,
+    /// Cursor in the color-slot list when editing a custom theme.
+    pub theme_editor_color_cursor: usize,
+    /// Cursor in the clone-from picker when creating a new custom theme.
+    pub theme_editor_clone_cursor: usize,
+    /// ID of the custom theme currently being edited or renamed.
+    pub theme_editor_editing_id: Option<u32>,
 }
 
 /// Sorts `(feed_idx, article_idx, published_secs)` triples newest-first.
@@ -197,6 +230,7 @@ impl App {
     /// Construct a fresh `App`, loading feeds, categories, and user data from disk.
     pub fn new() -> Self {
         let user_data = load_user_data();
+        let theme = resolve_theme(&user_data);
         let feeds = load_feeds();
         let categories = load_categories();
 
@@ -255,6 +289,7 @@ impl App {
             add_feed_target_category: None,
             add_feed_target_order: None,
             opml_path_input: String::new(),
+            input_cursor: 0,
             feeds_total: 0,
             feeds_pending: 0,
             article_fetching: false,
@@ -279,6 +314,11 @@ impl App {
             status_msg_start_tick: 0,
             sidebar_title_start_tick: 0,
             article_title_start_tick: 0,
+            theme,
+            theme_editor_cursor: 0,
+            theme_editor_color_cursor: 0,
+            theme_editor_clone_cursor: 0,
+            theme_editor_editing_id: None,
         };
 
         app.populate_all_feeds_view();
@@ -744,6 +784,7 @@ impl App {
             AppState::ArticleDetail => self.state = AppState::ArticleList,
             AppState::AddFeed => {
                 self.input.clear();
+                self.input_cursor = 0;
                 self.add_feed_step = AddFeedStep::Url;
                 self.add_feed_url.clear();
                 self.add_feed_fetched_title = None;
