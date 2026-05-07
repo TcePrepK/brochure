@@ -20,8 +20,33 @@ pub(super) fn handle_feed_list(
     match key.code {
         KeyCode::Char('q') => return true,
         KeyCode::Char('r') if !app.in_saved_context => {
-            let idx = app.selected_feed;
-            if let Some(feed) = app.feeds.get_mut(idx) {
+            if app.in_all_feeds_context {
+                // "All Feeds" is active — refresh every feed, same as 'R'.
+                let count = app
+                    .feeds
+                    .iter()
+                    .filter(|f| f.url != crate::models::FAVORITES_URL)
+                    .count();
+                if count > 0 {
+                    app.feeds_total += count;
+                    app.feeds_pending += count;
+                    app.set_status("Fetching all feeds...");
+                    for (idx, feed) in app.feeds.iter_mut().enumerate() {
+                        if feed.url == crate::models::FAVORITES_URL {
+                            continue;
+                        }
+                        feed.fetched = false;
+                        feed.fetch_error = None;
+                        let url = feed.url.clone();
+                        let tx2 = tx.clone();
+                        tokio::spawn(async move {
+                            let result = fetch_feed(&url).await;
+                            let _ = tx2.send(AppEvent::FeedFetched(idx, result));
+                        });
+                    }
+                }
+            } else if let Some(feed) = app.feeds.get_mut(app.selected_feed) {
+                let idx = app.selected_feed;
                 let url = feed.url.clone();
                 let title = feed.title.clone();
                 feed.fetched = false;
