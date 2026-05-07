@@ -50,5 +50,16 @@
       "Scrollbars now show fractional position indicators for smoother navigation",
       "Visible text cursor in all input fields with arrow key support"
     ]
+  },
+  {
+    "version": "0.5.1",
+    "date": "2026-05-07",
+    "summary": "Improves feed refreshing, view population, article age indicators, and navigation limits in settings and editors.",
+    "highlights": [
+      "Refreshes all feeds when \"All Feeds\" is selected",
+      "Correctly populates \"All Feeds\" on startup and after fetch",
+      "Shows article age badges in All Feeds and categories",
+      "Stops scroll loop at top/bottom of Settings and Feed Editor"
+    ]
   }
 ]
