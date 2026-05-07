@@ -9,7 +9,7 @@ use ratatui::{
     widgets::{ListItem, Paragraph, Wrap},
 };
 
-use super::super::content_block;
+use super::super::{content_block, render_scrollable_list};
 use super::footer::draw_article_footer;
 use super::helpers::split_articles;
 use super::utils::{age_color, scroll_title, short_age};
@@ -183,14 +183,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
             .collect();
 
         app.article_list_state.select(Some(app.selected_article));
-        render_scrollable_list!(
-            f,
-            items,
-            inner,
-            app.article_list_state,
-            app.selected_article,
-            &app.theme
-        );
+        render_scrollable_list(f, items, inner, &mut app.article_list_state, &app.theme);
         if show_footer {
             draw_article_footer(f, app, footer_area, false);
         }
@@ -346,14 +339,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
         };
 
     app.article_list_state.select(Some(visual_selected));
-    render_scrollable_list!(
-        f,
-        items,
-        list_area,
-        app.article_list_state,
-        visual_selected,
-        &app.theme
-    );
+    render_scrollable_list(f, items, list_area, &mut app.article_list_state, &app.theme);
 
     if show_footer {
         draw_article_footer(f, app, footer_area, false);

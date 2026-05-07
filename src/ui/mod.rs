@@ -3,47 +3,6 @@
 //! This module owns all rendering logic, including tree indentation helpers,
 //! and the main `draw()` function that dispatches to per-tab renderers.
 
-// ── Shared rendering macros ──────────────────────────────────────────────────
-/// Render a list with an optional vertical scrollbar.
-///
-/// When item count exceeds `$inner.height`, reserves 1 column for the scrollbar
-/// and renders a fractional `ScrollBar` (tui-scrollbar) positioned at `$cursor`.
-/// `$theme` must be a reference to the active [`crate::ui::theme::Theme`].
-macro_rules! render_scrollable_list {
-    ($f:expr, $items:expr, $inner:expr, $list_state:expr, $cursor:expr, $theme:expr) => {{
-        let total = $items.len();
-        let has_scrollbar = total > $inner.height as usize;
-        let list_render_area = if has_scrollbar {
-            ratatui::layout::Rect {
-                width: $inner.width.saturating_sub(1),
-                ..$inner
-            }
-        } else {
-            $inner
-        };
-        $f.render_stateful_widget(
-            ratatui::widgets::List::new($items),
-            list_render_area,
-            &mut $list_state,
-        );
-        if has_scrollbar {
-            let bar_area = ratatui::layout::Rect {
-                x: $inner.right().saturating_sub(1),
-                y: $inner.y,
-                width: 1,
-                height: $inner.height,
-            };
-            crate::ui::render_scrollbar(
-                $f,
-                bar_area,
-                total,
-                $inner.height as usize,
-                $cursor,
-                $theme,
-            );
-        }
-    }};
-}
 
 mod changelog;
 mod chrome;
@@ -57,9 +16,11 @@ mod theme_editor;
 
 use crate::app::App;
 use crate::models::{AppState, FeedTreeItem, Tab};
+use crate::ui::theme::Theme;
 use ratatui::prelude::{Line, Stylize};
 use ratatui::style::Style;
-use ratatui::widgets::{Block, Borders};
+use ratatui::layout::Rect;
+use ratatui::widgets::{Block, Borders, List, ListItem, ListState};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout},
@@ -75,6 +36,37 @@ pub(crate) fn border_set(rounded: bool) -> symbols::border::Set<'static> {
         symbols::border::ROUNDED
     } else {
         symbols::border::PLAIN
+    }
+}
+
+/// Renders a list with an optional vertical scrollbar.
+///
+/// When item count exceeds `inner.height`, reserves 1 column on the right for a scrollbar.
+/// The scrollbar offset is derived from `list_state.offset()` after rendering, so it always
+/// reflects the first visible item rather than the cursor position.
+pub(crate) fn render_scrollable_list<'a>(
+    f: &mut Frame,
+    items: Vec<ListItem<'a>>,
+    inner: Rect,
+    list_state: &mut ListState,
+    theme: &Theme,
+) {
+    let total = items.len();
+    let has_scrollbar = total > inner.height as usize;
+    let list_area = if has_scrollbar {
+        Rect { width: inner.width.saturating_sub(1), ..inner }
+    } else {
+        inner
+    };
+    f.render_stateful_widget(List::new(items), list_area, list_state);
+    if has_scrollbar {
+        let bar_area = Rect {
+            x: inner.right().saturating_sub(1),
+            y: inner.y,
+            width: 1,
+            height: inner.height,
+        };
+        render_scrollbar(f, bar_area, total, inner.height as usize, list_state.offset(), theme);
     }
 }
 
@@ -154,7 +146,7 @@ pub(crate) fn content_block<'a, T>(
     title: T,
     focused: bool,
     rounded: bool,
-    theme: &crate::ui::theme::Theme,
+    theme: &Theme,
 ) -> Block<'a>
 where
     T: Into<Line<'a>>,
@@ -177,7 +169,7 @@ pub(crate) fn render_scrollbar(
     content_len: usize,
     viewport_len: usize,
     offset: usize,
-    theme: &crate::ui::theme::Theme,
+    theme: &Theme,
 ) {
     use tui_scrollbar::{ScrollBar, ScrollBarArrows, ScrollLengths};
     f.render_widget(

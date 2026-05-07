@@ -9,7 +9,7 @@ use ratatui::{
     widgets::{Block, Borders, ListItem, Paragraph},
 };
 
-use super::border_set;
+use super::{border_set, render_scrollable_list};
 use crate::{app::App, models::AppState};
 
 /// Renders the full-screen saved-category editor for renaming and deleting custom categories.
@@ -78,14 +78,7 @@ pub(super) fn draw_saved_category_editor(f: &mut Frame, app: &mut App, area: Rec
         })
         .collect();
 
-    render_scrollable_list!(
-        f,
-        items,
-        inner,
-        app.saved_cat_editor_scroll.list_state,
-        app.saved_cat_editor_scroll.cursor,
-        &app.theme
-    );
+    render_scrollable_list(f, items, inner, &mut app.saved_cat_editor_scroll.list_state, &app.theme);
 
     // Render input row when creating a new category.
     if app.state == AppState::SavedCategoryEditorNew {

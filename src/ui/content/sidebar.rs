@@ -9,7 +9,7 @@ use ratatui::{
     widgets::ListItem,
 };
 
-use super::super::{SPINNER_FRAMES, content_block, tree_connector, tree_indent};
+use super::super::{SPINNER_FRAMES, content_block, render_scrollable_list, tree_connector, tree_indent};
 use super::utils::{scroll_title, truncate_title};
 use crate::{
     app::{App, sidebar_tree_items},
@@ -164,14 +164,7 @@ pub(super) fn draw_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
         .collect();
 
     app.sidebar_list_state.select(Some(cursor));
-    render_scrollable_list!(
-        f,
-        items,
-        list_area,
-        app.sidebar_list_state,
-        cursor,
-        &app.theme
-    );
+    render_scrollable_list(f, items, list_area, &mut app.sidebar_list_state, &app.theme);
 
     if let Some(pb) = maybe_progress {
         super::super::chrome::draw_progress_bar(f, app, pb);
