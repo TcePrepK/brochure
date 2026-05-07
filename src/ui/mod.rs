@@ -48,8 +48,9 @@ macro_rules! render_scrollable_list {
 mod changelog;
 mod chrome;
 mod content;
-mod editor;
+mod feed_editor;
 mod popups;
+mod saved_category_editor;
 mod settings;
 pub(crate) mod theme;
 mod theme_editor;
@@ -217,7 +218,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             | AppState::SavedCategoryEditorDeleteConfirm
             | AppState::SavedCategoryEditorNew
     ) {
-        settings::draw_saved_category_editor(f, app, chunks[1]);
+        saved_category_editor::draw_saved_category_editor(f, app, chunks[1]);
         if app.state == AppState::SavedCategoryEditorDeleteConfirm {
             popups::draw_confirm_delete_saved_cat(f, app);
         }

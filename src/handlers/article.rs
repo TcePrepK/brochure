@@ -446,7 +446,7 @@ fn open_article(app: &mut App, tx: &UnboundedSender<AppEvent>) {
 ///
 /// Returns `None` when no feed is selected, the article list is empty, or indices are out of
 /// bounds.
-pub(super) fn get_selected_article(app: &App) -> Option<Article> {
+pub fn get_selected_article(app: &App) -> Option<Article> {
     if app.in_category_context {
         let &(fi, ai) = app.category_view_articles.get(app.selected_article)?;
         app.feeds.get(fi)?.articles.get(ai).cloned()
