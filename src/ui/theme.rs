@@ -5,70 +5,70 @@ use ratatui::style::Color;
 /// Metadata for each color slot: `(field_name, short_label)` in the order used by
 /// [`crate::models::CustomThemeColors::get`] / [`crate::models::CustomThemeColors::set`].
 pub const COLOR_SLOTS: &[(&str, &str)] = &[
-    ("mauve", "accent / focused border"),
-    ("blue", "links / highlights"),
-    ("green", "success / read indicator"),
-    ("peach", "section headers / warnings"),
-    ("base", "main background"),
-    ("mantle", "darkest background"),
-    ("text", "primary foreground"),
-    ("subtext0", "secondary / muted text"),
-    ("surface0", "unfocused borders"),
-    ("yellow", "warnings / stars / unread"),
-    ("teal", "teal accent"),
-    ("sky", "lighter blue accent"),
-    ("pink", "pink accent"),
-    ("red", "errors / delete actions"),
+    ("accent",    "primary accent / focused border"),
+    ("link",      "links / highlights"),
+    ("success",   "success / read indicator"),
+    ("notice",    "section headers / warnings"),
+    ("bg",        "main background"),
+    ("bg_dark",   "darkest background"),
+    ("text",      "primary foreground"),
+    ("muted_text","secondary / muted text"),
+    ("border",    "unfocused borders"),
+    ("unread",    "warnings / stars / unread"),
+    ("teal",      "teal accent"),
+    ("sky",       "sky / lighter accent"),
+    ("pink",      "pink accent"),
+    ("error",     "errors / delete actions"),
 ];
 
 /// Full color palette for the application UI.
 ///
-/// Every named slot maps to one semantic role (e.g. `mauve` = focused border/accent,
-/// `surface0` = unfocused border, `base` = main background). Built-in constructors
+/// Every named slot maps to one semantic role (e.g. `accent` = focused border,
+/// `border` = unfocused border, `bg` = main background). Built-in constructors
 /// return ready-to-use palettes; `from_toml_str` loads custom user themes.
 #[derive(Debug, Clone)]
 pub struct Theme {
     /// Theme display name (shown in the theme picker).
     pub name: String,
-    /// Accent / focused-border color.
-    pub mauve: Color,
-    /// Link / highlight color.
-    pub blue: Color,
-    /// Success / read-indicator color.
-    pub green: Color,
-    /// Section-header / warning color.
-    pub peach: Color,
+    /// Focused-border / primary accent.
+    pub accent: Color,
+    /// Highlight.
+    pub link: Color,
+    /// Read-indicator / positive.
+    pub success: Color,
+    /// Section-header / warning.
+    pub notice: Color,
     /// Main background.
-    pub base: Color,
+    pub bg: Color,
     /// Darkest background (tab bar, footer).
-    pub mantle: Color,
+    pub bg_dark: Color,
     /// Primary foreground text.
     pub text: Color,
     /// Secondary / muted text.
-    pub subtext0: Color,
-    /// Unfocused border / muted element color.
-    pub surface0: Color,
+    pub muted_text: Color,
+    /// Unfocused border / muted element.
+    pub border: Color,
     /// Warning / star / unread accent.
-    pub yellow: Color,
+    pub unread: Color,
     /// Teal accent variant.
     pub teal: Color,
     /// Sky / lighter blue accent.
     pub sky: Color,
     /// Pink accent variant.
     pub pink: Color,
-    /// Error / delete action color.
-    pub red: Color,
+    /// Error / delete action.
+    pub error: Color,
 }
 
 impl Theme {
     /// Colors cycled by category ID in the sidebar (8-element fixed array).
     pub fn category_colors(&self) -> [Color; 8] {
         [
-            self.mauve,
-            self.blue,
-            self.green,
-            self.peach,
-            self.yellow,
+            self.accent,
+            self.link,
+            self.success,
+            self.notice,
+            self.unread,
             self.teal,
             self.sky,
             self.pink,
@@ -79,20 +79,20 @@ impl Theme {
     pub fn catppuccin_mocha() -> Self {
         Self {
             name: String::from("Catppuccin Mocha"),
-            mauve: Color::Rgb(203, 166, 247),
-            blue: Color::Rgb(137, 180, 250),
-            green: Color::Rgb(166, 227, 161),
-            peach: Color::Rgb(250, 179, 135),
-            base: Color::Rgb(30, 30, 46),
-            mantle: Color::Rgb(24, 24, 37),
+            accent: Color::Rgb(203, 166, 247),
+            link: Color::Rgb(137, 180, 250),
+            success: Color::Rgb(166, 227, 161),
+            notice: Color::Rgb(250, 179, 135),
+            bg: Color::Rgb(30, 30, 46),
+            bg_dark: Color::Rgb(24, 24, 37),
             text: Color::Rgb(205, 214, 244),
-            subtext0: Color::Rgb(166, 173, 200),
-            surface0: Color::Rgb(49, 50, 68),
-            yellow: Color::Rgb(249, 226, 175),
+            muted_text: Color::Rgb(166, 173, 200),
+            border: Color::Rgb(49, 50, 68),
+            unread: Color::Rgb(249, 226, 175),
             teal: Color::Rgb(148, 226, 213),
             sky: Color::Rgb(137, 220, 235),
             pink: Color::Rgb(245, 194, 231),
-            red: Color::Rgb(243, 139, 168),
+            error: Color::Rgb(243, 139, 168),
         }
     }
 
@@ -100,20 +100,20 @@ impl Theme {
     pub fn gruvbox_dark() -> Self {
         Self {
             name: String::from("Gruvbox Dark"),
-            mauve: Color::Rgb(211, 134, 155),
-            blue: Color::Rgb(131, 165, 152),
-            green: Color::Rgb(184, 187, 38),
-            peach: Color::Rgb(254, 128, 25),
-            base: Color::Rgb(40, 40, 40),
-            mantle: Color::Rgb(29, 32, 33),
+            accent: Color::Rgb(211, 134, 155),
+            link: Color::Rgb(131, 165, 152),
+            success: Color::Rgb(184, 187, 38),
+            notice: Color::Rgb(254, 128, 25),
+            bg: Color::Rgb(40, 40, 40),
+            bg_dark: Color::Rgb(29, 32, 33),
             text: Color::Rgb(235, 219, 178),
-            subtext0: Color::Rgb(168, 153, 132),
-            surface0: Color::Rgb(60, 56, 54),
-            yellow: Color::Rgb(250, 189, 47),
+            muted_text: Color::Rgb(168, 153, 132),
+            border: Color::Rgb(60, 56, 54),
+            unread: Color::Rgb(250, 189, 47),
             teal: Color::Rgb(142, 192, 124),
             sky: Color::Rgb(131, 165, 152),
             pink: Color::Rgb(211, 134, 155),
-            red: Color::Rgb(251, 73, 52),
+            error: Color::Rgb(251, 73, 52),
         }
     }
 
@@ -121,20 +121,20 @@ impl Theme {
     pub fn dracula() -> Self {
         Self {
             name: String::from("Dracula"),
-            mauve: Color::Rgb(189, 147, 249),
-            blue: Color::Rgb(98, 114, 164),
-            green: Color::Rgb(80, 250, 123),
-            peach: Color::Rgb(255, 184, 108),
-            base: Color::Rgb(40, 42, 54),
-            mantle: Color::Rgb(25, 26, 33),
+            accent: Color::Rgb(189, 147, 249),
+            link: Color::Rgb(98, 114, 164),
+            success: Color::Rgb(80, 250, 123),
+            notice: Color::Rgb(255, 184, 108),
+            bg: Color::Rgb(40, 42, 54),
+            bg_dark: Color::Rgb(25, 26, 33),
             text: Color::Rgb(248, 248, 242),
-            subtext0: Color::Rgb(98, 114, 164),
-            surface0: Color::Rgb(68, 71, 90),
-            yellow: Color::Rgb(241, 250, 140),
+            muted_text: Color::Rgb(98, 114, 164),
+            border: Color::Rgb(68, 71, 90),
+            unread: Color::Rgb(241, 250, 140),
             teal: Color::Rgb(139, 233, 253),
             sky: Color::Rgb(139, 233, 253),
             pink: Color::Rgb(255, 121, 198),
-            red: Color::Rgb(255, 85, 85),
+            error: Color::Rgb(255, 85, 85),
         }
     }
 
@@ -142,20 +142,20 @@ impl Theme {
     pub fn nord() -> Self {
         Self {
             name: String::from("Nord"),
-            mauve: Color::Rgb(180, 142, 173),
-            blue: Color::Rgb(129, 161, 193),
-            green: Color::Rgb(163, 190, 140),
-            peach: Color::Rgb(208, 135, 112),
-            base: Color::Rgb(46, 52, 64),
-            mantle: Color::Rgb(36, 41, 51),
+            accent: Color::Rgb(180, 142, 173),
+            link: Color::Rgb(129, 161, 193),
+            success: Color::Rgb(163, 190, 140),
+            notice: Color::Rgb(208, 135, 112),
+            bg: Color::Rgb(46, 52, 64),
+            bg_dark: Color::Rgb(36, 41, 51),
             text: Color::Rgb(236, 239, 244),
-            subtext0: Color::Rgb(216, 222, 233),
-            surface0: Color::Rgb(59, 66, 82),
-            yellow: Color::Rgb(235, 203, 139),
+            muted_text: Color::Rgb(216, 222, 233),
+            border: Color::Rgb(59, 66, 82),
+            unread: Color::Rgb(235, 203, 139),
             teal: Color::Rgb(143, 188, 187),
             sky: Color::Rgb(136, 192, 208),
             pink: Color::Rgb(180, 142, 173),
-            red: Color::Rgb(191, 97, 106),
+            error: Color::Rgb(191, 97, 106),
         }
     }
 
@@ -163,20 +163,20 @@ impl Theme {
     pub fn gnome() -> Self {
         Self {
             name: String::from("GNOME"),
-            mauve: Color::Rgb(145, 65, 172),
-            blue: Color::Rgb(53, 132, 228),
-            green: Color::Rgb(38, 162, 105),
-            peach: Color::Rgb(230, 97, 0),
-            base: Color::Rgb(30, 30, 30),
-            mantle: Color::Rgb(20, 20, 20),
+            accent: Color::Rgb(145, 65, 172),
+            link: Color::Rgb(53, 132, 228),
+            success: Color::Rgb(38, 162, 105),
+            notice: Color::Rgb(230, 97, 0),
+            bg: Color::Rgb(30, 30, 30),
+            bg_dark: Color::Rgb(20, 20, 20),
             text: Color::Rgb(255, 255, 255),
-            subtext0: Color::Rgb(154, 153, 150),
-            surface0: Color::Rgb(48, 48, 48),
-            yellow: Color::Rgb(229, 165, 10),
+            muted_text: Color::Rgb(154, 153, 150),
+            border: Color::Rgb(48, 48, 48),
+            unread: Color::Rgb(229, 165, 10),
             teal: Color::Rgb(33, 144, 164),
             sky: Color::Rgb(99, 160, 212),
             pink: Color::Rgb(192, 97, 203),
-            red: Color::Rgb(224, 27, 36),
+            error: Color::Rgb(224, 27, 36),
         }
     }
 
@@ -234,20 +234,20 @@ impl Theme {
         };
         Ok(Self {
             name: ct.name.clone(),
-            mauve: p("mauve", &c.mauve)?,
-            blue: p("blue", &c.blue)?,
-            green: p("green", &c.green)?,
-            peach: p("peach", &c.peach)?,
-            base: p("base", &c.base)?,
-            mantle: p("mantle", &c.mantle)?,
+            accent: p("accent", &c.accent)?,
+            link: p("link", &c.link)?,
+            success: p("success", &c.success)?,
+            notice: p("notice", &c.notice)?,
+            bg: p("bg", &c.bg)?,
+            bg_dark: p("bg_dark", &c.bg_dark)?,
             text: p("text", &c.text)?,
-            subtext0: p("subtext0", &c.subtext0)?,
-            surface0: p("surface0", &c.surface0)?,
-            yellow: p("yellow", &c.yellow)?,
+            muted_text: p("muted_text", &c.muted_text)?,
+            border: p("border", &c.border)?,
+            unread: p("unread", &c.unread)?,
             teal: p("teal", &c.teal)?,
             sky: p("sky", &c.sky)?,
             pink: p("pink", &c.pink)?,
-            red: p("red", &c.red)?,
+            error: p("error", &c.error)?,
         })
     }
 
@@ -256,20 +256,20 @@ impl Theme {
     /// Used when cloning a built-in theme as the starting point for a new custom theme.
     pub fn to_custom_colors(&self) -> crate::models::CustomThemeColors {
         crate::models::CustomThemeColors {
-            mauve: Self::color_to_hex(self.mauve),
-            blue: Self::color_to_hex(self.blue),
-            green: Self::color_to_hex(self.green),
-            peach: Self::color_to_hex(self.peach),
-            base: Self::color_to_hex(self.base),
-            mantle: Self::color_to_hex(self.mantle),
+            accent: Self::color_to_hex(self.accent),
+            link: Self::color_to_hex(self.link),
+            success: Self::color_to_hex(self.success),
+            notice: Self::color_to_hex(self.notice),
+            bg: Self::color_to_hex(self.bg),
+            bg_dark: Self::color_to_hex(self.bg_dark),
             text: Self::color_to_hex(self.text),
-            subtext0: Self::color_to_hex(self.subtext0),
-            surface0: Self::color_to_hex(self.surface0),
-            yellow: Self::color_to_hex(self.yellow),
+            muted_text: Self::color_to_hex(self.muted_text),
+            border: Self::color_to_hex(self.border),
+            unread: Self::color_to_hex(self.unread),
             teal: Self::color_to_hex(self.teal),
             sky: Self::color_to_hex(self.sky),
             pink: Self::color_to_hex(self.pink),
-            red: Self::color_to_hex(self.red),
+            error: Self::color_to_hex(self.error),
         }
     }
 
@@ -280,20 +280,20 @@ impl Theme {
     /// name = "My Theme"
     ///
     /// [colors]
-    /// mauve   = "#cba6f7"
-    /// blue    = "#89b4fa"
-    /// green   = "#a6e3a1"
-    /// peach   = "#fab387"
-    /// base    = "#1e1e2e"
-    /// mantle  = "#181825"
-    /// text    = "#cdd6f4"
-    /// subtext0 = "#a6adc8"
-    /// surface0 = "#313244"
-    /// yellow  = "#f9e2af"
-    /// teal    = "#94e2d5"
-    /// sky     = "#89dceb"
-    /// pink    = "#f5c2e7"
-    /// red     = "#f38ba8"
+    /// accent    = "#cba6f7"
+    /// link      = "#89b4fa"
+    /// success   = "#a6e3a1"
+    /// notice    = "#fab387"
+    /// bg        = "#1e1e2e"
+    /// bg_dark   = "#181825"
+    /// text      = "#cdd6f4"
+    /// muted_text = "#a6adc8"
+    /// border    = "#313244"
+    /// unread    = "#f9e2af"
+    /// teal      = "#94e2d5"
+    /// sky       = "#89dceb"
+    /// pink      = "#f5c2e7"
+    /// error     = "#f38ba8"
     /// ```
     pub fn from_toml_str(src: &str) -> anyhow::Result<Self> {
         use anyhow::Context as _;
@@ -319,20 +319,20 @@ impl Theme {
 
         Ok(Self {
             name,
-            mauve: parse("mauve")?,
-            blue: parse("blue")?,
-            green: parse("green")?,
-            peach: parse("peach")?,
-            base: parse("base")?,
-            mantle: parse("mantle")?,
+            accent: parse("accent")?,
+            link: parse("link")?,
+            success: parse("success")?,
+            notice: parse("notice")?,
+            bg: parse("bg")?,
+            bg_dark: parse("bg_dark")?,
             text: parse("text")?,
-            subtext0: parse("subtext0")?,
-            surface0: parse("surface0")?,
-            yellow: parse("yellow")?,
+            muted_text: parse("muted_text")?,
+            border: parse("border")?,
+            unread: parse("unread")?,
             teal: parse("teal")?,
             sky: parse("sky")?,
             pink: parse("pink")?,
-            red: parse("red")?,
+            error: parse("error")?,
         })
     }
 }
@@ -355,7 +355,7 @@ mod tests {
     #[test]
     fn builtin_catppuccin_mocha_has_correct_mauve() {
         let t = Theme::catppuccin_mocha();
-        assert_eq!(t.mauve, Color::Rgb(203, 166, 247));
+        assert_eq!(t.accent, Color::Rgb(203, 166, 247));
         assert_eq!(t.name, "Catppuccin Mocha");
     }
 
@@ -391,24 +391,24 @@ mod tests {
         let src = r##"
 name = "Test"
 [colors]
-mauve    = "#cba6f7"
-blue     = "#89b4fa"
-green    = "#a6e3a1"
-peach    = "#fab387"
-base     = "#1e1e2e"
-mantle   = "#181825"
-text     = "#cdd6f4"
-subtext0 = "#a6adc8"
-surface0 = "#313244"
-yellow   = "#f9e2af"
-teal     = "#94e2d5"
-sky      = "#89dceb"
-pink     = "#f5c2e7"
-red      = "#f38ba8"
+accent    = "#cba6f7"
+link      = "#89b4fa"
+success   = "#a6e3a1"
+notice    = "#fab387"
+bg        = "#1e1e2e"
+bg_dark   = "#181825"
+text      = "#cdd6f4"
+muted_text = "#a6adc8"
+border    = "#313244"
+unread    = "#f9e2af"
+teal      = "#94e2d5"
+sky       = "#89dceb"
+pink      = "#f5c2e7"
+error     = "#f38ba8"
 "##;
         let t = Theme::from_toml_str(src).unwrap();
         assert_eq!(t.name, "Test");
-        assert_eq!(t.mauve, Color::Rgb(203, 166, 247));
+        assert_eq!(t.accent, Color::Rgb(203, 166, 247));
     }
 
     #[test]
@@ -416,7 +416,7 @@ red      = "#f38ba8"
         let src = r##"
 name = "Broken"
 [colors]
-mauve = "#cba6f7"
+accent = "#cba6f7"
 "##;
         assert!(Theme::from_toml_str(src).is_err());
     }

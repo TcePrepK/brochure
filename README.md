@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-89dceb?style=flat-square)](LICENSE)
 [![Rust: 1.85+](https://img.shields.io/badge/rust-1.85+-fab387?style=flat-square)](https://www.rust-lang.org)
 
-Built with [Ratatui](https://ratatui.rs) · Catppuccin Mocha theme · Full RSS/Atom support
+Built with [Ratatui](https://ratatui.rs) · 5 built-in themes · Full RSS/Atom support
 
 </div>
 
@@ -62,18 +62,19 @@ Open the theme editor from **Settings → Theme**.
 
 ### Theme editor
 
-| Key | Action |
-|-----|--------|
-| `↑/↓` | Navigate theme list |
-| `Enter` | Activate selected theme |
-| `n` | New custom theme (clone from any existing theme) |
-| `e` | Edit colors (custom themes only) |
-| `r` | Rename (custom themes only) |
-| `d` | Delete (custom themes only) |
-| `x` | Export theme to a `.toml` file |
-| `i` | Import a `.toml` file as a new custom theme |
+| Key     | Action                                           |
+|---------|--------------------------------------------------|
+| `↑/↓`   | Navigate theme list                              |
+| `Enter` | Activate selected theme                          |
+| `n`     | New custom theme (clone from any existing theme) |
+| `e`     | Edit colors (custom themes only)                 |
+| `r`     | Rename (custom themes only)                      |
+| `d`     | Delete (custom themes only)                      |
+| `x`     | Export theme to a `.toml` file                   |
+| `i`     | Import a `.toml` file as a new custom theme      |
 
-When editing colors, navigate with `↑/↓`, press `Enter` on a slot to type a new `#rrggbb` hex value. A live color swatch previews your input. Press `s` or `Esc` to return.
+When editing colors, navigate with `↑/↓`, press `Enter` on a slot to type a new `#rrggbb` hex value. A live color swatch
+previews your input. Press `s` or `Esc` to return.
 
 ### Custom theme TOML format
 
@@ -81,23 +82,24 @@ When editing colors, navigate with `↑/↓`, press `Enter` on a slot to type a 
 name = "My Theme"
 
 [colors]
-mauve    = "#cba6f7"   # accent / focused border
-blue     = "#89b4fa"   # links / highlights
-green    = "#a6e3a1"   # success / read indicator
-peach    = "#fab387"   # section headers / warnings
-base     = "#1e1e2e"   # main background
-mantle   = "#181825"   # darkest background (tab bar, footer)
-text     = "#cdd6f4"   # primary foreground
-subtext0 = "#a6adc8"   # secondary / muted text
-surface0 = "#313244"   # unfocused borders
-yellow   = "#f9e2af"   # warnings / stars / unread accent
-teal     = "#94e2d5"   # teal accent
-sky      = "#89dceb"   # lighter blue accent
-pink     = "#f5c2e7"   # pink accent
-red      = "#f38ba8"   # errors / delete actions
+accent     = "#cba6f7"   # focused borders, selected items, active highlights
+link       = "#89b4fa"   # links and inline highlights
+success    = "#a6e3a1"   # read articles, positive indicators
+notice     = "#fab387"   # section headers, feed names, mild warnings
+bg         = "#1e1e2e"   # main panel background
+bg_dark    = "#181825"   # tab bar, footer, sidebar chrome
+text       = "#cdd6f4"   # article titles and body text
+muted_text = "#a6adc8"   # timestamps, secondary info, feed names in lists
+border     = "#313244"   # panel dividers, unfocused panel borders
+unread     = "#f9e2af"   # unread count badges, star icons
+teal       = "#94e2d5"   # category accent 1 (sidebar color rotation)
+sky        = "#89dceb"   # category accent 2 (sidebar color rotation)
+pink       = "#f5c2e7"   # category accent 3 (sidebar color rotation)
+error      = "#f38ba8"   # error messages, delete confirmations
 ```
 
-All 14 keys are required. Custom themes are stored inline in `user_data.json` — no external file needed after import. You can have any number of custom themes.
+All 14 keys are required. Custom themes are stored inline in `user_data.json` — no external file needed after import.
+You can have any number of custom themes.
 
 ## Contributing
 
