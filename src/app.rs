@@ -379,7 +379,10 @@ impl App {
         match self.state {
             AppState::FeedList => self.move_sidebar_cursor(true),
             AppState::ArticleList => self.move_article_cursor(true),
-            AppState::SettingsList => self.settings_selected = self.settings_selected.next(),
+            AppState::SettingsList
+                if (self.user_data.scroll_loop || self.settings_selected != SettingsItem::Theme) => {
+                    self.settings_selected = self.settings_selected.next();
+                }
             AppState::SavedCategoryList => self.move_saved_cursor(true),
             AppState::FeedEditor => {
                 if self.editor_panel == EditorPanel::Categories {
@@ -400,7 +403,11 @@ impl App {
                         } else {
                             cats.len()
                         };
-                        self.editor_cat_cursor = (self.editor_cat_cursor + 1) % wrap_len;
+                        if self.user_data.scroll_loop {
+                            self.editor_cat_cursor = (self.editor_cat_cursor + 1) % wrap_len;
+                        } else {
+                            self.editor_cat_cursor = (self.editor_cat_cursor + 1).min(wrap_len - 1);
+                        }
                     }
                 } else {
                     let items =
@@ -409,7 +416,11 @@ impl App {
                         // During a feed move: navigate ALL items so the cursor can land on a
                         // category header (dropping there = insert as first child of that category).
                         if !items.is_empty() {
-                            self.editor_cursor = (self.editor_cursor + 1) % items.len();
+                            if self.user_data.scroll_loop {
+                                self.editor_cursor = (self.editor_cursor + 1) % items.len();
+                            } else {
+                                self.editor_cursor = (self.editor_cursor + 1).min(items.len() - 1);
+                            }
                         }
                     } else {
                         // Normal: only Feed items (categories are non-interactive headers).
@@ -424,7 +435,12 @@ impl App {
                                 .iter()
                                 .position(|&i| i == self.editor_cursor)
                                 .unwrap_or(0);
-                            self.editor_cursor = feed_indices[(cur + 1) % feed_indices.len()];
+                            let next_idx = if self.user_data.scroll_loop {
+                                (cur + 1) % feed_indices.len()
+                            } else {
+                                (cur + 1).min(feed_indices.len() - 1)
+                            };
+                            self.editor_cursor = feed_indices[next_idx];
                         }
                     }
                 }
@@ -438,7 +454,11 @@ impl App {
         match self.state {
             AppState::FeedList => self.move_sidebar_cursor(false),
             AppState::ArticleList => self.move_article_cursor(false),
-            AppState::SettingsList => self.settings_selected = self.settings_selected.prev(),
+            AppState::SettingsList
+                if (self.user_data.scroll_loop || self.settings_selected != SettingsItem::ImportOpml)
+                => {
+                    self.settings_selected = self.settings_selected.prev();
+                }
             AppState::SavedCategoryList => self.move_saved_cursor(false),
             AppState::FeedEditor => {
                 if self.editor_panel == EditorPanel::Categories {
@@ -459,10 +479,14 @@ impl App {
                         } else {
                             cats.len()
                         };
-                        self.editor_cat_cursor = self
-                            .editor_cat_cursor
-                            .checked_sub(1)
-                            .unwrap_or(wrap_len - 1);
+                        if self.user_data.scroll_loop {
+                            self.editor_cat_cursor = self
+                                .editor_cat_cursor
+                                .checked_sub(1)
+                                .unwrap_or(wrap_len - 1);
+                        } else {
+                            self.editor_cat_cursor = self.editor_cat_cursor.saturating_sub(1);
+                        }
                     }
                 } else {
                     let items =
@@ -470,8 +494,12 @@ impl App {
                     if matches!(self.editor_mode, FeedEditorMode::Moving { .. }) {
                         // During a feed move: navigate ALL items.
                         if !items.is_empty() {
-                            self.editor_cursor =
-                                self.editor_cursor.checked_sub(1).unwrap_or(items.len() - 1);
+                            if self.user_data.scroll_loop {
+                                self.editor_cursor =
+                                    self.editor_cursor.checked_sub(1).unwrap_or(items.len() - 1);
+                            } else {
+                                self.editor_cursor = self.editor_cursor.saturating_sub(1);
+                            }
                         }
                     } else {
                         // Normal: only Feed items.
@@ -486,8 +514,12 @@ impl App {
                                 .iter()
                                 .position(|&i| i == self.editor_cursor)
                                 .unwrap_or(0);
-                            self.editor_cursor =
-                                feed_indices[cur.checked_sub(1).unwrap_or(feed_indices.len() - 1)];
+                            let prev_idx = if self.user_data.scroll_loop {
+                                cur.checked_sub(1).unwrap_or(feed_indices.len() - 1)
+                            } else {
+                                cur.saturating_sub(1)
+                            };
+                            self.editor_cursor = feed_indices[prev_idx];
                         }
                     }
                 }
