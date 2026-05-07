@@ -3,7 +3,6 @@
 //! This module owns all rendering logic, including tree indentation helpers,
 //! and the main `draw()` function that dispatches to per-tab renderers.
 
-
 mod changelog;
 mod chrome;
 mod content;
@@ -17,9 +16,9 @@ mod theme_editor;
 use crate::app::App;
 use crate::models::{AppState, FeedTreeItem, Tab};
 use crate::ui::theme::Theme;
+use ratatui::layout::Rect;
 use ratatui::prelude::{Line, Stylize};
 use ratatui::style::Style;
-use ratatui::layout::Rect;
 use ratatui::widgets::{Block, Borders, List, ListItem, ListState};
 use ratatui::{
     Frame,
@@ -54,7 +53,10 @@ pub(crate) fn render_scrollable_list<'a>(
     let total = items.len();
     let has_scrollbar = total > inner.height as usize;
     let list_area = if has_scrollbar {
-        Rect { width: inner.width.saturating_sub(1), ..inner }
+        Rect {
+            width: inner.width.saturating_sub(1),
+            ..inner
+        }
     } else {
         inner
     };
@@ -66,7 +68,14 @@ pub(crate) fn render_scrollable_list<'a>(
             width: 1,
             height: inner.height,
         };
-        render_scrollbar(f, bar_area, total, inner.height as usize, list_state.offset(), theme);
+        render_scrollbar(
+            f,
+            bar_area,
+            total,
+            inner.height as usize,
+            list_state.offset(),
+            theme,
+        );
     }
 }
 

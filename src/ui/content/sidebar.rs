@@ -9,7 +9,9 @@ use ratatui::{
     widgets::ListItem,
 };
 
-use super::super::{SPINNER_FRAMES, content_block, render_scrollable_list, tree_connector, tree_indent};
+use super::super::{
+    SPINNER_FRAMES, content_block, render_scrollable_list, tree_connector, tree_indent,
+};
 use super::utils::{scroll_title, truncate_title};
 use crate::{
     app::{App, sidebar_tree_items},
