@@ -595,14 +595,7 @@ pub(super) fn draw_update_popup(f: &mut Frame, app: &App) {
     f.render_widget(
         Paragraph::new(Line::from(vec![
             Span::styled(
-                "  [↑↓] ",
-                Style::default()
-                    .fg(app.theme.mauve)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::styled("Scroll   ", Style::default().fg(app.theme.text)),
-            Span::styled(
-                "[Enter/Esc] ",
+                "  [Enter/Esc/q] ",
                 Style::default()
                     .fg(app.theme.mauve)
                     .add_modifier(Modifier::BOLD),
