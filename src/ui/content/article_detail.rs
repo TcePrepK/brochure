@@ -31,7 +31,7 @@ pub(super) fn draw_article_detail(
         f.render_widget(block, area);
         f.render_widget(
             Paragraph::new("Select an article to preview.")
-                .style(Style::default().fg(app.theme.subtext0)),
+                .style(Style::default().fg(app.theme.muted_text)),
             inner,
         );
         return;
@@ -68,7 +68,7 @@ pub(super) fn draw_article_detail(
         format!(" {}{age_suffix} ", article.title)
     };
     let block = content_block(
-        detail_title.fg(app.theme.mauve).bold(),
+        detail_title.fg(app.theme.accent).bold(),
         !is_preview,
         app.user_data.border_rounded,
         &app.theme,

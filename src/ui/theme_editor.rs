@@ -56,7 +56,7 @@ pub(super) fn draw_theme_editor_screen(f: &mut Frame, app: &App, area: Rect) {
 // ── Main editor (theme list + color preview) ──────────────────────────────────
 
 fn draw_main(f: &mut Frame, app: &App, area: Rect) {
-    let bg = Block::default().bg(app.theme.base);
+    let bg = Block::default().bg(app.theme.bg);
     f.render_widget(bg, area);
 
     let cols = Layout::default()
@@ -70,7 +70,7 @@ fn draw_main(f: &mut Frame, app: &App, area: Rect) {
 
 fn draw_theme_list(f: &mut Frame, app: &App, area: Rect) {
     let block = content_block(
-        Line::from(" Themes ").fg(app.theme.mauve).bold(),
+        Line::from(" Themes ").fg(app.theme.accent).bold(),
         true,
         app.user_data.border_rounded,
         &app.theme,
@@ -90,8 +90,8 @@ fn draw_theme_list(f: &mut Frame, app: &App, area: Rect) {
             let is_cursor = i == cursor;
             let style = if is_cursor {
                 Style::default()
-                    .fg(app.theme.mantle)
-                    .bg(app.theme.mauve)
+                    .fg(app.theme.bg_dark)
+                    .bg(app.theme.accent)
                     .add_modifier(Modifier::BOLD)
             } else {
                 Style::default().fg(app.theme.text)
@@ -107,7 +107,7 @@ fn draw_theme_list(f: &mut Frame, app: &App, area: Rect) {
             "  {}",
             "─".repeat(inner.width.saturating_sub(2) as usize)
         ))
-        .fg(app.theme.surface0),
+        .fg(app.theme.border),
     ));
 
     let sep_idx = builtin_names.len();
@@ -120,8 +120,8 @@ fn draw_theme_list(f: &mut Frame, app: &App, area: Rect) {
         let is_cursor = list_idx == cursor;
         let style = if is_cursor {
             Style::default()
-                .fg(app.theme.mantle)
-                .bg(app.theme.blue)
+                .fg(app.theme.bg_dark)
+                .bg(app.theme.link)
                 .add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(app.theme.text)
@@ -135,7 +135,7 @@ fn draw_theme_list(f: &mut Frame, app: &App, area: Rect) {
 
     if app.user_data.custom_themes.is_empty() {
         items.push(ListItem::new(
-            Line::from("  (no custom themes)").fg(app.theme.subtext0),
+            Line::from("  (no custom themes)").fg(app.theme.muted_text),
         ));
     }
 
@@ -170,7 +170,7 @@ fn draw_color_preview(f: &mut Frame, app: &App, area: Rect) {
 
     let block = content_block(
         Line::from(format!(" {title_str} "))
-            .fg(app.theme.peach)
+            .fg(app.theme.notice)
             .bold(),
         false,
         app.user_data.border_rounded,
@@ -193,12 +193,12 @@ fn draw_color_preview(f: &mut Frame, app: &App, area: Rect) {
             let swatch_color = parse_hex_color(hex).unwrap_or(ratatui::style::Color::Reset);
             Line::from(vec![
                 Span::styled(
-                    format!("  {slot:<8} "),
-                    Style::default().fg(app.theme.subtext0),
+                    format!("  {slot:<10} "),
+                    Style::default().fg(app.theme.muted_text),
                 ),
                 Span::styled(swatch, Style::default().fg(swatch_color)),
                 Span::styled(format!("  {hex}  "), Style::default().fg(app.theme.text)),
-                Span::styled(label.to_string(), Style::default().fg(app.theme.surface0)),
+                Span::styled(label.to_string(), Style::default().fg(app.theme.border)),
             ])
         })
         .collect();
@@ -237,11 +237,11 @@ fn draw_clone_picker(f: &mut Frame, app: &App) {
     f.render_widget(Clear, popup_area);
 
     let block = Block::default()
-        .title(Line::from(" Clone From ").fg(app.theme.blue).bold())
+        .title(Line::from(" Clone From ").fg(app.theme.link).bold())
         .borders(Borders::ALL)
         .border_set(border_set(app.user_data.border_rounded))
-        .border_style(Style::default().fg(app.theme.blue))
-        .bg(app.theme.base);
+        .border_style(Style::default().fg(app.theme.link))
+        .bg(app.theme.bg);
 
     let inner = block.inner(popup_area);
     f.render_widget(block, popup_area);
@@ -253,8 +253,8 @@ fn draw_clone_picker(f: &mut Frame, app: &App) {
         .map(|(i, name)| {
             let style = if i == cursor {
                 Style::default()
-                    .fg(app.theme.mantle)
-                    .bg(app.theme.blue)
+                    .fg(app.theme.bg_dark)
+                    .bg(app.theme.link)
                     .add_modifier(Modifier::BOLD)
             } else {
                 Style::default().fg(app.theme.text)
@@ -267,8 +267,8 @@ fn draw_clone_picker(f: &mut Frame, app: &App) {
         let abs = builtin_names.len() + i;
         let style = if abs == cursor {
             Style::default()
-                .fg(app.theme.mantle)
-                .bg(app.theme.blue)
+                .fg(app.theme.bg_dark)
+                .bg(app.theme.link)
                 .add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(app.theme.sky)
@@ -286,7 +286,7 @@ fn draw_clone_picker(f: &mut Frame, app: &App) {
 // ── Color-slot editor ─────────────────────────────────────────────────────────
 
 fn draw_color_edit(f: &mut Frame, app: &App, area: Rect) {
-    let bg = Block::default().bg(app.theme.base);
+    let bg = Block::default().bg(app.theme.bg);
     f.render_widget(bg, area);
 
     let theme_name = app
@@ -302,7 +302,7 @@ fn draw_color_edit(f: &mut Frame, app: &App, area: Rect) {
 
     let block = content_block(
         Line::from(format!(" Edit: {theme_name} "))
-            .fg(app.theme.blue)
+            .fg(app.theme.link)
             .bold(),
         true,
         app.user_data.border_rounded,
@@ -332,7 +332,7 @@ fn draw_color_edit(f: &mut Frame, app: &App, area: Rect) {
 
             let prefix = if is_cursor { " ▶ " } else { "   " };
             let row_style = if is_cursor {
-                Style::default().bg(app.theme.surface0)
+                Style::default().bg(app.theme.border)
             } else {
                 Style::default()
             };
@@ -341,9 +341,9 @@ fn draw_color_edit(f: &mut Frame, app: &App, area: Rect) {
                 Span::styled(
                     format!("{prefix}{slot:<8} "),
                     row_style.fg(if is_cursor {
-                        app.theme.mauve
+                        app.theme.accent
                     } else {
-                        app.theme.subtext0
+                        app.theme.muted_text
                     }),
                 ),
                 Span::styled("███", Style::default().fg(swatch_color)),
@@ -355,7 +355,7 @@ fn draw_color_edit(f: &mut Frame, app: &App, area: Rect) {
                         Modifier::empty()
                     }),
                 ),
-                Span::styled(label.to_string(), Style::default().fg(app.theme.surface0)),
+                Span::styled(label.to_string(), Style::default().fg(app.theme.border)),
             ])
         })
         .collect();
@@ -404,7 +404,7 @@ fn draw_text_input_popup(f: &mut Frame, app: &App) {
     f.render_widget(Clear, popup_area);
 
     let block = content_block(
-        Line::from(title).fg(app.theme.blue).bold(),
+        Line::from(title).fg(app.theme.link).bold(),
         true,
         app.user_data.border_rounded,
         &app.theme,
@@ -414,7 +414,7 @@ fn draw_text_input_popup(f: &mut Frame, app: &App) {
 
     let (before, after) = split_at_cursor(&app.opml_path_input, app.input_cursor);
     let text = vec![
-        Line::from(prompt).fg(app.theme.subtext0),
+        Line::from(prompt).fg(app.theme.muted_text),
         Line::from(vec![
             Span::styled(
                 before,
@@ -425,7 +425,7 @@ fn draw_text_input_popup(f: &mut Frame, app: &App) {
             Span::styled(
                 "|",
                 Style::default()
-                    .fg(app.theme.mauve)
+                    .fg(app.theme.accent)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
@@ -436,7 +436,7 @@ fn draw_text_input_popup(f: &mut Frame, app: &App) {
             ),
         ]),
         Line::from(""),
-        Line::from("Enter = confirm   Esc = cancel").fg(app.theme.surface0),
+        Line::from("Enter = confirm   Esc = cancel").fg(app.theme.border),
     ];
     f.render_widget(Paragraph::new(text), inner);
 }
@@ -472,7 +472,7 @@ fn draw_hex_input_popup(f: &mut Frame, app: &App) {
 
     let block = content_block(
         Line::from(format!(" Edit: {slot_name} "))
-            .fg(app.theme.mauve)
+            .fg(app.theme.accent)
             .bold(),
         true,
         app.user_data.border_rounded,
@@ -486,7 +486,7 @@ fn draw_hex_input_popup(f: &mut Frame, app: &App) {
 
     let (before, after) = split_at_cursor(&app.opml_path_input, app.input_cursor);
     let text = vec![
-        Line::from("Hex color (#rrggbb):").fg(app.theme.subtext0),
+        Line::from("Hex color (#rrggbb):").fg(app.theme.muted_text),
         Line::from(vec![
             Span::styled(
                 before,
@@ -497,7 +497,7 @@ fn draw_hex_input_popup(f: &mut Frame, app: &App) {
             Span::styled(
                 "|",
                 Style::default()
-                    .fg(app.theme.mauve)
+                    .fg(app.theme.accent)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
@@ -508,7 +508,7 @@ fn draw_hex_input_popup(f: &mut Frame, app: &App) {
             ),
             Span::styled("  ███", Style::default().fg(preview_color)),
         ]),
-        Line::from("Enter = confirm   Esc = cancel").fg(app.theme.surface0),
+        Line::from("Enter = confirm   Esc = cancel").fg(app.theme.border),
     ];
     f.render_widget(Paragraph::new(text), inner);
 }

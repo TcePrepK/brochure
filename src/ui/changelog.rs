@@ -41,7 +41,7 @@ fn draw_about_block(f: &mut Frame, app: &App, area: Rect) {
     let version = env!("CARGO_PKG_VERSION");
 
     let block = content_block(
-        " About ".fg(app.theme.peach).bold(),
+        " About ".fg(app.theme.notice).bold(),
         false,
         app.user_data.border_rounded,
         &app.theme,
@@ -61,29 +61,29 @@ fn draw_about_block(f: &mut Frame, app: &App, area: Rect) {
         Span::styled(
             format!("v{version}"),
             Style::default()
-                .fg(app.theme.mauve)
+                .fg(app.theme.accent)
                 .add_modifier(Modifier::BOLD),
         ),
     ]);
     let desc_line = Line::from(vec![Span::styled(
         "  A terminal RSS reader built with Ratatui",
-        Style::default().fg(app.theme.subtext0),
+        Style::default().fg(app.theme.muted_text),
     )]);
 
     let blank_line = Line::raw("");
     let author_line = Line::from(vec![
-        Span::styled("  Author:      ", Style::default().fg(app.theme.subtext0)),
+        Span::styled("  Author:      ", Style::default().fg(app.theme.muted_text)),
         Span::styled("Sylviromi", Style::default().fg(app.theme.text)),
     ]);
     let license_line = Line::from(vec![
-        Span::styled("  License:     ", Style::default().fg(app.theme.subtext0)),
+        Span::styled("  License:     ", Style::default().fg(app.theme.muted_text)),
         Span::styled("MIT", Style::default().fg(app.theme.text)),
     ]);
     let repo_line = Line::from(vec![
-        Span::styled("  Repository:  ", Style::default().fg(app.theme.subtext0)),
+        Span::styled("  Repository:  ", Style::default().fg(app.theme.muted_text)),
         Span::styled(
             "https://github.com/Sylviromi/brochure",
-            Style::default().fg(app.theme.blue),
+            Style::default().fg(app.theme.link),
         ),
     ]);
 
@@ -96,7 +96,7 @@ fn draw_about_block(f: &mut Frame, app: &App, area: Rect) {
             license_line,
             repo_line,
         ])
-        .bg(app.theme.base),
+        .bg(app.theme.bg),
         inner,
     );
 }
@@ -104,7 +104,7 @@ fn draw_about_block(f: &mut Frame, app: &App, area: Rect) {
 /// Renders the scrollable changelog entries block.
 fn draw_changelog_block(f: &mut Frame, app: &mut App, area: Rect) {
     let block = content_block(
-        " Changelog ".fg(app.theme.peach).bold(),
+        " Changelog ".fg(app.theme.notice).bold(),
         true,
         app.user_data.border_rounded,
         &app.theme,
@@ -118,7 +118,7 @@ fn draw_changelog_block(f: &mut Frame, app: &mut App, area: Rect) {
             f.render_widget(
                 Paragraph::new(format!("Error parsing changelog.json: {e}"))
                     .style(Style::default().fg(app.theme.text))
-                    .bg(app.theme.base),
+                    .bg(app.theme.bg),
                 inner,
             );
             return;
@@ -144,29 +144,29 @@ fn draw_changelog_block(f: &mut Frame, app: &mut App, area: Rect) {
         lines.push(Line::from(vec![
             Span::styled(
                 format!("{connector} "),
-                Style::default().fg(app.theme.surface0),
+                Style::default().fg(app.theme.border),
             ),
             Span::styled(
                 format!("v{}", entry.version),
                 Style::default()
-                    .fg(app.theme.mauve)
+                    .fg(app.theme.accent)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::styled("  ·  ", Style::default().fg(app.theme.surface0)),
-            Span::styled(entry.date.clone(), Style::default().fg(app.theme.subtext0)),
+            Span::styled("  ·  ", Style::default().fg(app.theme.border)),
+            Span::styled(entry.date.clone(), Style::default().fg(app.theme.muted_text)),
         ]));
         // Summary line with vertical bar
         lines.push(Line::from(vec![
-            Span::styled(prefix, Style::default().fg(app.theme.surface0)),
+            Span::styled(prefix, Style::default().fg(app.theme.border)),
             Span::styled(entry.summary.clone(), Style::default().fg(app.theme.text)),
         ]));
         // Highlights with vertical bar
         for highlight in &entry.highlights {
             lines.push(Line::from(vec![
-                Span::styled(prefix, Style::default().fg(app.theme.surface0)),
+                Span::styled(prefix, Style::default().fg(app.theme.border)),
                 Span::styled(
                     format!("  • {highlight}"),
-                    Style::default().fg(app.theme.subtext0),
+                    Style::default().fg(app.theme.muted_text),
                 ),
             ]));
         }
@@ -174,7 +174,7 @@ fn draw_changelog_block(f: &mut Frame, app: &mut App, area: Rect) {
         if i + 1 < total {
             lines.push(Line::from(vec![Span::styled(
                 prefix,
-                Style::default().fg(app.theme.surface0),
+                Style::default().fg(app.theme.border),
             )]));
         }
     }
@@ -202,7 +202,7 @@ fn draw_changelog_block(f: &mut Frame, app: &mut App, area: Rect) {
         .take(viewport_height)
         .collect();
 
-    f.render_widget(Paragraph::new(visible).bg(app.theme.base), text_area);
+    f.render_widget(Paragraph::new(visible).bg(app.theme.bg), text_area);
 
     if has_scrollbar {
         let bar_area = Rect {

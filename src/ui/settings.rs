@@ -175,8 +175,8 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
                     " ├─"
                 };
                 ListItem::new(Line::from(vec![
-                    connector.fg(app.theme.surface0),
-                    label.fg(app.theme.peach).bold(),
+                    connector.fg(app.theme.border),
+                    label.fg(app.theme.notice).bold(),
                 ]))
             }
             Row::Item {
@@ -188,14 +188,14 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
                 let selected = app.settings_selected == *item;
                 let style = if selected {
                     Style::default()
-                        .fg(app.theme.mantle)
-                        .bg(app.theme.mauve)
+                        .fg(app.theme.bg_dark)
+                        .bg(app.theme.accent)
                         .add_modifier(Modifier::BOLD)
                 } else {
                     Style::default().fg(app.theme.text)
                 };
                 ListItem::new(Line::from(vec![
-                    prefix.fg(app.theme.surface0),
+                    prefix.fg(app.theme.border),
                     Span::styled(*label, style),
                 ]))
             }
@@ -209,26 +209,26 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
                 let selected = app.settings_selected == *item;
                 let base_style = if selected {
                     Style::default()
-                        .fg(app.theme.mantle)
-                        .bg(app.theme.mauve)
+                        .fg(app.theme.bg_dark)
+                        .bg(app.theme.accent)
                         .add_modifier(Modifier::BOLD)
                 } else {
                     Style::default().fg(app.theme.text)
                 };
                 let badge_style = if selected {
                     Style::default()
-                        .fg(app.theme.mantle)
-                        .bg(app.theme.mauve)
+                        .fg(app.theme.bg_dark)
+                        .bg(app.theme.accent)
                         .add_modifier(Modifier::BOLD)
                 } else if *on {
                     Style::default()
-                        .fg(app.theme.green)
+                        .fg(app.theme.success)
                         .add_modifier(Modifier::BOLD)
                 } else {
-                    Style::default().fg(app.theme.subtext0)
+                    Style::default().fg(app.theme.muted_text)
                 };
                 ListItem::new(Line::from(vec![
-                    prefix.fg(app.theme.surface0),
+                    prefix.fg(app.theme.border),
                     Span::styled(*label, base_style),
                     Span::styled(if *on { "  ON " } else { "  OFF " }, badge_style),
                 ]))
@@ -243,24 +243,24 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
                 let selected = app.settings_selected == *item;
                 let base_style = if selected {
                     Style::default()
-                        .fg(app.theme.mantle)
-                        .bg(app.theme.mauve)
+                        .fg(app.theme.bg_dark)
+                        .bg(app.theme.accent)
                         .add_modifier(Modifier::BOLD)
                 } else {
                     Style::default().fg(app.theme.text)
                 };
                 let badge_style = if selected {
                     Style::default()
-                        .fg(app.theme.mantle)
-                        .bg(app.theme.mauve)
+                        .fg(app.theme.bg_dark)
+                        .bg(app.theme.accent)
                         .add_modifier(Modifier::BOLD)
                 } else {
                     Style::default()
-                        .fg(app.theme.yellow)
+                        .fg(app.theme.unread)
                         .add_modifier(Modifier::BOLD)
                 };
                 ListItem::new(Line::from(vec![
-                    prefix.fg(app.theme.surface0),
+                    prefix.fg(app.theme.border),
                     Span::styled(*label, base_style),
                     Span::styled(format!("  {}", value), badge_style),
                 ]))
@@ -273,27 +273,27 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
                 let selected = app.settings_selected == SettingsItem::ClearArticleCache;
                 let base_style = if selected {
                     Style::default()
-                        .fg(app.theme.mantle)
-                        .bg(app.theme.mauve)
+                        .fg(app.theme.bg_dark)
+                        .bg(app.theme.accent)
                         .add_modifier(Modifier::BOLD)
                 } else {
                     Style::default().fg(app.theme.text)
                 };
                 let badge_style = if selected {
                     Style::default()
-                        .fg(app.theme.mantle)
-                        .bg(app.theme.mauve)
+                        .fg(app.theme.bg_dark)
+                        .bg(app.theme.accent)
                         .add_modifier(Modifier::BOLD)
                 } else {
-                    Style::default().fg(app.theme.red)
+                    Style::default().fg(app.theme.error)
                 };
                 ListItem::new(Line::from(vec![
-                    prefix.fg(app.theme.surface0),
+                    prefix.fg(app.theme.border),
                     Span::styled("[ Clear Article Cache ]", base_style),
                     Span::styled(format!("  {} ", size_label), badge_style),
                 ]))
             }
-            Row::Spacer => ListItem::new(Line::from(" │".fg(app.theme.surface0))),
+            Row::Spacer => ListItem::new(Line::from(" │".fg(app.theme.border))),
         })
         .collect();
 
@@ -301,12 +301,12 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
         .border_set(border_set(app.user_data.border_rounded))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(if app.state == AppState::SettingsList {
-            app.theme.mauve
+            app.theme.accent
         } else {
-            app.theme.surface0
+            app.theme.border
         }))
-        .bg(app.theme.base)
-        .title(" Settings ".fg(app.theme.peach).bold());
+        .bg(app.theme.bg)
+        .title(" Settings ".fg(app.theme.notice).bold());
 
     f.render_widget(List::new(list_items).block(block), area);
 }

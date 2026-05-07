@@ -37,7 +37,7 @@ pub(super) fn draw_category_article_list(f: &mut Frame, app: &mut App, area: Rec
     let footer_area = rows[1];
 
     let block = content_block(
-        format!(" {} ", cat_name).fg(app.theme.blue).bold(),
+        format!(" {} ", cat_name).fg(app.theme.link).bold(),
         false,
         app.user_data.border_rounded,
         &app.theme,
@@ -48,7 +48,7 @@ pub(super) fn draw_category_article_list(f: &mut Frame, app: &mut App, area: Rec
     if app.category_view_articles.is_empty() {
         f.render_widget(
             Paragraph::new(" No articles in this category.")
-                .style(Style::default().fg(app.theme.subtext0)),
+                .style(Style::default().fg(app.theme.muted_text)),
             inner,
         );
         draw_article_footer(f, app, footer_area, false);
@@ -72,7 +72,7 @@ pub(super) fn draw_category_article_list(f: &mut Frame, app: &mut App, area: Rec
         .map(|&(fi, ai)| {
             let article = &app.feeds[fi].articles[ai];
             let style = if article.is_read {
-                Style::default().fg(app.theme.subtext0)
+                Style::default().fg(app.theme.muted_text)
             } else {
                 Style::default().fg(app.theme.text)
             };
@@ -89,7 +89,7 @@ pub(super) fn draw_category_article_list(f: &mut Frame, app: &mut App, area: Rec
             let mut spans = vec![
                 Span::styled(
                     article.get_icon(),
-                    article.get_icon_style(app.theme.yellow, app.theme.subtext0, app.theme.blue),
+                    article.get_icon_style(app.theme.unread, app.theme.muted_text, app.theme.link),
                 ),
                 Span::raw(truncate_title(&article.title, title_available)),
             ];

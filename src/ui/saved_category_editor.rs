@@ -19,15 +19,15 @@ pub(super) fn draw_saved_category_editor(f: &mut Frame, app: &mut App, area: Rec
         .title(" Saved Category Editor  [r] rename  [d] delete  [n] new  [Esc] back ")
         .borders(Borders::ALL)
         .border_set(border_set(rounded))
-        .border_style(Style::default().fg(app.theme.mauve))
-        .style(Style::default().bg(app.theme.base));
+        .border_style(Style::default().fg(app.theme.accent))
+        .style(Style::default().bg(app.theme.bg));
 
     f.render_widget(block.clone(), area);
     let inner = block.inner(area);
 
     if app.user_data.saved_categories.is_empty() {
         let msg = Paragraph::new("  No categories yet. Save an article with [s] to create one.")
-            .style(Style::default().fg(app.theme.subtext0));
+            .style(Style::default().fg(app.theme.muted_text));
         f.render_widget(msg, inner);
         return;
     }
@@ -53,14 +53,14 @@ pub(super) fn draw_saved_category_editor(f: &mut Frame, app: &mut App, area: Rec
                 let before: String = chars[..pos].iter().collect();
                 let after: String = chars[pos..].iter().collect();
                 Line::from(vec![
-                    "  ".fg(app.theme.yellow),
-                    before.fg(app.theme.yellow),
-                    "|".fg(app.theme.mauve).bold(),
-                    after.fg(app.theme.yellow),
+                    "  ".fg(app.theme.unread),
+                    before.fg(app.theme.unread),
+                    "|".fg(app.theme.accent).bold(),
+                    after.fg(app.theme.unread),
                 ])
             } else {
                 let style = if i == app.saved_cat_editor_scroll.cursor {
-                    Style::default().bg(app.theme.surface0).fg(app.theme.mauve)
+                    Style::default().bg(app.theme.border).fg(app.theme.accent)
                 } else {
                     Style::default().fg(app.theme.text)
                 };
@@ -69,7 +69,7 @@ pub(super) fn draw_saved_category_editor(f: &mut Frame, app: &mut App, area: Rec
 
             let count_span = Span::styled(
                 format!("  [{count} article{}]", if count == 1 { "" } else { "s" }),
-                Style::default().fg(app.theme.subtext0),
+                Style::default().fg(app.theme.muted_text),
             );
 
             let mut spans = name_line.spans;
@@ -99,10 +99,10 @@ pub(super) fn draw_saved_category_editor(f: &mut Frame, app: &mut App, area: Rec
         let before: String = chars[..pos].iter().collect();
         let after: String = chars[pos..].iter().collect();
         let input_line = Line::from(vec![
-            "  Category name: ".fg(app.theme.yellow),
-            before.fg(app.theme.yellow),
-            "|".fg(app.theme.mauve).bold(),
-            after.fg(app.theme.yellow),
+            "  Category name: ".fg(app.theme.unread),
+            before.fg(app.theme.unread),
+            "|".fg(app.theme.accent).bold(),
+            after.fg(app.theme.unread),
         ]);
         f.render_widget(Paragraph::new(input_line), input_area);
     }

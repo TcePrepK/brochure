@@ -30,13 +30,13 @@ fn build_article_list_item(
 ) -> ListItem<'static> {
     let style = if is_selected {
         Style::default()
-            .fg(theme.mauve)
-            .bg(theme.surface0)
+            .fg(theme.accent)
+            .bg(theme.border)
             .add_modifier(Modifier::BOLD)
     } else if is_nav_highlight {
-        Style::default().fg(theme.mauve)
+        Style::default().fg(theme.accent)
     } else if article.is_read {
-        Style::default().fg(theme.subtext0)
+        Style::default().fg(theme.muted_text)
     } else {
         Style::default().fg(theme.text)
     };
@@ -46,7 +46,7 @@ fn build_article_list_item(
 
     let mut title_spans: Vec<Span> = Vec::new();
     if article.published_secs.is_none() {
-        title_spans.push("⚠ ".fg(theme.yellow));
+        title_spans.push("⚠ ".fg(theme.unread));
     }
     let title_available = (list_width as usize).saturating_sub(
         2 + age_width
@@ -74,7 +74,7 @@ fn build_article_list_item(
     ListItem::new(Line::from(
         vec![Span::styled(
             article.get_icon(),
-            article.get_icon_style(theme.yellow, theme.subtext0, theme.blue),
+            article.get_icon_style(theme.unread, theme.muted_text, theme.link),
         )]
         .into_iter()
         .chain(title_spans)
@@ -115,7 +115,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
 
         let is_navigating = app.state == AppState::ArticleList;
         let block = content_block(
-            format!(" {} ", cat_name).fg(app.theme.blue).bold(),
+            format!(" {} ", cat_name).fg(app.theme.link).bold(),
             is_navigating,
             app.user_data.border_rounded,
             &app.theme,
@@ -126,7 +126,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
         if app.category_view_articles.is_empty() {
             f.render_widget(
                 Paragraph::new(" No articles in this category.")
-                    .style(Style::default().fg(app.theme.subtext0)),
+                    .style(Style::default().fg(app.theme.muted_text)),
                 inner,
             );
             if show_footer {
@@ -144,11 +144,11 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
                 let is_selected = app.selected_article == i && app.state == AppState::ArticleList;
                 let style = if is_selected {
                     Style::default()
-                        .fg(app.theme.mauve)
-                        .bg(app.theme.surface0)
+                        .fg(app.theme.accent)
+                        .bg(app.theme.border)
                         .add_modifier(Modifier::BOLD)
                 } else if article.is_read {
-                    Style::default().fg(app.theme.subtext0)
+                    Style::default().fg(app.theme.muted_text)
                 } else {
                     Style::default().fg(app.theme.text)
                 };
@@ -164,9 +164,9 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
                     Span::styled(
                         article.get_icon(),
                         article.get_icon_style(
-                            app.theme.yellow,
-                            app.theme.subtext0,
-                            app.theme.blue,
+                            app.theme.unread,
+                            app.theme.muted_text,
+                            app.theme.link,
                         ),
                     ),
                     Span::raw(displayed_title),
@@ -200,7 +200,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
     // In the Saved tab but no category is selected (cursor on a category or nothing).
     if app.selected_tab == Tab::Saved && !app.in_saved_context {
         let block = content_block(
-            " ★ Saved ".fg(app.theme.blue).bold(),
+            " ★ Saved ".fg(app.theme.link).bold(),
             false,
             app.user_data.border_rounded,
             &app.theme,
@@ -209,7 +209,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
         f.render_widget(block, area);
         f.render_widget(
             Paragraph::new(" Select a category to view saved articles.")
-                .style(Style::default().fg(app.theme.subtext0)),
+                .style(Style::default().fg(app.theme.muted_text)),
             inner,
         );
         if show_footer {
@@ -241,7 +241,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
 
     let is_navigating = app.state == AppState::ArticleList;
     let block = content_block(
-        feed_title.fg(app.theme.blue).bold(),
+        feed_title.fg(app.theme.link).bold(),
         is_navigating,
         app.user_data.border_rounded,
         &app.theme,
@@ -258,7 +258,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
             && let Some(err) = &feed.fetch_error
         {
             let text = Line::from(vec![
-                " ⚠ ".fg(app.theme.red),
+                " ⚠ ".fg(app.theme.error),
                 err.clone().fg(app.theme.text),
             ]);
             f.render_widget(
@@ -272,7 +272,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
         }
         f.render_widget(
             Paragraph::new(" No articles found or fetching...")
-                .style(Style::default().fg(app.theme.subtext0)),
+                .style(Style::default().fg(app.theme.muted_text)),
             list_area,
         );
         if show_footer {
@@ -306,7 +306,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
     // Add separator if there are archived articles
     if has_archived {
         items.push(ListItem::new(Line::from(
-            " ── Archived ──".fg(app.theme.subtext0),
+            " ── Archived ──".fg(app.theme.muted_text),
         )));
     }
 

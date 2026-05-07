@@ -53,11 +53,11 @@ pub(super) fn age_color(secs: i64, theme: &Theme) -> Color {
         .unwrap_or(secs);
     let diff = (now - secs).max(0) as u64;
     if diff < 3600 {
-        theme.green
+        theme.success
     } else if diff < 86400 {
-        theme.yellow
+        theme.unread
     } else {
-        theme.subtext0
+        theme.muted_text
     }
 }
 

@@ -22,18 +22,18 @@ pub(super) fn draw_saved_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
 
     // "All Saved" entry (cursor 0)
     let all_style = if app.saved_sidebar_cursor == 0 && is_navigating {
-        Style::default().bg(app.theme.surface0).fg(app.theme.yellow)
+        Style::default().bg(app.theme.border).fg(app.theme.unread)
     } else {
         Style::default().fg(app.theme.text)
     };
     items.push(ListItem::new(Line::from(vec![
         Span::styled("🞴 All Saved ", all_style),
-        format!("[{total_saved}]").fg(app.theme.subtext0),
+        format!("[{total_saved}]").fg(app.theme.muted_text),
     ])));
 
     // Separator
     items.push(ListItem::new(Line::from(
-        "──────────────".fg(app.theme.surface0),
+        "──────────────".fg(app.theme.border),
     )));
 
     // Category entries (cursor 1+)
@@ -46,20 +46,20 @@ pub(super) fn draw_saved_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
             .filter(|s| s.category_id == cat.id)
             .count();
         let style = if app.saved_sidebar_cursor == cursor_pos && is_navigating {
-            Style::default().bg(app.theme.surface0).fg(app.theme.mauve)
+            Style::default().bg(app.theme.border).fg(app.theme.accent)
         } else {
             Style::default().fg(app.theme.text)
         };
         items.push(ListItem::new(Line::from(vec![
             Span::styled(format!("  {} ", cat.name), style),
-            format!("[{count}]").fg(app.theme.subtext0),
+            format!("[{count}]").fg(app.theme.muted_text),
         ])));
     }
 
     // Empty state
     if app.user_data.saved_categories.is_empty() && app.user_data.saved_articles.is_empty() {
         items.push(ListItem::new(Line::from(
-            "  No saved articles".fg(app.theme.subtext0),
+            "  No saved articles".fg(app.theme.muted_text),
         )));
     }
 

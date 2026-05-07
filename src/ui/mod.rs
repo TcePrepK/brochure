@@ -163,8 +163,8 @@ where
         .title(title)
         .borders(Borders::ALL)
         .border_set(border_set(rounded))
-        .border_style(Style::default().fg(if focused { theme.mauve } else { theme.surface0 }))
-        .bg(theme.base)
+        .border_style(Style::default().fg(if focused { theme.accent } else { theme.border }))
+        .bg(theme.bg)
 }
 
 /// Renders a themed vertical scrollbar into `area`.
@@ -186,9 +186,9 @@ pub(crate) fn render_scrollbar(
             viewport_len,
         })
         .arrows(ScrollBarArrows::Both)
-        .arrow_style(Style::default().fg(theme.mantle).bg(theme.base))
-        .thumb_style(Style::default().fg(theme.surface0).bg(theme.mantle))
-        .track_style(Style::default().bg(theme.mantle))
+        .arrow_style(Style::default().fg(theme.bg_dark).bg(theme.bg))
+        .thumb_style(Style::default().fg(theme.border).bg(theme.bg_dark))
+        .track_style(Style::default().bg(theme.bg_dark))
         .offset(offset),
         area,
     );

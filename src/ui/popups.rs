@@ -71,7 +71,7 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
             Span::styled(
                 "|",
                 Style::default()
-                    .fg(app.theme.mauve)
+                    .fg(app.theme.accent)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(after, Style::default().fg(app.theme.text)),
@@ -87,16 +87,16 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
         .borders(Borders::ALL)
         .border_style(
             Style::default().fg(if app.add_feed_step == AddFeedStep::Url {
-                app.theme.mauve
+                app.theme.accent
             } else {
-                app.theme.subtext0
+                app.theme.muted_text
             }),
         )
-        .bg(app.theme.base)
+        .bg(app.theme.bg)
         .title(Span::styled(
             " Feed URL ",
             Style::default()
-                .fg(app.theme.blue)
+                .fg(app.theme.link)
                 .add_modifier(Modifier::BOLD),
         ));
     f.render_widget(Paragraph::new(url_content).block(url_block), url_area);
@@ -113,16 +113,16 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
         .borders(Borders::ALL)
         .border_style(
             Style::default().fg(if app.add_feed_step == AddFeedStep::Title {
-                app.theme.mauve
+                app.theme.accent
             } else {
-                app.theme.subtext0
+                app.theme.muted_text
             }),
         )
-        .bg(app.theme.base)
+        .bg(app.theme.bg)
         .title(Span::styled(
             title_label,
             Style::default()
-                .fg(app.theme.blue)
+                .fg(app.theme.link)
                 .add_modifier(Modifier::BOLD),
         ));
 
@@ -132,7 +132,7 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
                 f.render_widget(
                     Paragraph::new(t.as_str())
                         .block(title_block)
-                        .style(Style::default().fg(app.theme.subtext0)),
+                        .style(Style::default().fg(app.theme.muted_text)),
                     title_area,
                 );
                 return;
@@ -164,7 +164,7 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
             Span::styled(
                 "|",
                 Style::default()
-                    .fg(app.theme.mauve)
+                    .fg(app.theme.accent)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(after, Style::default().fg(app.theme.text)),
@@ -201,12 +201,12 @@ fn draw_confirm_dialog(f: &mut Frame, app: &App, title: &str, body: String, hori
     let block = Block::default()
         .border_set(border_set(app.user_data.border_rounded))
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(app.theme.red))
-        .bg(app.theme.base)
+        .border_style(Style::default().fg(app.theme.error))
+        .bg(app.theme.bg)
         .title(Span::styled(
             title.to_string(),
             Style::default()
-                .fg(app.theme.red)
+                .fg(app.theme.error)
                 .add_modifier(Modifier::BOLD),
         ));
     let text = vec![
@@ -217,14 +217,14 @@ fn draw_confirm_dialog(f: &mut Frame, app: &App, title: &str, body: String, hori
             Span::styled(
                 "  [Enter] ",
                 Style::default()
-                    .fg(app.theme.red)
+                    .fg(app.theme.error)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled("Confirm   ", Style::default().fg(app.theme.text)),
             Span::styled(
                 "[Esc] ",
                 Style::default()
-                    .fg(app.theme.green)
+                    .fg(app.theme.success)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled("Cancel", Style::default().fg(app.theme.text)),
@@ -306,7 +306,7 @@ pub(super) fn draw_opml_path_popup(f: &mut Frame, app: &App) {
 
     f.render_widget(Clear, center);
     let block = content_block(
-        title.fg(app.theme.blue).bold(),
+        title.fg(app.theme.link).bold(),
         true,
         app.user_data.border_rounded,
         &app.theme,
@@ -390,7 +390,7 @@ pub(super) fn draw_category_picker(f: &mut Frame, app: &App) {
         let real_idx = scroll_top + i;
         let is_selected = app.category_picker_cursor == real_idx;
         let style = if is_selected {
-            Style::default().bg(app.theme.surface0).fg(app.theme.mauve)
+            Style::default().bg(app.theme.border).fg(app.theme.accent)
         } else {
             Style::default().fg(app.theme.text)
         };
@@ -400,7 +400,7 @@ pub(super) fn draw_category_picker(f: &mut Frame, app: &App) {
     let new_idx = cats_len;
     if app.category_picker_new_mode {
         lines.push(Line::from(vec![
-            Span::styled("  + ", Style::default().fg(app.theme.blue)),
+            Span::styled("  + ", Style::default().fg(app.theme.link)),
             Span::styled(
                 format!("{}|", app.category_picker_input),
                 Style::default().fg(app.theme.text),
@@ -408,9 +408,9 @@ pub(super) fn draw_category_picker(f: &mut Frame, app: &App) {
         ]));
     } else {
         let new_style = if app.category_picker_cursor == new_idx {
-            Style::default().bg(app.theme.surface0).fg(app.theme.blue)
+            Style::default().bg(app.theme.border).fg(app.theme.link)
         } else {
-            Style::default().fg(app.theme.blue)
+            Style::default().fg(app.theme.link)
         };
         lines.push(Line::from(Span::styled("  + New category…", new_style)));
     }
@@ -418,14 +418,14 @@ pub(super) fn draw_category_picker(f: &mut Frame, app: &App) {
     if article_is_saved {
         lines.push(Line::from(Span::styled(
             "  ──────────────",
-            Style::default().fg(app.theme.surface0),
+            Style::default().fg(app.theme.border),
         )));
 
         let unsave_idx = cats_len + 1;
         let unsave_style = if app.category_picker_cursor == unsave_idx {
-            Style::default().bg(app.theme.surface0).fg(app.theme.red)
+            Style::default().bg(app.theme.border).fg(app.theme.error)
         } else {
-            Style::default().fg(app.theme.red)
+            Style::default().fg(app.theme.error)
         };
         lines.push(Line::from(Span::styled("  ✕ Unsave", unsave_style)));
     }
@@ -512,7 +512,7 @@ pub(super) fn draw_update_popup(f: &mut Frame, app: &App) {
     };
 
     let block = content_block(
-        title.fg(app.theme.mauve).bold(),
+        title.fg(app.theme.accent).bold(),
         true,
         app.user_data.border_rounded,
         &app.theme,
@@ -546,7 +546,7 @@ pub(super) fn draw_update_popup(f: &mut Frame, app: &App) {
         lines.push(Line::from(Span::styled(
             header,
             Style::default()
-                .fg(app.theme.mauve)
+                .fg(app.theme.accent)
                 .add_modifier(Modifier::BOLD),
         )));
         if !release.highlights.is_empty() {
@@ -597,7 +597,7 @@ pub(super) fn draw_update_popup(f: &mut Frame, app: &App) {
             Span::styled(
                 "  [Enter/Esc/q] ",
                 Style::default()
-                    .fg(app.theme.mauve)
+                    .fg(app.theme.accent)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled("Dismiss", Style::default().fg(app.theme.text)),

@@ -163,8 +163,8 @@ impl Theme {
     pub fn gnome() -> Self {
         Self {
             name: String::from("GNOME"),
-            accent: Color::Rgb(145, 65, 172),
-            link: Color::Rgb(53, 132, 228),
+            accent: Color::Rgb(53, 132, 228),
+            link: Color::Rgb(98, 160, 234),
             success: Color::Rgb(38, 162, 105),
             notice: Color::Rgb(230, 97, 0),
             bg: Color::Rgb(30, 30, 30),
@@ -173,8 +173,8 @@ impl Theme {
             muted_text: Color::Rgb(154, 153, 150),
             border: Color::Rgb(48, 48, 48),
             unread: Color::Rgb(229, 165, 10),
-            teal: Color::Rgb(33, 144, 164),
-            sky: Color::Rgb(99, 160, 212),
+            teal: Color::Rgb(28, 113, 216),
+            sky: Color::Rgb(153, 193, 241),
             pink: Color::Rgb(192, 97, 203),
             error: Color::Rgb(224, 27, 36),
         }
