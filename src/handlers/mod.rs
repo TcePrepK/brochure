@@ -2,10 +2,11 @@
 //!
 //! Dispatches keyboard input to state-specific handlers (feed list, article detail, settings, etc.).
 
-mod article;
+pub(crate) mod article;
 mod changelog;
 mod feed_editor;
 mod feed_list;
+mod saved_category_editor;
 mod settings;
 mod theme_editor;
 
@@ -90,14 +91,18 @@ pub async fn handle_key(app: &mut App, key: KeyEvent, tx: &UnboundedSender<AppEv
             feed_editor::handle_feed_editor(app, key, tx)
         }
         AppState::CategoryPicker => article::handle_category_picker(app, key, tx),
-        AppState::SavedCategoryEditor => settings::handle_saved_category_editor(app, key),
+        AppState::SavedCategoryEditor => {
+            saved_category_editor::handle_saved_category_editor(app, key)
+        }
         AppState::SavedCategoryEditorRename => {
-            settings::handle_saved_category_editor_rename(app, key)
+            saved_category_editor::handle_saved_category_editor_rename(app, key)
         }
         AppState::SavedCategoryEditorDeleteConfirm => {
-            settings::handle_saved_category_editor_delete_confirm(app, key)
+            saved_category_editor::handle_saved_category_editor_delete_confirm(app, key)
         }
-        AppState::SavedCategoryEditorNew => settings::handle_saved_category_editor_new(app, key),
+        AppState::SavedCategoryEditorNew => {
+            saved_category_editor::handle_saved_category_editor_new(app, key)
+        }
         AppState::Changelog => return changelog::handle_changelog(app, key),
         AppState::ThemeEditor => theme_editor::handle_theme_editor(app, key),
         AppState::ThemeEditorNew => theme_editor::handle_theme_editor_new(app, key),
