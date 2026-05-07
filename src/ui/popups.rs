@@ -10,18 +10,55 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, Paragraph, Wrap},
+    widgets::{Block, Borders, Clear, Paragraph},
 };
 
 use super::render_scrollbar;
-use ratatui::prelude::Stylize;
-
 use crate::{
     app::App,
     models::{AddFeedStep, AppState, CategoryId},
 };
+use ratatui::prelude::Stylize;
 
 use super::{border_set, content_block};
+
+/// Word-wraps `text` with a hanging bullet indent into pre-formatted strings.
+///
+/// The first line gets `"  • "` and continuations get `"    "` (same width),
+/// so wrapped lines visually align with the start of the bullet text rather than column 0.
+fn wrap_bullet(text: &str, total_width: usize) -> Vec<String> {
+    const BULLET: &str = "  • ";
+    const INDENT: &str = "    "; // same display width as BULLET
+    let inner_w = total_width.saturating_sub(4);
+    if inner_w == 0 {
+        return vec![format!("{BULLET}{text}")];
+    }
+    let mut segments: Vec<String> = Vec::new();
+    let mut current = String::new();
+    for word in text.split_whitespace() {
+        let word_w = word.chars().count();
+        if current.is_empty() {
+            current.push_str(word);
+        } else if current.chars().count() + 1 + word_w <= inner_w {
+            current.push(' ');
+            current.push_str(word);
+        } else {
+            segments.push(current);
+            current = word.to_string();
+        }
+    }
+    if !current.is_empty() {
+        segments.push(current);
+    }
+    if segments.is_empty() {
+        return vec![BULLET.to_string()];
+    }
+    segments
+        .into_iter()
+        .enumerate()
+        .map(|(i, s)| format!("{}{s}", if i == 0 { BULLET } else { INDENT }))
+        .collect()
+}
 
 /// Splits text at the cursor position and returns (before, after) as strings.
 /// Used for rendering cursor in text input fields.
@@ -475,7 +512,7 @@ pub(super) fn draw_confirm_delete_saved_cat(f: &mut Frame, app: &App) {
 }
 
 /// Renders the update-available popup with scrollable release notes.
-pub(super) fn draw_update_popup(f: &mut Frame, app: &App) {
+pub(super) fn draw_update_popup(f: &mut Frame, app: &mut App) {
     let Some(ref info) = app.update_available else {
         return;
     };
@@ -512,7 +549,7 @@ pub(super) fn draw_update_popup(f: &mut Frame, app: &App) {
     };
 
     let block = content_block(
-        title.fg(app.theme.accent).bold(),
+        title.fg(app.theme.notice).bold(),
         true,
         app.user_data.border_rounded,
         &app.theme,
@@ -527,7 +564,10 @@ pub(super) fn draw_update_popup(f: &mut Frame, app: &App) {
         .constraints([Min(0), Length(1)])
         .areas(inner);
 
-    // Build all content lines
+    // Always reserve 1 col for the scrollbar so pre-wrapped widths stay stable.
+    let text_w = content_area.width.saturating_sub(1) as usize;
+
+    // Build all content lines (pre-wrapped so total_lines == visual line count).
     let current = env!("CARGO_PKG_VERSION");
     let mut lines: Vec<Line> = Vec::new();
     lines.push(Line::from(""));
@@ -549,10 +589,10 @@ pub(super) fn draw_update_popup(f: &mut Frame, app: &App) {
                 .fg(app.theme.accent)
                 .add_modifier(Modifier::BOLD),
         )));
-        if !release.highlights.is_empty() {
-            for h in &release.highlights {
+        for h in &release.highlights {
+            for wrapped in wrap_bullet(h, text_w) {
                 lines.push(Line::from(Span::styled(
-                    format!("  • {h}"),
+                    wrapped,
                     Style::default().fg(app.theme.text),
                 )));
             }
@@ -564,7 +604,9 @@ pub(super) fn draw_update_popup(f: &mut Frame, app: &App) {
     let total_lines = lines.len() as u16;
     let visible_h = content_area.height;
     let max_scroll = total_lines.saturating_sub(visible_h);
-    let scroll = app.update_popup_scroll.min(max_scroll);
+    // Clamp and write back so the handler's value never drifts above the actual limit.
+    app.update_popup_scroll = app.update_popup_scroll.min(max_scroll);
+    let scroll = app.update_popup_scroll;
 
     // Render scrollable content (leave 1 col on right for scrollbar)
     let [text_area, bar_area] = Layout::default()
@@ -572,12 +614,7 @@ pub(super) fn draw_update_popup(f: &mut Frame, app: &App) {
         .constraints([Min(0), Length(1)])
         .areas(content_area);
 
-    f.render_widget(
-        Paragraph::new(lines)
-            .scroll((scroll, 0))
-            .wrap(Wrap { trim: false }),
-        text_area,
-    );
+    f.render_widget(Paragraph::new(lines).scroll((scroll, 0)), text_area);
 
     // Scrollbar
     if total_lines > visible_h {
