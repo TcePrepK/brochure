@@ -402,6 +402,11 @@ fn on_feed_fetched(
         }
     }
 
+    // Refresh the all-feeds view so newly fetched articles appear immediately.
+    if app.in_all_feeds_context {
+        app.populate_all_feeds_view();
+    }
+
     // Update fetch progress counter
     app.feeds_pending = app.feeds_pending.saturating_sub(1);
     if app.feeds_pending == 0 {
