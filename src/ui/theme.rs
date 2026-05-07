@@ -5,20 +5,20 @@ use ratatui::style::Color;
 /// Metadata for each color slot: `(field_name, short_label)` in the order used by
 /// [`crate::models::CustomThemeColors::get`] / [`crate::models::CustomThemeColors::set`].
 pub const COLOR_SLOTS: &[(&str, &str)] = &[
-    ("accent",    "primary accent / focused border"),
-    ("link",      "links / highlights"),
-    ("success",   "success / read indicator"),
-    ("notice",    "section headers / warnings"),
-    ("bg",        "main background"),
-    ("bg_dark",   "darkest background"),
-    ("text",      "primary foreground"),
-    ("muted_text","secondary / muted text"),
-    ("border",    "unfocused borders"),
-    ("unread",    "warnings / stars / unread"),
-    ("teal",      "teal accent"),
-    ("sky",       "sky / lighter accent"),
-    ("pink",      "pink accent"),
-    ("error",     "errors / delete actions"),
+    ("accent", "primary accent / focused border"),
+    ("link", "links / highlights"),
+    ("success", "success / read indicator"),
+    ("notice", "section headers / warnings"),
+    ("bg", "main background"),
+    ("bg_dark", "darkest background"),
+    ("text", "primary foreground"),
+    ("muted_text", "secondary / muted text"),
+    ("border", "unfocused borders"),
+    ("unread", "warnings / stars / unread"),
+    ("teal", "teal accent"),
+    ("sky", "sky / lighter accent"),
+    ("pink", "pink accent"),
+    ("error", "errors / delete actions"),
 ];
 
 /// Full color palette for the application UI.

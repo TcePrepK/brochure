@@ -121,10 +121,7 @@ pub(super) fn draw_progress_bar(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(
         Paragraph::new(Line::from(vec![
             Span::styled("━".repeat(filled), Style::default().fg(app.theme.unread)),
-            Span::styled(
-                "─".repeat(unfilled),
-                Style::default().fg(app.theme.border),
-            ),
+            Span::styled("─".repeat(unfilled), Style::default().fg(app.theme.border)),
         ]))
         .bg(app.theme.bg),
         cols[0],

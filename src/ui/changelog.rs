@@ -153,7 +153,10 @@ fn draw_changelog_block(f: &mut Frame, app: &mut App, area: Rect) {
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled("  ·  ", Style::default().fg(app.theme.border)),
-            Span::styled(entry.date.clone(), Style::default().fg(app.theme.muted_text)),
+            Span::styled(
+                entry.date.clone(),
+                Style::default().fg(app.theme.muted_text),
+            ),
         ]));
         // Summary line with vertical bar
         lines.push(Line::from(vec![

@@ -380,9 +380,11 @@ impl App {
             AppState::FeedList => self.move_sidebar_cursor(true),
             AppState::ArticleList => self.move_article_cursor(true),
             AppState::SettingsList
-                if (self.user_data.scroll_loop || self.settings_selected != SettingsItem::Theme) => {
-                    self.settings_selected = self.settings_selected.next();
-                }
+                if (self.user_data.scroll_loop
+                    || self.settings_selected != SettingsItem::Theme) =>
+            {
+                self.settings_selected = self.settings_selected.next();
+            }
             AppState::SavedCategoryList => self.move_saved_cursor(true),
             AppState::FeedEditor => {
                 if self.editor_panel == EditorPanel::Categories {
@@ -455,10 +457,11 @@ impl App {
             AppState::FeedList => self.move_sidebar_cursor(false),
             AppState::ArticleList => self.move_article_cursor(false),
             AppState::SettingsList
-                if (self.user_data.scroll_loop || self.settings_selected != SettingsItem::ImportOpml)
-                => {
-                    self.settings_selected = self.settings_selected.prev();
-                }
+                if (self.user_data.scroll_loop
+                    || self.settings_selected != SettingsItem::ImportOpml) =>
+            {
+                self.settings_selected = self.settings_selected.prev();
+            }
             AppState::SavedCategoryList => self.move_saved_cursor(false),
             AppState::FeedEditor => {
                 if self.editor_panel == EditorPanel::Categories {

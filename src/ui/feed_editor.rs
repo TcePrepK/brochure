@@ -311,7 +311,8 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
         let max_chars = url_area.width as usize;
         let truncated: String = url.chars().take(max_chars.saturating_sub(1)).collect();
         f.render_widget(
-            Paragraph::new(format!(" {truncated}")).style(Style::default().fg(app.theme.muted_text)),
+            Paragraph::new(format!(" {truncated}"))
+                .style(Style::default().fg(app.theme.muted_text)),
             url_area,
         );
     }
