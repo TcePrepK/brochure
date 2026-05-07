@@ -61,5 +61,16 @@
       "Shows article age badges in All Feeds and categories",
       "Stops scroll loop at top/bottom of Settings and Feed Editor"
     ]
+  },
+  {
+    "version": "0.5.2",
+    "date": "2026-05-07",
+    "summary": "Improved UI responsiveness and readability in update popup and feed list.",
+    "highlights": [
+      "Scrolling in update popup now responds instantly",
+      "Feed list scrollbar accurately tracks position",
+      "Long bullet points wrap with hanging indent",
+      "Minor bug fixes and UI improvements"
+    ]
   }
 ]
