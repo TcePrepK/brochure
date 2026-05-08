@@ -410,7 +410,7 @@ fn draw_text_input_popup(f: &mut Frame, app: &App) {
         Line::from(prompt).fg(app.theme.muted_text),
         Line::from(vec![
             before.fg(app.theme.text).bold(),
-            cursor_ch.fg(app.theme.success).bold(),
+            cursor_ch.fg(app.theme.bg).bg(app.theme.success).bold(),
             after.fg(app.theme.text).bold(),
         ]),
         Line::from(""),
@@ -464,24 +464,20 @@ fn draw_hex_input_popup(f: &mut Frame, app: &App) {
 
     let (before, cursor_ch, after) =
         split_cursor(&app.theme_editor.hex_input, app.theme_editor.input_cursor);
+    let padding = 7 - app.theme_editor.hex_input.len();
+    let cursor_space = if app.theme_editor.input_cursor == app.theme_editor.hex_input.len() {
+        ""
+    } else {
+        " "
+    };
     let text = vec![
         Line::from("Hex color (#rrggbb):").fg(app.theme.muted_text),
         Line::from(vec![
             "#".fg(app.theme.text).bold(),
             before.fg(app.theme.text).bold(),
-            cursor_ch.fg(app.theme.text).bold(),
+            cursor_ch.fg(app.theme.bg).bg(app.theme.success).bold(),
             after.fg(app.theme.text).bold(),
-            Span::styled(
-                format!(
-                    "{} ███",
-                    if app.theme_editor.input_cursor == app.theme_editor.hex_input.len() {
-                        ""
-                    } else {
-                        " "
-                    }
-                ),
-                Style::default().fg(preview_color),
-            ),
+            format!("{}{:width$}███", cursor_space, "", width = padding).fg(preview_color),
         ]),
         Line::from("Enter = confirm   Esc = cancel").fg(app.theme.border),
     ];

@@ -45,6 +45,15 @@ fn normalize_hex(hex: &str) -> String {
     }
 }
 
+/// Remove the leading '#' from hex.
+fn strip_hex(hex: &str) -> &str {
+    if hex.starts_with('#') {
+        hex.split_at(1).1
+    } else {
+        hex
+    }
+}
+
 /// Allocate the next custom theme ID (max existing + 1, or 1 if none exist).
 fn next_id(app: &App) -> u32 {
     app.user_data
@@ -286,7 +295,7 @@ pub(super) fn handle_theme_editor_color_edit(app: &mut App, key: KeyEvent) {
                 && let Some(ct) = app.user_data.custom_themes.iter().find(|t| t.id == id)
             {
                 app.theme_editor.hex_input =
-                    ct.colors.get(app.theme_editor.color_cursor).to_string();
+                    strip_hex(ct.colors.get(app.theme_editor.color_cursor)).to_string();
                 app.theme_editor.input_cursor = app.theme_editor.hex_input.len();
                 app.state = AppState::ThemeEditorHexInput;
             }
