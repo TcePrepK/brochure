@@ -107,8 +107,8 @@ pub fn load_user_data() -> UserData {
     if let Some(src) = data.custom_theme.take()
         && data.custom_themes.is_empty()
     {
-        use crate::ui::theme::Theme;
-        if let Ok(theme) = Theme::from_toml_str(&src) {
+        use crate::ui::theme::ColorTheme;
+        if let Ok(theme) = ColorTheme::from_toml_str(&src) {
             let colors = theme.to_custom_colors();
             data.custom_themes.push(crate::models::CustomTheme {
                 id: 1,
