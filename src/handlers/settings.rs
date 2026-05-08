@@ -15,7 +15,7 @@ use crate::{
         expand_home_dir, export_opml_to_path, import_opml_from_path, save_categories, save_feeds,
         save_user_data,
     },
-    ui::theme::Theme,
+    ui::theme::ColorTheme,
 };
 
 /// Toggle a boolean field in `app.user_data`, persist, and show status.
@@ -107,8 +107,8 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
             }
             SettingsItem::Theme => {
                 // Position cursor on the currently active theme.
-                let builtin_names = Theme::builtin_names();
-                app.theme_editor_cursor = if app.user_data.selected_theme == "custom" {
+                let builtin_names = ColorTheme::builtin_names();
+                app.theme_editor.cursor = if app.user_data.selected_theme == "custom" {
                     let custom_pos = app
                         .user_data
                         .custom_themes
@@ -119,7 +119,7 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                 } else {
                     builtin_names
                         .iter()
-                        .position(|n| Theme::slug(n) == app.user_data.selected_theme)
+                        .position(|n| ColorTheme::slug(n) == app.user_data.selected_theme)
                         .unwrap_or(0)
                 };
                 app.state = AppState::ThemeEditor;

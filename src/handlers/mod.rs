@@ -37,7 +37,7 @@ pub(super) fn handle_text_input(input: &mut String, cursor: &mut usize, key: Key
             input.remove(byte_idx);
             *cursor -= 1;
         }
-        KeyCode::Char(c) => {
+        KeyCode::Char(c) if input.chars().count() < 6 => {
             let byte_idx = input
                 .char_indices()
                 .nth(*cursor)

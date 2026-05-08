@@ -6,28 +6,28 @@
 
 use crossterm::event::{KeyCode, KeyEvent};
 
+use super::handle_text_input;
 use crate::{
     app::{App, resolve_theme},
     models::{AppState, CustomTheme},
     storage::{default_export_path, expand_home_dir, save_user_data},
-    ui::theme::{COLOR_SLOTS, Theme},
+    ui::theme::{COLOR_SLOTS, ColorTheme},
 };
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /// Returns the total number of rows in the theme editor list (builtins + custom).
 fn total_themes(app: &App) -> usize {
-    Theme::builtin_names().len() + app.user_data.custom_themes.len()
+    ColorTheme::builtin_names().len() + app.user_data.custom_themes.len()
 }
 
 /// Returns true if `cursor` points at a built-in theme.
 fn is_builtin(cursor: usize) -> bool {
-    cursor < Theme::builtin_names().len()
+    cursor < ColorTheme::builtin_names().len()
 }
 
 /// Returns the `custom_themes` index for `cursor` (caller must verify `!is_builtin`).
 fn custom_idx(cursor: usize) -> usize {
-    cursor - Theme::builtin_names().len()
+    cursor - ColorTheme::builtin_names().len()
 }
 
 /// Validate a hex color string (`#rrggbb` or `rrggbb`).
@@ -68,24 +68,24 @@ pub(super) fn handle_theme_editor(app: &mut App, key: KeyEvent) {
         }
 
         KeyCode::Up | KeyCode::Char('k') if total > 0 => {
-            app.theme_editor_cursor = app.theme_editor_cursor.checked_sub(1).unwrap_or(total - 1);
+            app.theme_editor.cursor = app.theme_editor.cursor.checked_sub(1).unwrap_or(total - 1);
         }
         KeyCode::Down | KeyCode::Char('j') if total > 0 => {
-            app.theme_editor_cursor = (app.theme_editor_cursor + 1) % total;
+            app.theme_editor.cursor = (app.theme_editor.cursor + 1) % total;
         }
 
         // Enter — activate selected theme.
         KeyCode::Enter => {
-            if is_builtin(app.theme_editor_cursor) {
-                let name = Theme::builtin_names()[app.theme_editor_cursor];
-                let slug = Theme::slug(name);
+            if is_builtin(app.theme_editor.cursor) {
+                let name = ColorTheme::builtin_names()[app.theme_editor.cursor];
+                let slug = ColorTheme::slug(name);
                 app.user_data.selected_theme = slug.to_string();
                 app.user_data.selected_custom_id = None;
                 app.theme = resolve_theme(&app.user_data);
                 let _ = save_user_data(&app.user_data);
                 app.set_status(format!("Theme: {name}"));
             } else {
-                let idx = custom_idx(app.theme_editor_cursor);
+                let idx = custom_idx(app.theme_editor.cursor);
                 if let Some(ct) = app.user_data.custom_themes.get(idx) {
                     let id = ct.id;
                     let name = ct.name.clone();
@@ -100,22 +100,22 @@ pub(super) fn handle_theme_editor(app: &mut App, key: KeyEvent) {
 
         // n — new custom theme (open clone picker).
         KeyCode::Char('n') => {
-            app.theme_editor_clone_cursor = 0;
+            app.theme_editor.clone_cursor = 0;
             app.state = AppState::ThemeEditorNew;
         }
 
         // e — edit colors (custom only).
         KeyCode::Char('e') => {
-            if is_builtin(app.theme_editor_cursor) {
+            if is_builtin(app.theme_editor.cursor) {
                 app.set_status(
                     "Built-in themes are read-only — press 'n' to create one based on it."
                         .to_string(),
                 );
             } else {
-                let idx = custom_idx(app.theme_editor_cursor);
+                let idx = custom_idx(app.theme_editor.cursor);
                 if let Some(ct) = app.user_data.custom_themes.get(idx) {
-                    app.theme_editor_editing_id = Some(ct.id);
-                    app.theme_editor_color_cursor = 0;
+                    app.theme_editor.editing_id = Some(ct.id);
+                    app.theme_editor.color_cursor = 0;
                     app.state = AppState::ThemeEditorColorEdit;
                 }
             }
@@ -123,14 +123,14 @@ pub(super) fn handle_theme_editor(app: &mut App, key: KeyEvent) {
 
         // r — rename (custom only).
         KeyCode::Char('r') => {
-            if is_builtin(app.theme_editor_cursor) {
+            if is_builtin(app.theme_editor.cursor) {
                 app.set_status("Built-in themes cannot be renamed.".to_string());
             } else {
-                let idx = custom_idx(app.theme_editor_cursor);
+                let idx = custom_idx(app.theme_editor.cursor);
                 if let Some(ct) = app.user_data.custom_themes.get(idx) {
-                    app.opml_path_input = ct.name.clone();
-                    app.input_cursor = app.opml_path_input.chars().count();
-                    app.theme_editor_editing_id = Some(ct.id);
+                    app.theme_editor.path_input = ct.name.clone();
+                    app.theme_editor.input_cursor = app.theme_editor.path_input.chars().count();
+                    app.theme_editor.editing_id = Some(ct.id);
                     app.state = AppState::ThemeEditorRename;
                 }
             }
@@ -138,10 +138,10 @@ pub(super) fn handle_theme_editor(app: &mut App, key: KeyEvent) {
 
         // d — delete (custom only).
         KeyCode::Char('d') => {
-            if is_builtin(app.theme_editor_cursor) {
+            if is_builtin(app.theme_editor.cursor) {
                 app.set_status("Built-in themes cannot be deleted.".to_string());
             } else {
-                let idx = custom_idx(app.theme_editor_cursor);
+                let idx = custom_idx(app.theme_editor.cursor);
                 if let Some(ct) = app.user_data.custom_themes.get(idx) {
                     let id = ct.id;
                     let was_active = app.user_data.selected_custom_id == Some(id);
@@ -149,11 +149,11 @@ pub(super) fn handle_theme_editor(app: &mut App, key: KeyEvent) {
                     if was_active {
                         app.user_data.selected_theme = "catppuccin-mocha".to_string();
                         app.user_data.selected_custom_id = None;
-                        app.theme = Theme::catppuccin_mocha();
+                        app.theme = ColorTheme::catppuccin_mocha();
                     }
                     let new_total = total_themes(app);
                     if new_total > 0 {
-                        app.theme_editor_cursor = app.theme_editor_cursor.min(new_total - 1);
+                        app.theme_editor.cursor = app.theme_editor.cursor.min(new_total - 1);
                     }
                     let _ = save_user_data(&app.user_data);
                     app.set_status("Custom theme deleted.".to_string());
@@ -163,10 +163,10 @@ pub(super) fn handle_theme_editor(app: &mut App, key: KeyEvent) {
 
         // x — export selected theme to a TOML file.
         KeyCode::Char('x') => {
-            let default_name = if is_builtin(app.theme_editor_cursor) {
-                Theme::slug(Theme::builtin_names()[app.theme_editor_cursor]).to_string()
+            let default_name = if is_builtin(app.theme_editor.cursor) {
+                ColorTheme::slug(ColorTheme::builtin_names()[app.theme_editor.cursor]).to_string()
             } else {
-                let idx = custom_idx(app.theme_editor_cursor);
+                let idx = custom_idx(app.theme_editor.cursor);
                 app.user_data
                     .custom_themes
                     .get(idx)
@@ -176,15 +176,15 @@ pub(super) fn handle_theme_editor(app: &mut App, key: KeyEvent) {
             let base = default_export_path();
             let export_path =
                 std::path::PathBuf::from(&base).with_file_name(format!("{default_name}.toml"));
-            app.opml_path_input = export_path.display().to_string();
-            app.input_cursor = app.opml_path_input.chars().count();
+            app.theme_editor.path_input = export_path.display().to_string();
+            app.theme_editor.input_cursor = app.theme_editor.path_input.chars().count();
             app.state = AppState::ThemeEditorExport;
         }
 
         // i — import a theme from a TOML file.
         KeyCode::Char('i') => {
-            app.opml_path_input.clear();
-            app.input_cursor = 0;
+            app.theme_editor.path_input.clear();
+            app.theme_editor.input_cursor = 0;
             app.state = AppState::ThemeEditorImport;
         }
 
@@ -203,20 +203,22 @@ pub(super) fn handle_theme_editor_new(app: &mut App, key: KeyEvent) {
             app.state = AppState::ThemeEditor;
         }
         KeyCode::Up | KeyCode::Char('k') if total > 0 => {
-            app.theme_editor_clone_cursor = app
-                .theme_editor_clone_cursor
+            app.theme_editor.clone_cursor = app
+                .theme_editor
+                .clone_cursor
                 .checked_sub(1)
                 .unwrap_or(total - 1);
         }
         KeyCode::Down | KeyCode::Char('j') if total > 0 => {
-            app.theme_editor_clone_cursor = (app.theme_editor_clone_cursor + 1) % total;
+            app.theme_editor.clone_cursor = (app.theme_editor.clone_cursor + 1) % total;
         }
         KeyCode::Enter => {
-            let colors = if is_builtin(app.theme_editor_clone_cursor) {
-                let slug = Theme::slug(Theme::builtin_names()[app.theme_editor_clone_cursor]);
-                Theme::builtin(slug).map(|t| t.to_custom_colors())
+            let colors = if is_builtin(app.theme_editor.clone_cursor) {
+                let slug =
+                    ColorTheme::slug(ColorTheme::builtin_names()[app.theme_editor.clone_cursor]);
+                ColorTheme::builtin(slug).map(|t| t.to_custom_colors())
             } else {
-                let idx = custom_idx(app.theme_editor_clone_cursor);
+                let idx = custom_idx(app.theme_editor.clone_cursor);
                 app.user_data
                     .custom_themes
                     .get(idx)
@@ -224,10 +226,10 @@ pub(super) fn handle_theme_editor_new(app: &mut App, key: KeyEvent) {
             };
 
             if let Some(colors) = colors {
-                let base_name = if is_builtin(app.theme_editor_clone_cursor) {
-                    Theme::builtin_names()[app.theme_editor_clone_cursor].to_string()
+                let base_name = if is_builtin(app.theme_editor.clone_cursor) {
+                    ColorTheme::builtin_names()[app.theme_editor.clone_cursor].to_string()
                 } else {
-                    let idx = custom_idx(app.theme_editor_clone_cursor);
+                    let idx = custom_idx(app.theme_editor.clone_cursor);
                     app.user_data
                         .custom_themes
                         .get(idx)
@@ -242,12 +244,12 @@ pub(super) fn handle_theme_editor_new(app: &mut App, key: KeyEvent) {
                     colors,
                 });
                 // Position cursor on the new theme and immediately open rename.
-                app.theme_editor_cursor =
-                    Theme::builtin_names().len() + app.user_data.custom_themes.len() - 1;
+                app.theme_editor.cursor =
+                    ColorTheme::builtin_names().len() + app.user_data.custom_themes.len() - 1;
                 let _ = save_user_data(&app.user_data);
-                app.opml_path_input = name;
-                app.input_cursor = app.opml_path_input.chars().count();
-                app.theme_editor_editing_id = Some(id);
+                app.theme_editor.path_input = name;
+                app.theme_editor.input_cursor = app.theme_editor.path_input.chars().count();
+                app.theme_editor.editing_id = Some(id);
                 app.state = AppState::ThemeEditorRename;
             }
         }
@@ -263,26 +265,29 @@ pub(super) fn handle_theme_editor_color_edit(app: &mut App, key: KeyEvent) {
         KeyCode::Esc | KeyCode::Char('s') | KeyCode::Char('q') => {
             // Refresh active theme if we just finished editing it.
             if app.user_data.selected_theme == "custom"
-                && app.user_data.selected_custom_id == app.theme_editor_editing_id
+                && app.user_data.selected_custom_id == app.theme_editor.editing_id
             {
                 app.theme = resolve_theme(&app.user_data);
             }
             app.state = AppState::ThemeEditor;
         }
         KeyCode::Up | KeyCode::Char('k') => {
-            app.theme_editor_color_cursor = app
-                .theme_editor_color_cursor
+            app.theme_editor.color_cursor = app
+                .theme_editor
+                .color_cursor
                 .checked_sub(1)
                 .unwrap_or(COLOR_SLOTS.len() - 1);
         }
         KeyCode::Down | KeyCode::Char('j') => {
-            app.theme_editor_color_cursor = (app.theme_editor_color_cursor + 1) % COLOR_SLOTS.len();
+            app.theme_editor.color_cursor = (app.theme_editor.color_cursor + 1) % COLOR_SLOTS.len();
         }
         KeyCode::Enter => {
-            if let Some(id) = app.theme_editor_editing_id
+            if let Some(id) = app.theme_editor.editing_id
                 && let Some(ct) = app.user_data.custom_themes.iter().find(|t| t.id == id)
             {
-                app.opml_path_input = ct.colors.get(app.theme_editor_color_cursor).to_string();
+                app.theme_editor.hex_input =
+                    ct.colors.get(app.theme_editor.color_cursor).to_string();
+                app.theme_editor.input_cursor = app.theme_editor.hex_input.len();
                 app.state = AppState::ThemeEditorHexInput;
             }
         }
@@ -296,29 +301,33 @@ pub(super) fn handle_theme_editor_color_edit(app: &mut App, key: KeyEvent) {
 pub(super) fn handle_theme_editor_hex_input(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Esc => {
-            app.opml_path_input.clear();
-            app.input_cursor = 0;
+            app.theme_editor.hex_input.clear();
+            app.theme_editor.input_cursor = 0;
             app.state = AppState::ThemeEditorColorEdit;
         }
         KeyCode::Enter => {
-            let raw = app.opml_path_input.trim().to_string();
+            let raw = app.theme_editor.hex_input.trim().to_string();
             if !hex_valid(&raw) {
                 app.set_status(format!("'{raw}' is not a valid hex color — use #rrggbb"));
                 return;
             }
             let hex = normalize_hex(&raw);
-            if let Some(id) = app.theme_editor_editing_id
+            if let Some(id) = app.theme_editor.editing_id
                 && let Some(ct) = app.user_data.custom_themes.iter_mut().find(|t| t.id == id)
             {
-                ct.colors.set(app.theme_editor_color_cursor, hex);
+                ct.colors.set(app.theme_editor.color_cursor, hex);
                 let _ = save_user_data(&app.user_data);
             }
-            app.opml_path_input.clear();
-            app.input_cursor = 0;
+            app.theme_editor.hex_input.clear();
+            app.theme_editor.input_cursor = 0;
             app.state = AppState::ThemeEditorColorEdit;
         }
         KeyCode::Left | KeyCode::Right | KeyCode::Backspace | KeyCode::Char(_) => {
-            super::handle_text_input(&mut app.opml_path_input, &mut app.input_cursor, key.code);
+            handle_text_input(
+                &mut app.theme_editor.hex_input,
+                &mut app.theme_editor.input_cursor,
+                key.code,
+            );
         }
         _ => {}
     }
@@ -330,16 +339,16 @@ pub(super) fn handle_theme_editor_hex_input(app: &mut App, key: KeyEvent) {
 pub(super) fn handle_theme_editor_rename(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Esc => {
-            app.opml_path_input.clear();
+            app.theme_editor.path_input.clear();
             app.state = AppState::ThemeEditor;
         }
         KeyCode::Enter => {
-            let new_name = app.opml_path_input.trim().to_string();
+            let new_name = app.theme_editor.path_input.trim().to_string();
             if new_name.is_empty() {
                 app.set_status("Name cannot be empty.".to_string());
                 return;
             }
-            if let Some(id) = app.theme_editor_editing_id {
+            if let Some(id) = app.theme_editor.editing_id {
                 if let Some(ct) = app.user_data.custom_themes.iter_mut().find(|t| t.id == id) {
                     ct.name = new_name.clone();
                 }
@@ -349,14 +358,15 @@ pub(super) fn handle_theme_editor_rename(app: &mut App, key: KeyEvent) {
                 }
                 let _ = save_user_data(&app.user_data);
             }
-            app.opml_path_input.clear();
+            app.theme_editor.path_input.clear();
             app.state = AppState::ThemeEditor;
         }
-        KeyCode::Backspace => {
-            app.opml_path_input.pop();
-        }
-        KeyCode::Char(c) => {
-            app.opml_path_input.push(c);
+        KeyCode::Left | KeyCode::Right | KeyCode::Backspace | KeyCode::Char(_) => {
+            handle_text_input(
+                &mut app.theme_editor.path_input,
+                &mut app.theme_editor.input_cursor,
+                key.code,
+            );
         }
         _ => {}
     }
@@ -368,17 +378,17 @@ pub(super) fn handle_theme_editor_rename(app: &mut App, key: KeyEvent) {
 pub(super) fn handle_theme_editor_export(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Esc => {
-            app.opml_path_input.clear();
+            app.theme_editor.path_input.clear();
             app.state = AppState::ThemeEditor;
         }
         KeyCode::Enter => {
-            let path = expand_home_dir(&app.opml_path_input);
-            let toml = if is_builtin(app.theme_editor_cursor) {
-                let name = Theme::builtin_names()[app.theme_editor_cursor];
-                let slug = Theme::slug(name);
-                Theme::builtin(slug).map(|t| t.to_custom_colors().to_toml(name))
+            let path = expand_home_dir(&app.theme_editor.path_input);
+            let toml = if is_builtin(app.theme_editor.cursor) {
+                let name = ColorTheme::builtin_names()[app.theme_editor.cursor];
+                let slug = ColorTheme::slug(name);
+                ColorTheme::builtin(slug).map(|t| t.to_custom_colors().to_toml(name))
             } else {
-                let idx = custom_idx(app.theme_editor_cursor);
+                let idx = custom_idx(app.theme_editor.cursor);
                 app.user_data
                     .custom_themes
                     .get(idx)
@@ -388,18 +398,19 @@ pub(super) fn handle_theme_editor_export(app: &mut App, key: KeyEvent) {
                 match std::fs::write(&path, content) {
                     Ok(_) => {
                         app.set_status(format!("Exported to {path}"));
-                        app.opml_path_input.clear();
+                        app.theme_editor.path_input.clear();
                         app.state = AppState::ThemeEditor;
                     }
                     Err(e) => app.set_status(format!("Export failed: {e}")),
                 }
             }
         }
-        KeyCode::Backspace => {
-            app.opml_path_input.pop();
-        }
-        KeyCode::Char(c) => {
-            app.opml_path_input.push(c);
+        KeyCode::Left | KeyCode::Right | KeyCode::Backspace | KeyCode::Char(_) => {
+            handle_text_input(
+                &mut app.theme_editor.path_input,
+                &mut app.theme_editor.input_cursor,
+                key.code,
+            );
         }
         _ => {}
     }
@@ -411,16 +422,16 @@ pub(super) fn handle_theme_editor_export(app: &mut App, key: KeyEvent) {
 pub(super) fn handle_theme_editor_import(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Esc => {
-            app.opml_path_input.clear();
+            app.theme_editor.path_input.clear();
             app.state = AppState::ThemeEditor;
         }
         KeyCode::Enter => {
-            let path = expand_home_dir(&app.opml_path_input);
+            let path = expand_home_dir(&app.theme_editor.path_input);
             match std::fs::read_to_string(&path) {
                 Err(e) => {
                     app.set_status(format!("Cannot read file: {e}"));
                 }
-                Ok(src) => match Theme::from_toml_str(&src) {
+                Ok(src) => match ColorTheme::from_toml_str(&src) {
                     Err(e) => {
                         app.set_status(format!("Parse error: {e}"));
                     }
@@ -433,21 +444,23 @@ pub(super) fn handle_theme_editor_import(app: &mut App, key: KeyEvent) {
                             name: name.clone(),
                             colors,
                         });
-                        app.theme_editor_cursor =
-                            Theme::builtin_names().len() + app.user_data.custom_themes.len() - 1;
+                        app.theme_editor.cursor = ColorTheme::builtin_names().len()
+                            + app.user_data.custom_themes.len()
+                            - 1;
                         let _ = save_user_data(&app.user_data);
                         app.set_status(format!("Imported: {name}"));
-                        app.opml_path_input.clear();
+                        app.theme_editor.path_input.clear();
                         app.state = AppState::ThemeEditor;
                     }
                 },
             }
         }
-        KeyCode::Backspace => {
-            app.opml_path_input.pop();
-        }
-        KeyCode::Char(c) => {
-            app.opml_path_input.push(c);
+        KeyCode::Left | KeyCode::Right | KeyCode::Backspace | KeyCode::Char(_) => {
+            handle_text_input(
+                &mut app.theme_editor.path_input,
+                &mut app.theme_editor.input_cursor,
+                key.code,
+            );
         }
         _ => {}
     }
