@@ -11,8 +11,6 @@ use ratatui::{
     widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph},
 };
 
-use ratatui::prelude::Stylize;
-
 use super::{border_set, content_block};
 use crate::ui::content::utils::split_cursor;
 use crate::{
@@ -20,7 +18,8 @@ use crate::{
     models::AppState,
     ui::theme::{COLOR_SLOTS, ColorTheme},
 };
-
+use ratatui::prelude::Stylize;
+use ratatui::style::Color;
 // ── Entry points ──────────────────────────────────────────────────────────────
 
 /// Top-level draw dispatcher for all `ThemeEditor*` states.
@@ -188,17 +187,16 @@ fn draw_color_preview(f: &mut Frame, app: &App, area: Rect) {
         .enumerate()
         .map(|(i, (slot, label))| {
             let hex = colors.get(i);
-            let swatch = "███";
-            // Parse hex to get the actual color for the swatch.
-            let swatch_color = parse_hex_color(hex).unwrap_or(ratatui::style::Color::Reset);
+            let swatch = get_swatch(app, hex);
+            let (hashtag, rendered_hex) = to_renderable_hex(app, hex);
             Line::from(vec![
-                Span::styled(
-                    format!("  {slot:<10} "),
-                    Style::default().fg(app.theme.muted_text),
-                ),
-                Span::styled(swatch, Style::default().fg(swatch_color)),
-                Span::styled(format!("  {hex}  "), Style::default().fg(app.theme.text)),
-                Span::styled(label.to_string(), Style::default().fg(app.theme.border)),
+                format!("  {slot:<10} ").fg(app.theme.muted_text),
+                swatch,
+                Span::from(" "),
+                hashtag,
+                rendered_hex,
+                Span::from(" "),
+                label.fg(app.theme.border),
             ])
         })
         .collect();
@@ -328,7 +326,6 @@ fn draw_color_edit(f: &mut Frame, app: &App, area: Rect) {
         .enumerate()
         .map(|(i, (slot, label))| {
             let hex = colors.get(i);
-            let swatch_color = parse_hex_color(hex).unwrap_or(ratatui::style::Color::Reset);
             let is_cursor = i == cursor;
 
             let prefix = if is_cursor { " ▶ " } else { "   " };
@@ -337,6 +334,8 @@ fn draw_color_edit(f: &mut Frame, app: &App, area: Rect) {
             } else {
                 Style::default()
             };
+            let swatch = get_swatch(app, hex);
+            let (hashtag, rendered_hex) = to_renderable_hex(app, hex);
 
             Line::from(vec![
                 Span::styled(
@@ -347,16 +346,16 @@ fn draw_color_edit(f: &mut Frame, app: &App, area: Rect) {
                         app.theme.muted_text
                     }),
                 ),
-                Span::styled("███", Style::default().fg(swatch_color)),
-                Span::styled(
-                    format!("  {hex}  "),
-                    row_style.fg(app.theme.text).add_modifier(if is_cursor {
-                        Modifier::BOLD
-                    } else {
-                        Modifier::empty()
-                    }),
-                ),
-                Span::styled(label.to_string(), Style::default().fg(app.theme.border)),
+                swatch,
+                Span::from(" "),
+                hashtag,
+                rendered_hex.add_modifier(if is_cursor {
+                    Modifier::BOLD
+                } else {
+                    Modifier::empty()
+                }),
+                Span::from(" "),
+                label.fg(app.theme.border),
             ])
         })
         .collect();
@@ -459,9 +458,6 @@ fn draw_hex_input_popup(f: &mut Frame, app: &App) {
     let inner = block.inner(popup_area);
     f.render_widget(block, popup_area);
 
-    let preview_color =
-        parse_hex_color(&app.theme_editor.hex_input).unwrap_or(ratatui::style::Color::Reset);
-
     let (before, cursor_ch, after) =
         split_cursor(&app.theme_editor.hex_input, app.theme_editor.input_cursor);
     let padding = 7 - app.theme_editor.hex_input.len();
@@ -470,14 +466,17 @@ fn draw_hex_input_popup(f: &mut Frame, app: &App) {
     } else {
         " "
     };
+    let swatch = get_swatch(app, &app.theme_editor.hex_input);
+
     let text = vec![
         Line::from("Hex color (#rrggbb):").fg(app.theme.muted_text),
         Line::from(vec![
-            "#".fg(app.theme.text).bold(),
+            "#".fg(app.theme.muted_text).bold(),
             before.fg(app.theme.text).bold(),
             cursor_ch.fg(app.theme.bg).bg(app.theme.success).bold(),
             after.fg(app.theme.text).bold(),
-            format!("{}{:width$}███", cursor_space, "", width = padding).fg(preview_color),
+            Span::from(format!("{}{:width$}", cursor_space, "", width = padding)),
+            swatch,
         ]),
         Line::from("Enter = confirm   Esc = cancel").fg(app.theme.border),
     ];
@@ -487,7 +486,7 @@ fn draw_hex_input_popup(f: &mut Frame, app: &App) {
 // ── Color parsing helper ──────────────────────────────────────────────────────
 
 /// Parse a `#rrggbb` hex string into a ratatui `Color::Rgb` for swatches.
-fn parse_hex_color(hex: &str) -> Option<ratatui::style::Color> {
+fn parse_hex_color(hex: &str) -> Option<Color> {
     let h = hex.trim_start_matches('#');
     if h.len() != 6 {
         return None;
@@ -495,5 +494,22 @@ fn parse_hex_color(hex: &str) -> Option<ratatui::style::Color> {
     let r = u8::from_str_radix(&h[0..2], 16).ok()?;
     let g = u8::from_str_radix(&h[2..4], 16).ok()?;
     let b = u8::from_str_radix(&h[4..6], 16).ok()?;
-    Some(ratatui::style::Color::Rgb(r, g, b))
+    Some(Color::Rgb(r, g, b))
+}
+
+/// Get the proper swatch symbol and color
+fn get_swatch(app: &App, hex: &str) -> Span<'static> {
+    let color = parse_hex_color(hex).unwrap_or(app.theme.error);
+    let symbol = if parse_hex_color(hex).is_some() {
+        "███"
+    } else {
+        "?¿?"
+    };
+    symbol.fg(color).bold()
+}
+
+fn to_renderable_hex<'a>(app: &App, hex: &'a str) -> (Span<'static>, Span<'a>) {
+    let h = hex.trim_start_matches('#');
+
+    ("#".fg(app.theme.muted_text), h.fg(app.theme.text))
 }
