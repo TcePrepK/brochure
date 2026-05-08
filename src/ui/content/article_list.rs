@@ -29,10 +29,7 @@ fn build_article_list_item(
     theme: &crate::ui::theme::ColorTheme,
 ) -> ListItem<'static> {
     let style = if is_selected {
-        Style::default()
-            .fg(theme.accent)
-            .bg(theme.border)
-            .bold()
+        Style::default().fg(theme.accent).bg(theme.border).bold()
     } else if is_nav_highlight {
         Style::default().fg(theme.accent)
     } else if article.is_read {

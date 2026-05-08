@@ -221,9 +221,7 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
                         .bg(app.theme.accent)
                         .bold()
                 } else if *on {
-                    Style::default()
-                        .fg(app.theme.success)
-                        .bold()
+                    Style::default().fg(app.theme.success).bold()
                 } else {
                     Style::default().fg(app.theme.muted_text)
                 };
@@ -255,9 +253,7 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
                         .bg(app.theme.accent)
                         .bold()
                 } else {
-                    Style::default()
-                        .fg(app.theme.unread)
-                        .bold()
+                    Style::default().fg(app.theme.unread).bold()
                 };
                 ListItem::new(Line::from(vec![
                     prefix.fg(app.theme.border),

@@ -51,18 +51,11 @@ fn draw_about_block(f: &mut Frame, app: &App, area: Rect) {
 
     let name_line = Line::from(vec![
         Span::raw("  "),
-        Span::styled(
-            "Brochure",
-            Style::default()
-                .fg(app.theme.text)
-                .bold(),
-        ),
+        Span::styled("Brochure", Style::default().fg(app.theme.text).bold()),
         Span::raw("  "),
         Span::styled(
             format!("v{version}"),
-            Style::default()
-                .fg(app.theme.accent)
-                .bold(),
+            Style::default().fg(app.theme.accent).bold(),
         ),
     ]);
     let desc_line = Line::from(vec![Span::styled(
@@ -148,9 +141,7 @@ fn draw_changelog_block(f: &mut Frame, app: &mut App, area: Rect) {
             ),
             Span::styled(
                 format!("v{}", entry.version),
-                Style::default()
-                    .fg(app.theme.accent)
-                    .bold(),
+                Style::default().fg(app.theme.accent).bold(),
             ),
             Span::styled("  ·  ", Style::default().fg(app.theme.border)),
             Span::styled(

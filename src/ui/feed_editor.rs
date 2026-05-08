@@ -199,12 +199,7 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
                 };
                 let origin_hint = if is_on_origin { " ↩" } else { "" };
                 let drop_marker = if show_selected {
-                    Span::styled(
-                        "➤ ",
-                        Style::default()
-                            .fg(app.theme.unread)
-                            .bold(),
-                    )
+                    Span::styled("➤ ", Style::default().fg(app.theme.unread).bold())
                 } else {
                     Span::raw("")
                 };

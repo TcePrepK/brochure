@@ -1,7 +1,7 @@
 //! Theme definitions: color palette struct, built-in themes, and custom TOML loading.
 
-use ratatui::style::Color;
 use crate::models::{CustomTheme, CustomThemeColors};
+use ratatui::style::Color;
 
 /// Metadata for each color slot: `(field_name, short_label)` in the order used by
 /// [`CustomThemeColors::get`] / [`CustomThemeColors::set`].

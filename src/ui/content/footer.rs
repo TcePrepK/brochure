@@ -61,11 +61,7 @@ pub(super) fn draw_article_footer(f: &mut Frame, app: &App, area: Rect, is_artic
         );
         f.render_widget(
             Paragraph::new(pct_str)
-                .style(
-                    Style::default()
-                        .fg(app.theme.unread)
-                        .bold(),
-                )
+                .style(Style::default().fg(app.theme.unread).bold())
                 .bg(app.theme.bg),
             bar_chunks[1],
         );

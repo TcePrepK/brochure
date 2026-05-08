@@ -120,9 +120,7 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
         .bg(app.theme.bg)
         .title(Span::styled(
             " Feed URL ",
-            Style::default()
-                .fg(app.theme.link)
-                .bold(),
+            Style::default().fg(app.theme.link).bold(),
         ));
     f.render_widget(Paragraph::new(url_content).block(url_block), url_area);
 
@@ -146,9 +144,7 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
         .bg(app.theme.bg)
         .title(Span::styled(
             title_label,
-            Style::default()
-                .fg(app.theme.link)
-                .bold(),
+            Style::default().fg(app.theme.link).bold(),
         ));
 
     if app.add_feed_step == AddFeedStep::Title && app.input.is_empty() {
@@ -228,28 +224,16 @@ fn draw_confirm_dialog(f: &mut Frame, app: &App, title: &str, body: String, hori
         .bg(app.theme.bg)
         .title(Span::styled(
             title.to_string(),
-            Style::default()
-                .fg(app.theme.error)
-                .bold(),
+            Style::default().fg(app.theme.error).bold(),
         ));
     let text = vec![
         Line::from(""),
         Line::from(Span::styled(body, Style::default().fg(app.theme.text))),
         Line::from(""),
         Line::from(vec![
-            Span::styled(
-                "  [Enter] ",
-                Style::default()
-                    .fg(app.theme.error)
-                    .bold(),
-            ),
+            Span::styled("  [Enter] ", Style::default().fg(app.theme.error).bold()),
             Span::styled("Confirm   ", Style::default().fg(app.theme.text)),
-            Span::styled(
-                "[Esc] ",
-                Style::default()
-                    .fg(app.theme.success)
-                    .bold(),
-            ),
+            Span::styled("[Esc] ", Style::default().fg(app.theme.success).bold()),
             Span::styled("Cancel", Style::default().fg(app.theme.text)),
         ]),
     ];
@@ -576,9 +560,7 @@ pub(super) fn draw_update_popup(f: &mut Frame, app: &mut App) {
         };
         lines.push(Line::from(Span::styled(
             header,
-            Style::default()
-                .fg(app.theme.accent)
-                .bold(),
+            Style::default().fg(app.theme.accent).bold(),
         )));
         for h in &release.highlights {
             for wrapped in wrap_bullet(h, text_w) {
@@ -624,9 +606,7 @@ pub(super) fn draw_update_popup(f: &mut Frame, app: &mut App) {
         Paragraph::new(Line::from(vec![
             Span::styled(
                 "  [Enter/Esc/q] ",
-                Style::default()
-                    .fg(app.theme.accent)
-                    .bold(),
+                Style::default().fg(app.theme.accent).bold(),
             ),
             Span::styled("Dismiss", Style::default().fg(app.theme.text)),
         ])),
