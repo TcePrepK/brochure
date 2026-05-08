@@ -1,9 +1,10 @@
 //! Theme definitions: color palette struct, built-in themes, and custom TOML loading.
 
 use ratatui::style::Color;
+use crate::models::{CustomTheme, CustomThemeColors};
 
 /// Metadata for each color slot: `(field_name, short_label)` in the order used by
-/// [`crate::models::CustomThemeColors::get`] / [`crate::models::CustomThemeColors::set`].
+/// [`CustomThemeColors::get`] / [`CustomThemeColors::set`].
 pub const COLOR_SLOTS: &[(&str, &str)] = &[
     ("accent", "primary accent / focused border"),
     ("link", "links / highlights"),
@@ -225,8 +226,8 @@ impl ColorTheme {
         }
     }
 
-    /// Build a runtime `Theme` from a stored [`crate::models::CustomTheme`].
-    pub fn from_custom_theme(ct: &crate::models::CustomTheme) -> anyhow::Result<Self> {
+    /// Build a runtime `Theme` from a stored [`CustomTheme`].
+    pub fn from_custom_theme(ct: &CustomTheme) -> anyhow::Result<Self> {
         use anyhow::Context as _;
         let c = &ct.colors;
         let p = |key: &str, hex: &str| -> anyhow::Result<Color> {
@@ -251,11 +252,11 @@ impl ColorTheme {
         })
     }
 
-    /// Convert this runtime theme into [`crate::models::CustomThemeColors`] hex strings.
+    /// Convert this runtime theme into [`CustomThemeColors`] hex strings.
     ///
     /// Used when cloning a built-in theme as the starting point for a new custom theme.
-    pub fn to_custom_colors(&self) -> crate::models::CustomThemeColors {
-        crate::models::CustomThemeColors {
+    pub fn to_custom_colors(&self) -> CustomThemeColors {
+        CustomThemeColors {
             accent: Self::color_to_hex(self.accent),
             link: Self::color_to_hex(self.link),
             success: Self::color_to_hex(self.success),
@@ -338,7 +339,6 @@ impl ColorTheme {
 }
 
 /// Parse a CSS hex color string (`#rrggbb`) into a `Color::Rgb`.
-#[allow(dead_code)]
 fn parse_hex(hex: &str) -> anyhow::Result<Color> {
     let hex = hex.trim_start_matches('#');
     anyhow::ensure!(hex.len() == 6, "expected 6 hex digits, got {}", hex.len());
