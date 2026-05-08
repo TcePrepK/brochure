@@ -61,7 +61,7 @@ pub(super) fn draw_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
                         Style::default()
                             .fg(app.theme.unread)
                             .bg(app.theme.border)
-                            .add_modifier(Modifier::BOLD)
+                            .bold()
                     } else {
                         Style::default().fg(app.theme.text)
                     };
@@ -91,9 +91,9 @@ pub(super) fn draw_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
                         Style::default()
                             .fg(app.theme.bg_dark)
                             .bg(color)
-                            .add_modifier(Modifier::BOLD)
+                            .bold()
                     } else {
-                        Style::default().fg(color).add_modifier(Modifier::BOLD)
+                        Style::default().fg(color).bold()
                     };
                     let connector_style = if selected {
                         Style::default().fg(color).bg(app.theme.border)
@@ -117,7 +117,7 @@ pub(super) fn draw_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
                         Style::default()
                             .fg(app.theme.accent)
                             .bg(app.theme.border)
-                            .add_modifier(Modifier::BOLD)
+                            .bold()
                     } else {
                         Style::default().fg(app.theme.text)
                     };

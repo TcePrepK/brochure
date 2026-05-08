@@ -32,7 +32,7 @@ fn build_article_list_item(
         Style::default()
             .fg(theme.accent)
             .bg(theme.border)
-            .add_modifier(Modifier::BOLD)
+            .bold()
     } else if is_nav_highlight {
         Style::default().fg(theme.accent)
     } else if article.is_read {
@@ -146,7 +146,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
                     Style::default()
                         .fg(app.theme.accent)
                         .bg(app.theme.border)
-                        .add_modifier(Modifier::BOLD)
+                        .bold()
                 } else if article.is_read {
                     Style::default().fg(app.theme.muted_text)
                 } else {

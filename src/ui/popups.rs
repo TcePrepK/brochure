@@ -122,7 +122,7 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
             " Feed URL ",
             Style::default()
                 .fg(app.theme.link)
-                .add_modifier(Modifier::BOLD),
+                .bold(),
         ));
     f.render_widget(Paragraph::new(url_content).block(url_block), url_area);
 
@@ -148,7 +148,7 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
             title_label,
             Style::default()
                 .fg(app.theme.link)
-                .add_modifier(Modifier::BOLD),
+                .bold(),
         ));
 
     if app.add_feed_step == AddFeedStep::Title && app.input.is_empty() {
@@ -230,7 +230,7 @@ fn draw_confirm_dialog(f: &mut Frame, app: &App, title: &str, body: String, hori
             title.to_string(),
             Style::default()
                 .fg(app.theme.error)
-                .add_modifier(Modifier::BOLD),
+                .bold(),
         ));
     let text = vec![
         Line::from(""),
@@ -241,14 +241,14 @@ fn draw_confirm_dialog(f: &mut Frame, app: &App, title: &str, body: String, hori
                 "  [Enter] ",
                 Style::default()
                     .fg(app.theme.error)
-                    .add_modifier(Modifier::BOLD),
+                    .bold(),
             ),
             Span::styled("Confirm   ", Style::default().fg(app.theme.text)),
             Span::styled(
                 "[Esc] ",
                 Style::default()
                     .fg(app.theme.success)
-                    .add_modifier(Modifier::BOLD),
+                    .bold(),
             ),
             Span::styled("Cancel", Style::default().fg(app.theme.text)),
         ]),
@@ -578,7 +578,7 @@ pub(super) fn draw_update_popup(f: &mut Frame, app: &mut App) {
             header,
             Style::default()
                 .fg(app.theme.accent)
-                .add_modifier(Modifier::BOLD),
+                .bold(),
         )));
         for h in &release.highlights {
             for wrapped in wrap_bullet(h, text_w) {
@@ -626,7 +626,7 @@ pub(super) fn draw_update_popup(f: &mut Frame, app: &mut App) {
                 "  [Enter/Esc/q] ",
                 Style::default()
                     .fg(app.theme.accent)
-                    .add_modifier(Modifier::BOLD),
+                    .bold(),
             ),
             Span::styled("Dismiss", Style::default().fg(app.theme.text)),
         ])),

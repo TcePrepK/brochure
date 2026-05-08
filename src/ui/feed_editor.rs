@@ -193,7 +193,7 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
                     Style::default()
                         .fg(app.theme.accent)
                         .bg(app.theme.border)
-                        .add_modifier(Modifier::BOLD)
+                        .bold()
                 } else {
                     Style::default().fg(app.theme.text)
                 };
@@ -203,7 +203,7 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
                         "➤ ",
                         Style::default()
                             .fg(app.theme.unread)
-                            .add_modifier(Modifier::BOLD),
+                            .bold(),
                     )
                 } else {
                     Span::raw("")
@@ -418,7 +418,7 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
                     connector.fg(app.theme.border),
                     "  ✎ ".fg(color),
                     before.fg(app.theme.text),
-                    Span::styled(cursor_ch, Style::default().fg(app.theme.bg).bg(color)),
+                    cursor_ch.fg(app.theme.bg).bg(color),
                     after.fg(app.theme.text),
                 ]));
             }
@@ -448,9 +448,10 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
                 Style::default()
                     .fg(app.theme.bg_dark)
                     .bg(color)
-                    .add_modifier(Modifier::BOLD)
+                    .bold()
+                    .bold()
             } else {
-                Style::default().fg(color).add_modifier(Modifier::BOLD)
+                Style::default().fg(color).bold()
             };
             let connector_style = if selected && !is_ghost {
                 Style::default().fg(app.theme.bg_dark).bg(color)

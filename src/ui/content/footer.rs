@@ -64,7 +64,7 @@ pub(super) fn draw_article_footer(f: &mut Frame, app: &App, area: Rect, is_artic
                 .style(
                     Style::default()
                         .fg(app.theme.unread)
-                        .add_modifier(Modifier::BOLD),
+                        .bold(),
                 )
                 .bg(app.theme.bg),
             bar_chunks[1],

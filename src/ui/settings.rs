@@ -190,7 +190,7 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
                     Style::default()
                         .fg(app.theme.bg_dark)
                         .bg(app.theme.accent)
-                        .add_modifier(Modifier::BOLD)
+                        .bold()
                 } else {
                     Style::default().fg(app.theme.text)
                 };
@@ -211,7 +211,7 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
                     Style::default()
                         .fg(app.theme.bg_dark)
                         .bg(app.theme.accent)
-                        .add_modifier(Modifier::BOLD)
+                        .bold()
                 } else {
                     Style::default().fg(app.theme.text)
                 };
@@ -219,11 +219,11 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
                     Style::default()
                         .fg(app.theme.bg_dark)
                         .bg(app.theme.accent)
-                        .add_modifier(Modifier::BOLD)
+                        .bold()
                 } else if *on {
                     Style::default()
                         .fg(app.theme.success)
-                        .add_modifier(Modifier::BOLD)
+                        .bold()
                 } else {
                     Style::default().fg(app.theme.muted_text)
                 };
@@ -245,7 +245,7 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
                     Style::default()
                         .fg(app.theme.bg_dark)
                         .bg(app.theme.accent)
-                        .add_modifier(Modifier::BOLD)
+                        .bold()
                 } else {
                     Style::default().fg(app.theme.text)
                 };
@@ -253,11 +253,11 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
                     Style::default()
                         .fg(app.theme.bg_dark)
                         .bg(app.theme.accent)
-                        .add_modifier(Modifier::BOLD)
+                        .bold()
                 } else {
                     Style::default()
                         .fg(app.theme.unread)
-                        .add_modifier(Modifier::BOLD)
+                        .bold()
                 };
                 ListItem::new(Line::from(vec![
                     prefix.fg(app.theme.border),
@@ -275,7 +275,7 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
                     Style::default()
                         .fg(app.theme.bg_dark)
                         .bg(app.theme.accent)
-                        .add_modifier(Modifier::BOLD)
+                        .bold()
                 } else {
                     Style::default().fg(app.theme.text)
                 };
@@ -283,7 +283,7 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
                     Style::default()
                         .fg(app.theme.bg_dark)
                         .bg(app.theme.accent)
-                        .add_modifier(Modifier::BOLD)
+                        .bold()
                 } else {
                     Style::default().fg(app.theme.error)
                 };

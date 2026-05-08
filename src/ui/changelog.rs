@@ -55,14 +55,14 @@ fn draw_about_block(f: &mut Frame, app: &App, area: Rect) {
             "Brochure",
             Style::default()
                 .fg(app.theme.text)
-                .add_modifier(Modifier::BOLD),
+                .bold(),
         ),
         Span::raw("  "),
         Span::styled(
             format!("v{version}"),
             Style::default()
                 .fg(app.theme.accent)
-                .add_modifier(Modifier::BOLD),
+                .bold(),
         ),
     ]);
     let desc_line = Line::from(vec![Span::styled(
@@ -150,7 +150,7 @@ fn draw_changelog_block(f: &mut Frame, app: &mut App, area: Rect) {
                 format!("v{}", entry.version),
                 Style::default()
                     .fg(app.theme.accent)
-                    .add_modifier(Modifier::BOLD),
+                    .bold(),
             ),
             Span::styled("  ·  ", Style::default().fg(app.theme.border)),
             Span::styled(

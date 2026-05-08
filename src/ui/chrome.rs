@@ -36,7 +36,7 @@ pub(super) fn draw_tab_bar(f: &mut Frame, app: &App, area: Rect) {
             Style::default()
                 .fg(app.theme.bg_dark)
                 .bg(app.theme.accent)
-                .add_modifier(Modifier::BOLD),
+                .bold(),
         ),
         Span::raw("  "),
     ];
@@ -47,7 +47,7 @@ pub(super) fn draw_tab_bar(f: &mut Frame, app: &App, area: Rect) {
                 Style::default()
                     .fg(app.theme.bg_dark)
                     .bg(app.theme.accent)
-                    .add_modifier(Modifier::BOLD),
+                    .bold(),
             ));
         } else {
             tab_spans.push(Span::styled(
