@@ -7,11 +7,13 @@ mod events;
 pub mod feed;
 mod navigation;
 pub mod scroll;
+pub(crate) mod theme;
 
 pub use core_types::*;
 pub use events::*;
 pub use navigation::*;
 pub use scroll::{ListScroll, TextScroll};
+pub use theme::{CustomTheme, CustomThemeColors, ThemeEditorState};
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

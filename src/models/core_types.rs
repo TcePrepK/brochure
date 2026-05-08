@@ -1,9 +1,9 @@
 //! Core domain types: Feed, Article, and user-persistent data structures.
 
+use super::CategoryId;
+use crate::models::theme::custom_theme::CustomTheme;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-
-use super::CategoryId;
 
 /// A single RSS/Atom feed source.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -276,100 +276,4 @@ pub struct UserData {
     /// Legacy: path to a custom `.toml` theme file. Migrated on load; never re-written.
     #[serde(default, skip_serializing)]
     pub custom_theme_path: Option<String>,
-}
-
-/// A user-created color theme stored as 14 named hex strings.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CustomTheme {
-    /// Unique identifier (monotonically increasing per session).
-    pub id: u32,
-    /// Display name shown in the theme editor.
-    pub name: String,
-    /// The 14 color slots for this theme.
-    pub colors: CustomThemeColors,
-}
-
-/// The 14 named color slots that make up a theme palette, stored as `#rrggbb` hex strings.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CustomThemeColors {
-    pub accent: String,
-    pub link: String,
-    pub success: String,
-    pub notice: String,
-    pub bg: String,
-    pub bg_dark: String,
-    pub text: String,
-    pub muted_text: String,
-    pub border: String,
-    pub unread: String,
-    pub teal: String,
-    pub sky: String,
-    pub pink: String,
-    pub error: String,
-}
-
-impl CustomThemeColors {
-    /// Get a color slot's hex value by index (0–13, matching `COLOR_SLOTS` order).
-    pub fn get(&self, idx: usize) -> &str {
-        match idx {
-            0 => &self.accent,
-            1 => &self.link,
-            2 => &self.success,
-            3 => &self.notice,
-            4 => &self.bg,
-            5 => &self.bg_dark,
-            6 => &self.text,
-            7 => &self.muted_text,
-            8 => &self.border,
-            9 => &self.unread,
-            10 => &self.teal,
-            11 => &self.sky,
-            12 => &self.pink,
-            13 => &self.error,
-            _ => "#000000",
-        }
-    }
-
-    /// Set a color slot by index. No-op for out-of-range indices.
-    pub fn set(&mut self, idx: usize, hex: String) {
-        match idx {
-            0 => self.accent = hex,
-            1 => self.link = hex,
-            2 => self.success = hex,
-            3 => self.notice = hex,
-            4 => self.bg = hex,
-            5 => self.bg_dark = hex,
-            6 => self.text = hex,
-            7 => self.muted_text = hex,
-            8 => self.border = hex,
-            9 => self.unread = hex,
-            10 => self.teal = hex,
-            11 => self.sky = hex,
-            12 => self.pink = hex,
-            13 => self.error = hex,
-            _ => {}
-        }
-    }
-
-    /// Serialize to TOML text compatible with `Theme::from_toml_str`.
-    pub fn to_toml(&self, name: &str) -> String {
-        format!(
-            "name = \"{name}\"\n\n[colors]\naccent    = \"{accent}\"\nlink      = \"{link}\"\nsuccess   = \"{success}\"\nnotice    = \"{notice}\"\nbg        = \"{bg}\"\nbg_dark   = \"{bg_dark}\"\ntext      = \"{text}\"\nmuted_text = \"{muted_text}\"\nborder    = \"{border}\"\nunread    = \"{unread}\"\nteal      = \"{teal}\"\nsky       = \"{sky}\"\npink      = \"{pink}\"\nerror     = \"{error}\"\n",
-            name = name,
-            accent = self.accent,
-            link = self.link,
-            success = self.success,
-            notice = self.notice,
-            bg = self.bg,
-            bg_dark = self.bg_dark,
-            text = self.text,
-            muted_text = self.muted_text,
-            border = self.border,
-            unread = self.unread,
-            teal = self.teal,
-            sky = self.sky,
-            pink = self.pink,
-            error = self.error,
-        )
-    }
 }
