@@ -72,5 +72,16 @@
       "Long bullet points wrap with hanging indent",
       "Minor bug fixes and UI improvements"
     ]
+  },
+  {
+    "version": "0.5.3",
+    "date": "2026-05-09",
+    "summary": "Improved text input consistency and introduced a high-visibility inverted block cursor across editors.",
+    "highlights": [
+      "Unified text input behavior for all editors",
+      "Added high-visibility inverted block cursor",
+      "Enhanced hex editor with validation and UI tweaks",
+      "Resolved editor cursor issues"
+    ]
   }
 ]
