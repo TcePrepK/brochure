@@ -13,13 +13,13 @@ use ratatui::{
 
 use ratatui::prelude::Stylize;
 
+use super::{border_set, content_block};
+use crate::ui::content::utils::split_cursor;
 use crate::{
     app::App,
     models::AppState,
-    ui::theme::{COLOR_SLOTS, Theme},
+    ui::theme::{COLOR_SLOTS, ColorTheme},
 };
-
-use super::{border_set, content_block};
 
 // ── Entry points ──────────────────────────────────────────────────────────────
 
@@ -78,15 +78,15 @@ fn draw_theme_list(f: &mut Frame, app: &App, area: Rect) {
     let inner = block.inner(area);
     f.render_widget(block, area);
 
-    let builtin_names = Theme::builtin_names();
-    let cursor = app.theme_editor_cursor;
+    let builtin_names = ColorTheme::builtin_names();
+    let cursor = app.theme_editor.cursor;
 
     let mut items: Vec<ListItem> = builtin_names
         .iter()
         .enumerate()
         .map(|(i, name)| {
             let is_active = app.user_data.selected_theme != "custom"
-                && Theme::slug(name) == app.user_data.selected_theme;
+                && ColorTheme::slug(name) == app.user_data.selected_theme;
             let is_cursor = i == cursor;
             let style = if is_cursor {
                 Style::default()
@@ -151,13 +151,13 @@ fn draw_theme_list(f: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_color_preview(f: &mut Frame, app: &App, area: Rect) {
-    let builtin_names = Theme::builtin_names();
-    let cursor = app.theme_editor_cursor;
+    let builtin_names = ColorTheme::builtin_names();
+    let cursor = app.theme_editor.cursor;
 
     let (title_str, colors) = if cursor < builtin_names.len() {
         let name = builtin_names[cursor];
-        let slug = Theme::slug(name);
-        let cols = Theme::builtin(slug).map(|t| t.to_custom_colors());
+        let slug = ColorTheme::slug(name);
+        let cols = ColorTheme::builtin(slug).map(|t| t.to_custom_colors());
         (name.to_string(), cols)
     } else {
         let idx = cursor - builtin_names.len();
@@ -209,7 +209,7 @@ fn draw_color_preview(f: &mut Frame, app: &App, area: Rect) {
 // ── Clone picker popup ────────────────────────────────────────────────────────
 
 fn draw_clone_picker(f: &mut Frame, app: &App) {
-    let builtin_names = Theme::builtin_names();
+    let builtin_names = ColorTheme::builtin_names();
     let custom_count = app.user_data.custom_themes.len();
     let total = builtin_names.len() + custom_count;
     let popup_height = (total.min(16) + 2) as u16;
@@ -246,7 +246,7 @@ fn draw_clone_picker(f: &mut Frame, app: &App) {
     let inner = block.inner(popup_area);
     f.render_widget(block, popup_area);
 
-    let cursor = app.theme_editor_clone_cursor;
+    let cursor = app.theme_editor.clone_cursor;
     let mut items: Vec<ListItem> = builtin_names
         .iter()
         .enumerate()
@@ -290,7 +290,8 @@ fn draw_color_edit(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(bg, area);
 
     let theme_name = app
-        .theme_editor_editing_id
+        .theme_editor
+        .editing_id
         .and_then(|id| {
             app.user_data
                 .custom_themes
@@ -311,7 +312,7 @@ fn draw_color_edit(f: &mut Frame, app: &App, area: Rect) {
     let inner = block.inner(area);
     f.render_widget(block, area);
 
-    let colors = app.theme_editor_editing_id.and_then(|id| {
+    let colors = app.theme_editor.editing_id.and_then(|id| {
         app.user_data
             .custom_themes
             .iter()
@@ -320,7 +321,7 @@ fn draw_color_edit(f: &mut Frame, app: &App, area: Rect) {
     });
 
     let Some(colors) = colors else { return };
-    let cursor = app.theme_editor_color_cursor;
+    let cursor = app.theme_editor.color_cursor;
 
     let lines: Vec<Line> = COLOR_SLOTS
         .iter()
@@ -339,7 +340,7 @@ fn draw_color_edit(f: &mut Frame, app: &App, area: Rect) {
 
             Line::from(vec![
                 Span::styled(
-                    format!("{prefix}{slot:<8} "),
+                    format!("{prefix}{slot:<10} "),
                     row_style.fg(if is_cursor {
                         app.theme.accent
                     } else {
@@ -364,15 +365,6 @@ fn draw_color_edit(f: &mut Frame, app: &App, area: Rect) {
 }
 
 // ── Shared text-input popup ───────────────────────────────────────────────────
-
-/// Splits a string at the cursor position, returning (before, after).
-fn split_at_cursor(text: &str, cursor: usize) -> (String, String) {
-    let chars: Vec<char> = text.chars().collect();
-    let pos = cursor.min(chars.len());
-    let before: String = chars[..pos].iter().collect();
-    let after: String = chars[pos..].iter().collect();
-    (before, after)
-}
 
 fn draw_text_input_popup(f: &mut Frame, app: &App) {
     let (title, prompt) = match app.state {
@@ -412,28 +404,13 @@ fn draw_text_input_popup(f: &mut Frame, app: &App) {
     let inner = block.inner(popup_area);
     f.render_widget(block, popup_area);
 
-    let (before, after) = split_at_cursor(&app.opml_path_input, app.input_cursor);
+    let (before, cursor_ch, after) = split_cursor(&app.theme_editor.hex_input, app.input_cursor);
     let text = vec![
         Line::from(prompt).fg(app.theme.muted_text),
         Line::from(vec![
-            Span::styled(
-                before,
-                Style::default()
-                    .fg(app.theme.text)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(
-                "|",
-                Style::default()
-                    .fg(app.theme.accent)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(
-                after,
-                Style::default()
-                    .fg(app.theme.text)
-                    .add_modifier(Modifier::BOLD),
-            ),
+            before.fg(app.theme.text).bold(),
+            cursor_ch.fg(app.theme.success).bold(),
+            after.fg(app.theme.text).bold(),
         ]),
         Line::from(""),
         Line::from("Enter = confirm   Esc = cancel").fg(app.theme.border),
@@ -445,7 +422,7 @@ fn draw_text_input_popup(f: &mut Frame, app: &App) {
 
 fn draw_hex_input_popup(f: &mut Frame, app: &App) {
     let slot_name = COLOR_SLOTS
-        .get(app.theme_editor_color_cursor)
+        .get(app.theme_editor.color_cursor)
         .map(|(s, _)| *s)
         .unwrap_or("color");
 
@@ -482,31 +459,27 @@ fn draw_hex_input_popup(f: &mut Frame, app: &App) {
     f.render_widget(block, popup_area);
 
     let preview_color =
-        parse_hex_color(&app.opml_path_input).unwrap_or(ratatui::style::Color::Reset);
+        parse_hex_color(&app.theme_editor.hex_input).unwrap_or(ratatui::style::Color::Reset);
 
-    let (before, after) = split_at_cursor(&app.opml_path_input, app.input_cursor);
+    let (before, cursor_ch, after) = split_cursor(&app.opml_path_input, app.input_cursor);
     let text = vec![
         Line::from("Hex color (#rrggbb):").fg(app.theme.muted_text),
         Line::from(vec![
+            "#".fg(app.theme.text).bold(),
+            before.fg(app.theme.text).bold(),
+            cursor_ch.fg(app.theme.text).bold(),
+            after.fg(app.theme.text).bold(),
             Span::styled(
-                before,
-                Style::default()
-                    .fg(app.theme.text)
-                    .add_modifier(Modifier::BOLD),
+                format!(
+                    "{} ███",
+                    if app.input_cursor == app.opml_path_input.len() {
+                        ""
+                    } else {
+                        " "
+                    }
+                ),
+                Style::default().fg(preview_color),
             ),
-            Span::styled(
-                "|",
-                Style::default()
-                    .fg(app.theme.accent)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(
-                after,
-                Style::default()
-                    .fg(app.theme.text)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::styled("  ███", Style::default().fg(preview_color)),
         ]),
         Line::from("Enter = confirm   Esc = cancel").fg(app.theme.border),
     ];

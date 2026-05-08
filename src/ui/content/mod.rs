@@ -19,6 +19,6 @@ mod helpers;
 mod layouts;
 mod saved_sidebar;
 mod sidebar;
-mod utils;
+pub(super) mod utils;
 
 pub(super) use layouts::{draw_feeds_tab, draw_saved_tab};

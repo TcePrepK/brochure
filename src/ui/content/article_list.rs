@@ -26,7 +26,7 @@ fn build_article_list_item(
     list_width: u16,
     tick: usize,
     article_title_start_tick: usize,
-    theme: &crate::ui::theme::Theme,
+    theme: &crate::ui::theme::ColorTheme,
 ) -> ListItem<'static> {
     let style = if is_selected {
         Style::default()

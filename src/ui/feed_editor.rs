@@ -13,36 +13,22 @@ use ratatui::{
 
 use ratatui::prelude::Stylize;
 
+use super::{border_set, tree_connector, tree_indent};
+use crate::ui::content::utils::split_cursor;
 use crate::{
     app::{App, visible_cat_only_items, visible_tree_items},
     models::{AppState, EditorPanel, FeedEditorMode, FeedTreeItem},
 };
 
-use super::{border_set, tree_connector, tree_indent};
-
 /// Returns the accent color for the editor mode label — yellow during moves, green otherwise.
 fn editor_mode_color(
     mode: &FeedEditorMode,
-    theme: &crate::ui::theme::Theme,
+    theme: &crate::ui::theme::ColorTheme,
 ) -> ratatui::style::Color {
     match mode {
         FeedEditorMode::Moving { .. } => theme.unread,
         _ => theme.success,
     }
-}
-
-/// Splits text at cursor position, returning (before_cursor, cursor_char, after_cursor).
-/// The cursor_char is the character under the cursor, or a space if at end of text.
-fn split_cursor(text: &str, cursor: usize) -> (String, String, String) {
-    let chars: Vec<char> = text.chars().collect();
-    let pos = cursor.min(chars.len());
-    let before: String = chars[..pos].iter().collect();
-    let (cursor_ch, after): (String, String) = if pos < chars.len() {
-        (chars[pos].to_string(), chars[pos + 1..].iter().collect())
-    } else {
-        (" ".to_string(), String::new())
-    };
-    (before, cursor_ch, after)
 }
 
 /// Renders the full-screen feed editor with feeds and categories panels.

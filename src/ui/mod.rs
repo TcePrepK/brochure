@@ -15,7 +15,7 @@ mod theme_editor;
 
 use crate::app::App;
 use crate::models::{AppState, FeedTreeItem, Tab};
-use crate::ui::theme::Theme;
+use crate::ui::theme::ColorTheme;
 use ratatui::layout::Rect;
 use ratatui::prelude::{Line, Stylize};
 use ratatui::style::Style;
@@ -48,7 +48,7 @@ pub(crate) fn render_scrollable_list<'a>(
     items: Vec<ListItem<'a>>,
     inner: Rect,
     list_state: &mut ListState,
-    theme: &Theme,
+    theme: &ColorTheme,
 ) {
     let total = items.len();
     let has_scrollbar = total > inner.height as usize;
@@ -155,7 +155,7 @@ pub(crate) fn content_block<'a, T>(
     title: T,
     focused: bool,
     rounded: bool,
-    theme: &Theme,
+    theme: &ColorTheme,
 ) -> Block<'a>
 where
     T: Into<Line<'a>>,
@@ -178,7 +178,7 @@ pub(crate) fn render_scrollbar(
     content_len: usize,
     viewport_len: usize,
     offset: usize,
-    theme: &Theme,
+    theme: &ColorTheme,
 ) {
     use tui_scrollbar::{ScrollBar, ScrollBarArrows, ScrollLengths};
     f.render_widget(

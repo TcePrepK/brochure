@@ -14,13 +14,13 @@ use ratatui::{
 };
 
 use super::render_scrollbar;
+use super::{border_set, content_block};
+use crate::ui::content::utils::split_cursor;
 use crate::{
     app::App,
     models::{AddFeedStep, AppState, CategoryId},
 };
 use ratatui::prelude::Stylize;
-
-use super::{border_set, content_block};
 
 /// Word-wraps `text` with a hanging bullet indent into pre-formatted strings.
 ///
@@ -60,16 +60,6 @@ fn wrap_bullet(text: &str, total_width: usize) -> Vec<String> {
         .collect()
 }
 
-/// Splits text at the cursor position and returns (before, after) as strings.
-/// Used for rendering cursor in text input fields.
-fn split_at_cursor(text: &str, cursor: usize) -> (String, String) {
-    let chars: Vec<char> = text.chars().collect();
-    let pos = cursor.min(chars.len());
-    let before: String = chars[..pos].iter().collect();
-    let after: String = chars[pos..].iter().collect();
-    (before, after)
-}
-
 /// Renders the add-feed popup with URL and title input fields.
 pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
     let area = f.area();
@@ -102,14 +92,12 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
     // URL field
     f.render_widget(Clear, url_area);
     let url_content = if app.add_feed_step == AddFeedStep::Url {
-        let (before, after) = split_at_cursor(&app.input, app.input_cursor);
+        let (before, cursor_ch, after) = split_cursor(&app.input, app.input_cursor);
         Line::from(vec![
             Span::styled(before, Style::default().fg(app.theme.text)),
             Span::styled(
-                "|",
-                Style::default()
-                    .fg(app.theme.accent)
-                    .add_modifier(Modifier::BOLD),
+                cursor_ch,
+                Style::default().fg(app.theme.bg).bg(app.theme.success),
             ),
             Span::styled(after, Style::default().fg(app.theme.text)),
         ])
@@ -195,14 +183,12 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
     }
 
     let title_content = if app.add_feed_step == AddFeedStep::Title && !app.input.is_empty() {
-        let (before, after) = split_at_cursor(&app.input, app.input_cursor);
+        let (before, cursor_ch, after) = split_cursor(&app.input, app.input_cursor);
         Line::from(vec![
             Span::styled(before, Style::default().fg(app.theme.text)),
             Span::styled(
-                "|",
-                Style::default()
-                    .fg(app.theme.accent)
-                    .add_modifier(Modifier::BOLD),
+                cursor_ch,
+                Style::default().fg(app.theme.bg).bg(app.theme.success),
             ),
             Span::styled(after, Style::default().fg(app.theme.text)),
         ])
@@ -349,12 +335,17 @@ pub(super) fn draw_opml_path_popup(f: &mut Frame, app: &App) {
         &app.theme,
     );
 
-    f.render_widget(
-        Paragraph::new(app.opml_path_input.clone())
-            .block(block)
-            .style(Style::default().fg(app.theme.text)),
-        center,
-    );
+    let (before, cursor_ch, after) = split_cursor(&app.opml_path_input, app.input_cursor);
+    let content = Line::from(vec![
+        Span::styled(before, Style::default().fg(app.theme.text)),
+        Span::styled(
+            cursor_ch,
+            Style::default().fg(app.theme.bg).bg(app.theme.success),
+        ),
+        Span::styled(after, Style::default().fg(app.theme.text)),
+    ]);
+
+    f.render_widget(Paragraph::new(content).block(block), center);
 }
 
 /// Renders the category picker popup for saving an article to a custom category.

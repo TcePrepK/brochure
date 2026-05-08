@@ -1,6 +1,6 @@
 //! Pure formatting utilities for timestamps, titles, and colors used across content submodules.
 
-use crate::ui::theme::Theme;
+use crate::ui::theme::ColorTheme;
 use ratatui::style::Color;
 
 /// Formats a Unix timestamp as a human-readable age string (e.g., "42m ago", "2d ago").
@@ -46,7 +46,7 @@ pub(super) fn scroll_title(text: &str, available: usize, elapsed: usize) -> Stri
 }
 
 /// Returns a color for a timestamp age: green for recent (< 1h), yellow for today, dimmed for older.
-pub(super) fn age_color(secs: i64, theme: &Theme) -> Color {
+pub(super) fn age_color(secs: i64, theme: &ColorTheme) -> Color {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
@@ -77,4 +77,18 @@ pub(super) fn short_age(secs: i64) -> String {
     } else {
         format!(" {}d", diff / 86400)
     }
+}
+
+/// Splits text at cursor position, returning (before_cursor, cursor_char, after_cursor).
+/// The cursor_char is the character under the cursor, or a space if at end of text.
+pub fn split_cursor(text: &str, cursor: usize) -> (String, String, String) {
+    let chars: Vec<char> = text.chars().collect();
+    let pos = cursor.min(chars.len());
+    let before: String = chars[..pos].iter().collect();
+    let (cursor_ch, after): (String, String) = if pos < chars.len() {
+        (chars[pos].to_string(), chars[pos + 1..].iter().collect())
+    } else {
+        (" ".to_string(), String::new())
+    };
+    (before, cursor_ch, after)
 }

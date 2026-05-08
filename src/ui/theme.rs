@@ -27,7 +27,7 @@ pub const COLOR_SLOTS: &[(&str, &str)] = &[
 /// `border` = unfocused border, `bg` = main background). Built-in constructors
 /// return ready-to-use palettes; `from_toml_str` loads custom user themes.
 #[derive(Debug, Clone)]
-pub struct Theme {
+pub struct ColorTheme {
     /// Theme display name (shown in the theme picker).
     pub name: String,
     /// Focused-border / primary accent.
@@ -60,7 +60,7 @@ pub struct Theme {
     pub error: Color,
 }
 
-impl Theme {
+impl ColorTheme {
     /// Colors cycled by category ID in the sidebar (8-element fixed array).
     pub fn category_colors(&self) -> [Color; 8] {
         [
@@ -354,24 +354,24 @@ mod tests {
 
     #[test]
     fn builtin_catppuccin_mocha_has_correct_mauve() {
-        let t = Theme::catppuccin_mocha();
+        let t = ColorTheme::catppuccin_mocha();
         assert_eq!(t.accent, Color::Rgb(203, 166, 247));
         assert_eq!(t.name, "Catppuccin Mocha");
     }
 
     #[test]
     fn builtin_lookup_by_slug() {
-        assert!(Theme::builtin("catppuccin-mocha").is_some());
-        assert!(Theme::builtin("gruvbox-dark").is_some());
-        assert!(Theme::builtin("dracula").is_some());
-        assert!(Theme::builtin("nord").is_some());
-        assert!(Theme::builtin("gnome").is_some());
-        assert!(Theme::builtin("unknown").is_none());
+        assert!(ColorTheme::builtin("catppuccin-mocha").is_some());
+        assert!(ColorTheme::builtin("gruvbox-dark").is_some());
+        assert!(ColorTheme::builtin("dracula").is_some());
+        assert!(ColorTheme::builtin("nord").is_some());
+        assert!(ColorTheme::builtin("gnome").is_some());
+        assert!(ColorTheme::builtin("unknown").is_none());
     }
 
     #[test]
     fn category_colors_returns_8_entries() {
-        let t = Theme::catppuccin_mocha();
+        let t = ColorTheme::catppuccin_mocha();
         assert_eq!(t.category_colors().len(), 8);
     }
 
@@ -406,7 +406,7 @@ sky       = "#89dceb"
 pink      = "#f5c2e7"
 error     = "#f38ba8"
 "##;
-        let t = Theme::from_toml_str(src).unwrap();
+        let t = ColorTheme::from_toml_str(src).unwrap();
         assert_eq!(t.name, "Test");
         assert_eq!(t.accent, Color::Rgb(203, 166, 247));
     }
@@ -418,6 +418,6 @@ name = "Broken"
 [colors]
 accent = "#cba6f7"
 "##;
-        assert!(Theme::from_toml_str(src).is_err());
+        assert!(ColorTheme::from_toml_str(src).is_err());
     }
 }
