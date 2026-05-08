@@ -237,7 +237,7 @@ pub(super) fn handle_add_feed(app: &mut App, key: KeyEvent, tx: &UnboundedSender
                 });
             }
             KeyCode::Esc => app.unselect(),
-            _ => super::handle_text_input(&mut app.input, &mut app.input_cursor, key.code),
+            _ => super::handle_text_input(&mut app.input, &mut app.input_cursor, key.code, None),
         }
     } else {
         match key.code {
@@ -295,7 +295,7 @@ pub(super) fn handle_add_feed(app: &mut App, key: KeyEvent, tx: &UnboundedSender
                 app.state = app.add_feed_return_state.clone();
             }
             KeyCode::Esc => app.unselect(),
-            _ => super::handle_text_input(&mut app.input, &mut app.input_cursor, key.code),
+            _ => super::handle_text_input(&mut app.input, &mut app.input_cursor, key.code, None),
         }
     }
 }
@@ -404,6 +404,11 @@ pub(super) fn handle_opml_path(app: &mut App, key: KeyEvent, tx: &UnboundedSende
             app.state = AppState::SettingsList;
         }
         KeyCode::Esc => app.unselect(),
-        _ => super::handle_text_input(&mut app.opml_path_input, &mut app.input_cursor, key.code),
+        _ => super::handle_text_input(
+            &mut app.opml_path_input,
+            &mut app.input_cursor,
+            key.code,
+            None,
+        ),
     }
 }

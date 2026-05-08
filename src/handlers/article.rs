@@ -166,6 +166,7 @@ pub(super) fn handle_category_picker(app: &mut App, key: KeyEvent, tx: &Unbounde
                 &mut app.category_picker_input,
                 &mut app.input_cursor,
                 key.code,
+                None,
             ),
         }
         return;

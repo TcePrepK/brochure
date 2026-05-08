@@ -327,6 +327,7 @@ pub(super) fn handle_theme_editor_hex_input(app: &mut App, key: KeyEvent) {
                 &mut app.theme_editor.hex_input,
                 &mut app.theme_editor.input_cursor,
                 key.code,
+                Some(6),
             );
         }
         _ => {}
@@ -366,6 +367,7 @@ pub(super) fn handle_theme_editor_rename(app: &mut App, key: KeyEvent) {
                 &mut app.theme_editor.path_input,
                 &mut app.theme_editor.input_cursor,
                 key.code,
+                None,
             );
         }
         _ => {}
@@ -410,6 +412,7 @@ pub(super) fn handle_theme_editor_export(app: &mut App, key: KeyEvent) {
                 &mut app.theme_editor.path_input,
                 &mut app.theme_editor.input_cursor,
                 key.code,
+                None,
             );
         }
         _ => {}
@@ -460,6 +463,7 @@ pub(super) fn handle_theme_editor_import(app: &mut App, key: KeyEvent) {
                 &mut app.theme_editor.path_input,
                 &mut app.theme_editor.input_cursor,
                 key.code,
+                None,
             );
         }
         _ => {}

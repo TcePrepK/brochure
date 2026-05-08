@@ -404,7 +404,8 @@ fn draw_text_input_popup(f: &mut Frame, app: &App) {
     let inner = block.inner(popup_area);
     f.render_widget(block, popup_area);
 
-    let (before, cursor_ch, after) = split_cursor(&app.theme_editor.hex_input, app.input_cursor);
+    let (before, cursor_ch, after) =
+        split_cursor(&app.theme_editor.path_input, app.theme_editor.input_cursor);
     let text = vec![
         Line::from(prompt).fg(app.theme.muted_text),
         Line::from(vec![
@@ -461,7 +462,8 @@ fn draw_hex_input_popup(f: &mut Frame, app: &App) {
     let preview_color =
         parse_hex_color(&app.theme_editor.hex_input).unwrap_or(ratatui::style::Color::Reset);
 
-    let (before, cursor_ch, after) = split_cursor(&app.opml_path_input, app.input_cursor);
+    let (before, cursor_ch, after) =
+        split_cursor(&app.theme_editor.hex_input, app.theme_editor.input_cursor);
     let text = vec![
         Line::from("Hex color (#rrggbb):").fg(app.theme.muted_text),
         Line::from(vec![
@@ -472,7 +474,7 @@ fn draw_hex_input_popup(f: &mut Frame, app: &App) {
             Span::styled(
                 format!(
                     "{} ███",
-                    if app.input_cursor == app.opml_path_input.len() {
+                    if app.theme_editor.input_cursor == app.theme_editor.hex_input.len() {
                         ""
                     } else {
                         " "

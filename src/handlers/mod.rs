@@ -20,7 +20,13 @@ use crate::{
 
 /// Cursor-aware text input: handles Left/Right movement, Backspace (delete before cursor),
 /// and Char insertion at cursor. Shared by all text-input handler modules.
-pub(super) fn handle_text_input(input: &mut String, cursor: &mut usize, key: KeyCode) {
+/// Pass `max_len: Some(n)` to cap input length (e.g. `Some(6)` for hex colors); `None` for unlimited.
+pub(super) fn handle_text_input(
+    input: &mut String,
+    cursor: &mut usize,
+    key: KeyCode,
+    max_len: Option<usize>,
+) {
     match key {
         KeyCode::Left if *cursor > 0 => {
             *cursor -= 1;
@@ -37,7 +43,7 @@ pub(super) fn handle_text_input(input: &mut String, cursor: &mut usize, key: Key
             input.remove(byte_idx);
             *cursor -= 1;
         }
-        KeyCode::Char(c) if input.chars().count() < 6 => {
+        KeyCode::Char(c) if max_len.is_none_or(|max| input.chars().count() < max) => {
             let byte_idx = input
                 .char_indices()
                 .nth(*cursor)

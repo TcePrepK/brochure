@@ -129,7 +129,7 @@ pub(super) fn handle_saved_category_editor_new(app: &mut App, key: KeyEvent) {
             app.input_cursor = 0;
             app.state = AppState::SavedCategoryEditor;
         }
-        _ => super::handle_text_input(&mut app.editor_input, &mut app.input_cursor, key.code),
+        _ => super::handle_text_input(&mut app.editor_input, &mut app.input_cursor, key.code, None),
     }
 }
 
@@ -161,6 +161,6 @@ pub(super) fn handle_saved_category_editor_rename(app: &mut App, key: KeyEvent) 
             app.input_cursor = 0;
             app.state = AppState::SavedCategoryEditor;
         }
-        _ => super::handle_text_input(&mut app.editor_input, &mut app.input_cursor, key.code),
+        _ => super::handle_text_input(&mut app.editor_input, &mut app.input_cursor, key.code, None),
     }
 }

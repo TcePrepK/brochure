@@ -1,3 +1,5 @@
+//! User-created color theme type stored in user data.
+
 use crate::models::theme::custom_theme_colors::CustomThemeColors;
 use serde::{Deserialize, Serialize};
 

@@ -1,21 +1,37 @@
+//! The 14 named color slots that make up a custom theme palette.
+
 use serde::{Deserialize, Serialize};
 
 /// The 14 named color slots that make up a theme palette, stored as `#rrggbb` hex strings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CustomThemeColors {
+    /// Accent color — used for focused borders and highlighted UI elements.
     pub accent: String,
+    /// Link color — hyperlinks and interactive text.
     pub link: String,
+    /// Success/positive indicator color.
     pub success: String,
+    /// Notice/warning color.
     pub notice: String,
+    /// Main background color.
     pub bg: String,
+    /// Dark background — panels and sidebars.
     pub bg_dark: String,
+    /// Primary text color.
     pub text: String,
+    /// Secondary/muted text color.
     pub muted_text: String,
+    /// Unfocused border color.
     pub border: String,
+    /// Unread indicator color.
     pub unread: String,
+    /// Teal accent — used for category colors and decorative elements.
     pub teal: String,
+    /// Sky blue accent — used for category colors.
     pub sky: String,
+    /// Pink accent — used for category colors and decorative elements.
     pub pink: String,
+    /// Error/destructive action color.
     pub error: String,
 }
 

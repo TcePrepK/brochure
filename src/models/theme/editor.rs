@@ -1,3 +1,5 @@
+//! Theme editor UI state: cursors, input buffers, and editing context.
+
 /// State for the theme editor: cursors and editing context.
 #[derive(Default)]
 pub struct ThemeEditorState {
@@ -9,7 +11,8 @@ pub struct ThemeEditorState {
     pub clone_cursor: usize,
     /// ID of the custom theme currently being edited or renamed.
     pub editing_id: Option<u32>,
-    /// File path typed by the user in ThemeEditorExport / ThemeEditorImport states.
+    /// Text buffer shared by `ThemeEditorRename` (theme name), `ThemeEditorExport`,
+    /// and `ThemeEditorImport` (file path) states.
     pub path_input: String,
     /// Text buffer for hex color entry.
     pub hex_input: String,

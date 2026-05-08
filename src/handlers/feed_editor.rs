@@ -90,7 +90,12 @@ pub(super) fn handle_feed_editor(app: &mut App, key: KeyEvent, _tx: &UnboundedSe
                 app.state = AppState::FeedEditor;
             }
             KeyCode::Esc => app.unselect(),
-            _ => super::handle_text_input(&mut app.editor_input, &mut app.input_cursor, key.code),
+            _ => super::handle_text_input(
+                &mut app.editor_input,
+                &mut app.input_cursor,
+                key.code,
+                None,
+            ),
         },
         AppState::FeedEditor => {
             // ── Pending category-delete confirmation (right panel) ─────────────
