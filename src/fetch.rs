@@ -1,11 +1,11 @@
-//! Async network I/O for brochure: feed fetching, image URL extraction, and Readability-based
+//! Async network I/O for brochure: feed fetching, MediaRSS image extraction, and Readability-based
 //! article content retrieval. All HTTP requests share a single lazily-initialised client.
 
 use crate::models::{Article, ReleaseNote, UpdateInfo};
 use std::sync::OnceLock;
 
 /// Returns the shared, lazily-initialised HTTP client used for all outgoing requests.
-fn http_client() -> &'static reqwest::Client {
+pub(crate) fn http_client() -> &'static reqwest::Client {
     static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
     CLIENT.get_or_init(|| {
         reqwest::Client::builder()
@@ -13,12 +13,6 @@ fn http_client() -> &'static reqwest::Client {
             .build()
             .expect("failed to build HTTP client")
     })
-}
-
-/// Returns the compiled regex used to extract the first `https` image URL from HTML content.
-fn img_url_re() -> &'static regex::Regex {
-    static RE: OnceLock<regex::Regex> = OnceLock::new();
-    RE.get_or_init(|| regex::Regex::new(r#"<img[^>]+src=["'](https?://[^"']+)["']"#).unwrap())
 }
 
 /// Strips a UTF-8 BOM (`EF BB BF`) from the start of a byte slice if one is present.
@@ -75,9 +69,24 @@ pub async fn fetch_feed(url: &str) -> Result<(Vec<Article>, Option<i64>), String
                 .content
                 .and_then(|c| c.body)
                 .unwrap_or_else(|| description.clone());
-            let image_url = img_url_re()
-                .captures(&html_content)
-                .map(|caps| caps[1].to_string());
+            let mut images: Vec<String> = Vec::new();
+            // Collect images from MediaRSS attachments.
+            for media in &entry.media {
+                for content in &media.content {
+                    if let Some(url) = &content.url {
+                        let s = url.to_string();
+                        if !images.contains(&s) {
+                            images.push(s);
+                        }
+                    }
+                }
+                for thumb in &media.thumbnails {
+                    let s = thumb.image.uri.clone();
+                    if !images.contains(&s) {
+                        images.push(s);
+                    }
+                }
+            }
             let content = html2md::parse_html(&html_content);
             let published_secs = entry.published.or(entry.updated).map(|dt| dt.timestamp());
 
@@ -88,7 +97,7 @@ pub async fn fetch_feed(url: &str) -> Result<(Vec<Article>, Option<i64>), String
                 is_read: false,
                 is_saved: false,
                 content,
-                image_url,
+                images,
                 source_feed: String::new(), // filled in by on_feed_fetched in main.rs
                 published_secs,
                 is_archived: false,
@@ -260,4 +269,27 @@ fn is_newer_version(tag_version: &str, current_version: &str) -> bool {
         (Some(tag_semver), Some(current_semver)) => tag_semver > current_semver,
         _ => false,
     }
+}
+
+/// Download raw image bytes from a URL using the shared HTTP client.
+///
+/// Protocol-relative URLs (starting with `//`) are expanded to `https:`.
+pub async fn fetch_image(url: &str) -> Result<Vec<u8>, String> {
+    let resolved = if url.starts_with("//") {
+        format!("https:{url}")
+    } else {
+        url.to_string()
+    };
+    if !resolved.starts_with("http://") && !resolved.starts_with("https://") {
+        return Err(format!("skipping non-HTTP URL: {url}"));
+    }
+    let bytes = http_client()
+        .get(&resolved)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?
+        .bytes()
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(bytes.to_vec())
 }

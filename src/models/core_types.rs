@@ -55,9 +55,10 @@ pub struct Article {
     /// Full article text (populated by readability fetch or saved from content field).
     #[serde(default)]
     pub content: String,
-    /// URL to a hero image for the article.
+    /// Image URLs from MediaRSS attachments (media:content, media:thumbnail).
+    /// Images embedded in article HTML are handled by html2md → markdown.
     #[serde(default)]
-    pub image_url: Option<String>,
+    pub images: Vec<String>,
     /// Name of the feed this article was fetched from (set at fetch time).
     #[serde(default)]
     pub source_feed: String,

@@ -141,7 +141,7 @@ pub fn load_articles() -> HashMap<String, Vec<Article>> {
     HashMap::new()
 }
 
-/// Persist articles to disk. When `save_content` is false, content and image_url are stripped.
+/// Persist articles to disk. When `save_content` is false, content and images are stripped.
 pub fn save_articles(feeds: &[Feed], save_content: bool) -> anyhow::Result<()> {
     let map: HashMap<String, Vec<Article>> = feeds
         .iter()
@@ -154,7 +154,7 @@ pub fn save_articles(feeds: &[Feed], save_content: bool) -> anyhow::Result<()> {
                     .iter()
                     .map(|a| Article {
                         content: String::new(),
-                        image_url: None,
+                        images: Vec::new(),
                         ..a.clone()
                     })
                     .collect()
@@ -512,7 +512,7 @@ mod tests {
             is_read: false,
             is_saved: false,
             content: String::new(),
-            image_url: None,
+            images: Vec::new(),
             source_feed: String::new(),
             published_secs: None,
             is_archived: false,

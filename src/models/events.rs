@@ -17,4 +17,6 @@ pub enum AppEvent {
     FeedTitleFetched(Result<String, String>),
     /// A newer version of brochure is available on crates.io.
     UpdateAvailable(UpdateInfo),
+    /// An image has been downloaded for display in the article detail.
+    ImageDownloaded(String, Result<Vec<u8>, String>),
 }
