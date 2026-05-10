@@ -11,8 +11,9 @@ use crate::models::{
 use crate::state::{AddFeedState, CategoryPickerState, FeedEditorState, OpmlState};
 use crate::storage::{article_cache_size, load_categories, load_feeds, load_user_data};
 use crate::ui::theme::ColorTheme;
+use ratatui::layout::Rect;
 use ratatui::widgets::ListState;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 /// Build the active [`ColorTheme`] from persisted user preferences.
 ///
@@ -136,6 +137,26 @@ pub struct App {
     pub update_popup_scroll: u16,
     /// Value of `tick` when `status_msg` was last set — used to compute per-message scroll offset.
     pub status_msg_start_tick: usize,
+
+    // ── Image cache ──────────────────────────────────────────────────────────
+    /// Decoded image pixel data keyed by URL.
+    pub image_cache: HashMap<String, limner::render_image::img_crate::DynamicImage>,
+    /// URLs currently being downloaded.
+    pub image_pending: HashSet<String>,
+
+    // ── Article image rendering ──────────────────────────────────────────────
+    /// Per-URL encoded terminal protocols (Kitty / Sixel / half-block).
+    pub protocol_cache: HashMap<String, limner::render_image::Protocol>,
+    /// Image picker (terminal protocol detection) — initialized in [`run()`].
+    pub picker: Option<limner::render_image::Picker>,
+    /// Image metadata from the latest markdown render.
+    pub article_images: Vec<limner::ImageInfo>,
+    /// Link metadata from the latest markdown render.
+    pub article_links: Vec<limner::LinkInfo>,
+    /// Content-area rect of the article detail panel.
+    pub article_content_area: Rect,
+    /// Current scroll offset of the article detail view.
+    pub article_scroll_offset: u16,
 
     // ── Title auto-scroll animation ──────────────────────────────────────────
     /// Value of `tick` when the sidebar cursor last moved — used to scroll long feed titles.
@@ -265,6 +286,14 @@ impl App {
             update_available: None,
             update_popup_scroll: 0,
             status_msg_start_tick: 0,
+            image_cache: HashMap::new(),
+            image_pending: HashSet::new(),
+            protocol_cache: HashMap::new(),
+            picker: None,
+            article_images: Vec::new(),
+            article_links: Vec::new(),
+            article_content_area: Rect::default(),
+            article_scroll_offset: 0,
             sidebar_title_start_tick: 0,
             article_title_start_tick: 0,
             theme,
@@ -1033,7 +1062,7 @@ mod tests {
             is_read: false,
             is_saved: false,
             content: String::new(),
-            image_url: None,
+            images: Vec::new(),
             source_feed: String::new(),
             published_secs: None,
             is_archived: false,

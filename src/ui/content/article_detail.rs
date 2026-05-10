@@ -1,10 +1,12 @@
 //! Article detail view rendering with markdown content, scrolling, and header.
 
+use limner::render_image::Image;
+use limner::{MarkdownStyle, render_markdown_with_extra};
 use ratatui::prelude::Stylize;
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
-    style::Style,
+    style::{Color, Style},
     widgets::{Paragraph, Wrap},
 };
 
@@ -12,6 +14,32 @@ use super::super::{SPINNER_FRAMES, content_block, render_scrollbar};
 use super::footer::draw_article_footer;
 use crate::app::App;
 use crate::handlers::article::get_selected_article;
+
+/// Build a limner style config from the app theme.
+fn md_style(theme: &crate::ui::theme::ColorTheme) -> MarkdownStyle {
+    MarkdownStyle {
+        paragraph: Style::new().fg(theme.text),
+        heading_1: Style::new().fg(theme.accent).bold(),
+        heading_2: Style::new().fg(theme.accent).bold(),
+        heading_3: Style::new().fg(theme.accent),
+        bold: Style::new().bold(),
+        italic: Style::new().italic(),
+        strikethrough: Style::new().crossed_out(),
+        inline_code: Style::new().fg(theme.teal).bg(Color::Rgb(40, 40, 40)),
+        code_block: Style::new().fg(theme.teal),
+        code_block_bg: theme.bg_dark,
+        link: Style::new().fg(theme.link).underlined(),
+        link_prefix: "🔗 ",
+        quote: Style::new().fg(theme.muted_text),
+        quote_indicator: "▍ ",
+        image: Style::new().fg(theme.teal),
+        image_prefix: "🖼 ",
+        list_bullet: "• ",
+        ordered_template: "{}. ",
+        hr_char: '─',
+        hr_style: Style::new().fg(theme.border),
+    }
+}
 
 /// Renders the article detail view with markdown content, scrolling, and article metadata footer.
 ///
@@ -86,39 +114,98 @@ pub(super) fn draw_article_detail(
         (inner_area, Rect::default())
     };
 
-    // Convert images to inline text (![alt](url) → 🖼 alt), then strip hyperlinks.
-    let no_images = regex::Regex::new(r"!\[([^]]*)]\([^)]+\)")
-        .unwrap()
-        .replace_all(&article.content, |caps: &regex::Captures| {
-            let alt = caps[1].trim();
-            if alt.is_empty() {
-                "🖼".to_string()
-            } else {
-                format!("🖼 {alt}")
-            }
-        })
-        .to_string();
-    let stripped = regex::Regex::new(r"\[([^]]+)]\([^)]+\)")
-        .unwrap()
-        .replace_all(&no_images, "$1")
-        .to_string();
-
     let scroll_offset = app.article_scroll.get(&article.link);
 
     if !is_preview {
         app.content_area_height = content_area.height;
     }
 
+    let style = md_style(&app.theme);
+    let result = render_markdown_with_extra(
+        &article.content,
+        &style,
+        content_area.width,
+        &article.images,
+    );
+
+    let mut lines = result.lines;
+
+    // Inject inline images into the rendered line buffer (preview and full).
+    let placements = if let Some(ref picker) = app.picker
+        && !app.image_cache.is_empty()
+    {
+        let font_size = picker.font_size();
+        limner::render_image::prepare_inline_images(
+            &mut lines,
+            &result.images,
+            &app.image_cache,
+            &mut app.protocol_cache,
+            picker,
+            &font_size,
+            content_area.width,
+            10,
+        )
+    } else {
+        Vec::new()
+    };
+
+    // Store render metadata in the full-detail view only.
+    if !is_preview {
+        app.article_images = result.images;
+        app.article_links = result.links;
+        app.article_content_area = content_area;
+        app.article_scroll_offset = scroll_offset;
+    }
+
     // Build the paragraph first so we can call line_count(width) for the true rendered
     // line count (accounts for word-wrap), not just the logical markdown line count.
-    let paragraph = Paragraph::new(tui_markdown::from_str(&stripped))
+    let line_count = Paragraph::new(lines.clone())
         .wrap(Wrap { trim: false })
-        .scroll((scroll_offset, 0));
-
-    let line_count = paragraph.line_count(content_area.width).max(1);
+        .line_count(content_area.width)
+        .max(1);
     if !is_preview {
         app.content_line_count = line_count;
     }
+
+    // Render inline images on top of the reserved empty lines.
+    // Convert raw line_start → visual line index (accounts for word-wrap).
+    let content_top = content_area.y as i32;
+    let content_bottom = (content_area.y + content_area.height) as i32;
+    for p in &placements {
+        let Some(protocol) = app.protocol_cache.get(&p.url) else {
+            continue;
+        };
+
+        let visual_y = if p.line_start == 0 {
+            0
+        } else {
+            let end = p.line_start.min(lines.len());
+            Paragraph::new(lines[..end].to_vec())
+                .wrap(Wrap { trim: false })
+                .line_count(content_area.width)
+                .max(1) as u16
+        };
+        let y0 = content_top + visual_y as i32 - scroll_offset as i32;
+        let y1 = y0 + p.cell_rows as i32;
+
+        if y0 < content_top || y1 > content_bottom {
+            continue;
+        }
+
+        f.render_widget(
+            Image::new(protocol),
+            Rect {
+                x: content_area.x,
+                y: y0 as u16,
+                width: p.cell_cols.min(content_area.width),
+                height: p.cell_rows,
+            },
+        );
+    }
+
+    let paragraph = Paragraph::new(lines)
+        .wrap(Wrap { trim: false })
+        .scroll((scroll_offset, 0));
 
     if show_footer {
         draw_article_footer(f, app, bar_area, true);

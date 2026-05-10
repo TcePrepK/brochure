@@ -20,6 +20,8 @@ use ratatui::{Terminal, backend::CrosstermBackend};
 use std::{io, time::Duration};
 use tokio::sync::mpsc;
 
+use crate::app::App;
+
 /// Entry point for the application. Sets up terminal raw mode, alternate screen, mouse capture, and delegates to `run()` for the main event loop.
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -151,6 +153,12 @@ async fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()
         app.set_status("");
     }
 
+    // Detect terminal image protocol (Kitty / Sixel / halfblock fallback).
+    app.picker = Some(
+        limner::render_image::Picker::from_query_stdio()
+            .unwrap_or_else(|_| limner::render_image::halfblock_picker()),
+    );
+
     loop {
         terminal.draw(|f| ui::draw(f, &mut app))?;
 
@@ -234,7 +242,18 @@ async fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()
                 app.update_popup_scroll = 0;
                 app.update_available = Some(info);
             }
+
+            AppEvent::ImageDownloaded(url, result) => {
+                app.image_pending.remove(&url);
+                if let Ok(bytes) = result
+                    && let Ok(img) = limner::render_image::img_crate::load_from_memory(&bytes)
+                {
+                    app.image_cache.insert(url, img);
+                }
+            }
         }
+
+        spawn_article_image_downloads(&mut app, &tx);
     }
 
     Ok(())
@@ -343,7 +362,7 @@ fn on_feed_fetched(
                 for art in &mut articles {
                     if !preserved.contains_key(&art.link) {
                         art.content = String::new();
-                        art.image_url = None;
+                        art.images = Vec::new();
                     }
                 }
             }
@@ -418,4 +437,20 @@ fn on_feed_fetched(
 
     // Persist article cache
     let _ = storage::save_articles(&app.feeds, app.user_data.save_article_content);
+}
+
+/// Spawn background downloads for article images not yet cached or pending.
+fn spawn_article_image_downloads(app: &mut App, tx: &tokio::sync::mpsc::UnboundedSender<AppEvent>) {
+    for img in app.article_images.clone() {
+        if app.image_cache.contains_key(&img.url) || app.image_pending.contains(&img.url) {
+            continue;
+        }
+        app.image_pending.insert(img.url.clone());
+        let tx = tx.clone();
+        let url = img.url.clone();
+        tokio::spawn(async move {
+            let result = fetch::fetch_image(&url).await;
+            let _ = tx.send(AppEvent::ImageDownloaded(url, result));
+        });
+    }
 }
