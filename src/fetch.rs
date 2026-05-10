@@ -133,22 +133,45 @@ pub async fn fetch_feed(url: &str) -> Result<(Vec<Article>, Option<i64>), String
                     }
                 }
             }
-            // Convert HTML to Markdown and capture image metadata.
-            let conversion = html_to_markdown_rs::convert(&html_content, None);
-            let content = conversion
-                .as_ref()
+            // Convert HTML to Markdown.
+            let content = html_to_markdown_rs::convert(&html_content, None)
                 .ok()
-                .and_then(|r| r.content.clone())
+                .and_then(|r| r.content)
                 .unwrap_or_default();
-            // Image URLs from converter metadata match the markdown content exactly.
-            if let Ok(result) = &conversion {
-                for img in &result.metadata.images {
-                    if !images.contains(&img.src) {
-                        images.push(img.src.clone());
+            // Extract image URLs directly from the markdown output to guarantee
+            // they match the ![...](url) references that limner will scan for.
+            let mut markdown_img_urls: Vec<String> = Vec::new();
+            {
+                let mut remaining = content.as_str();
+                while let Some(start) = remaining.find("![") {
+                    let after_alt = &remaining[start + 2..];
+                    match after_alt.find("](") {
+                        Some(paren) => {
+                            let url_start = paren + 2;
+                            let after_paren = &after_alt[url_start..];
+                            match after_paren.find(')') {
+                                Some(end) => {
+                                    let url = &after_paren[..end];
+                                    if !markdown_img_urls.contains(&url.to_string()) {
+                                        markdown_img_urls.push(url.to_string());
+                                    }
+                                    remaining = &after_paren[end + 1..];
+                                }
+                                None => break,
+                            }
+                        }
+                        None => {
+                            remaining = &remaining[start + 2..];
+                        }
                     }
                 }
             }
-            // Fallback: extract any remaining image URLs directly from HTML.
+            for url in &markdown_img_urls {
+                if !images.contains(url) {
+                    images.push(url.clone());
+                }
+            }
+            // Fallback: extract any remaining image URLs from raw HTML.
             for url in extract_img_src(&html_content) {
                 if !images.contains(&url) {
                     images.push(url);
