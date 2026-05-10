@@ -1,45 +1,46 @@
-# Brochure — Agent Guide
+# CLAUDE.md — Brochure
 
-Single binary crate (`src/main.rs` entrypoint, tokio runtime). No workspace, no lib crate.
+## Session start
+Read these files at the beginning of every session:
+- `~/.claude/shared/task-workflow.md`
+- `~/.claude/shared/agent-orchestration.md`
+- `~/.claude/shared/rust-ast-extractor.md`
+- `~/.claude/shared/rust-conventions.md`
 
-## Architecture
+---
 
-- **`app.rs`** — central `App` struct holding all state. Methods for navigation, tree traversal, cursor movement.
-- **`state/`** — extracted sub-structs, each owning its own text input and cursor:
-  `FeedEditorState`, `AddFeedState`, `CategoryPickerState`, `OpmlState`.
-  `ThemeEditorState` lives in `models/theme/editor.rs`.
-- **`handlers/`** — one file per feature (`article.rs`, `feed_editor.rs`, `settings.rs`, etc.),
-  routed by `AppState` in `handlers/mod.rs::handle_key`.
-- **`ui/`** — one file per screen, mirrors handler structure.
-- **`models/`** — domain types (`Feed`, `Article`, `AppState`, `FeedTreeItem` in `tree.rs`, etc.).
-- **`storage.rs`** — disk persistence (JSON files in platform data dir).
-- **`fetch.rs`** — async feed fetching via reqwest.
+## Keeping This File Current
 
-Key pattern: handlers mutate `App`, UI reads `App`. `App::unselect()` handles back-navigation for each state.
+**Update AGENTS.md whenever you:**
 
-## Verification (run in order)
+- Add, rename, or restructure a module or directory
+- Change a module's sole responsibility
+- Add a new persisted type or data file
+- Add or change a script in `scripts/`
+- Change the testing workflow
+- Establish a new non-negotiable rule
+- **Change the task workflow**
 
-```sh
-cargo fmt && cargo fix --allow-dirty && cargo check && cargo clippy && cargo test
-```
+**Do not let AGENTS.md drift from the code.** If you notice a stale reference (wrong file path, removed type, changed
+rule), fix it in the same commit.
 
-All 13 tests are inline unit tests — no integration tests, no external services.
+---
 
-## Doc convention
+## Module Map
 
-Every `pub` item gets `///` doc comments (one sentence minimum). These feed the AST cache tool.
+Run `synopsis dir src/` for a live index of all source files and their responsibilities.
+Each file's `//!` module doc is the authoritative description — it is never out of date.
 
-## AST cache (via `synopsis`)
+---
 
-```sh
-synopsis get src/app.rs --compact   # list all items with sigs + docs
-synopsis get src/app.rs::App        # source of one item (JSON)
-synopsis get src/app.rs::fn::handle_key  # filtered by kind + name
-synopsis index src/                 # re-index after edits
-```
+## Code Quality (non-negotiable, apply on every edit)
 
-## Text input helper
+Whenever you read or edit a file — even for a small fix — also look for:
 
-All cursor-aware text input goes through `handlers/mod.rs::handle_text_input(input, cursor, key, max_len)`.
-`max_len: Some(6)` for hex color codes; `None` for unlimited inputs.
-UI rendering uses `ui/content/mod.rs::split_cursor` for cursor display.
+- **Duplicate or near-duplicate code** that belongs in a shared helper function.
+- **Functions that are too long** and would be clearer if split into smaller, focused helpers.
+- **Files that have grown too large** and would benefit from being split into sub-modules.
+- **Obvious simplifications**: dead branches, redundant variables, needlessly verbose patterns.
+
+Make these improvements in the same commit when they are clearly better and low-risk.
+When the improvement is larger or uncertain, surface it to the user as a suggesti
