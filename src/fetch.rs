@@ -133,16 +133,27 @@ pub async fn fetch_feed(url: &str) -> Result<(Vec<Article>, Option<i64>), String
                     }
                 }
             }
-            // Extract image URLs from <img> tags in the HTML content.
+            // Convert HTML to Markdown and capture image metadata.
+            let conversion = html_to_markdown_rs::convert(&html_content, None);
+            let content = conversion
+                .as_ref()
+                .ok()
+                .and_then(|r| r.content.clone())
+                .unwrap_or_default();
+            // Image URLs from converter metadata match the markdown content exactly.
+            if let Ok(result) = &conversion {
+                for img in &result.metadata.images {
+                    if !images.contains(&img.src) {
+                        images.push(img.src.clone());
+                    }
+                }
+            }
+            // Fallback: extract any remaining image URLs directly from HTML.
             for url in extract_img_src(&html_content) {
                 if !images.contains(&url) {
                     images.push(url);
                 }
             }
-            let content = html_to_markdown_rs::convert(&html_content, None)
-                .ok()
-                .and_then(|r| r.content)
-                .unwrap_or_default();
             let published_secs = entry.published.or(entry.updated).map(|dt| dt.timestamp());
 
             Article {
