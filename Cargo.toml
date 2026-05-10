@@ -21,7 +21,7 @@ anyhow = "1.0.102"
 dirs = "6.0.0"
 crossterm = "0.29.0"
 feed-rs = "2.3.1"
-html2md = "0.2.15"
+html-to-markdown-rs = "3.4.0"
 open = "5.3.3"
 ratatui = { version = "0.30.0", features = ["unstable-rendered-line-info"] }
 readability = { version = "0.3.0", default-features = false }

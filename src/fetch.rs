@@ -139,7 +139,10 @@ pub async fn fetch_feed(url: &str) -> Result<(Vec<Article>, Option<i64>), String
                     images.push(url);
                 }
             }
-            let content = html2md::parse_html(&html_content);
+            let content = html_to_markdown_rs::convert(&html_content, None)
+                .ok()
+                .and_then(|r| r.content)
+                .unwrap_or_default();
             let published_secs = entry.published.or(entry.updated).map(|dt| dt.timestamp());
 
             Article {

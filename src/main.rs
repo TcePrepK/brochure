@@ -189,7 +189,10 @@ async fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()
                             if let Some(article) = app.saved_view_articles.get_mut(art_idx) {
                                 let msg = match result {
                                     Ok(html) => {
-                                        article.content = html2md::parse_html(&html);
+                                        article.content = html_to_markdown_rs::convert(&html, None)
+                                            .ok()
+                                            .and_then(|r| r.content)
+                                            .unwrap_or_default();
                                         "Article loaded.".to_string()
                                     }
                                     Err(e) => {
@@ -214,7 +217,10 @@ async fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()
                         {
                             match result {
                                 Ok(html) => {
-                                    article.content = html2md::parse_html(&html);
+                                    article.content = html_to_markdown_rs::convert(&html, None)
+                                        .ok()
+                                        .and_then(|r| r.content)
+                                        .unwrap_or_default();
                                     app.set_status("Article loaded.");
                                 }
                                 Err(e) => {
