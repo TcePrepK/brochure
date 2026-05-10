@@ -4,6 +4,36 @@
 use crate::models::{Article, ReleaseNote, UpdateInfo};
 use std::sync::OnceLock;
 
+/// Extract image URLs from `<img src="...">` tags in HTML content.
+fn extract_img_src(html: &str) -> Vec<String> {
+    let mut urls = Vec::new();
+    let mut remaining = html;
+    while let Some(start) = remaining.find("<img") {
+        let img_tag_start = start;
+        let rest = &remaining[img_tag_start..];
+        let end = rest.find('>').map(|e| e + 1).unwrap_or(rest.len());
+        let tag = &rest[..end];
+        // Look for src="..." or src='...'
+        if let Some(src_start) = tag.find(" src=") {
+            let after_src = &tag[src_start + 5..];
+            let quote = after_src.chars().next().unwrap_or('"');
+            if quote == '"' || quote == '\'' {
+                if let Some(quote_end) = after_src[1..].find(quote) {
+                    let src = &after_src[1..=quote_end];
+                    if !urls.contains(&src.to_string()) {
+                        urls.push(src.to_string());
+                    }
+                }
+            }
+        }
+        remaining = &remaining[img_tag_start + end..];
+    }
+    urls
+}
+
+/// Maximum number of simultaneous feed-fetch requests.
+const MAX_CONCURRENT_FETCHES: usize = 6;
+
 /// Returns the shared, lazily-initialised HTTP client used for all outgoing requests.
 pub(crate) fn http_client() -> &'static reqwest::Client {
     static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
@@ -13,6 +43,12 @@ pub(crate) fn http_client() -> &'static reqwest::Client {
             .build()
             .expect("failed to build HTTP client")
     })
+}
+
+/// Semaphore that limits concurrent feed fetches to avoid overwhelming servers.
+fn fetch_semaphore() -> &'static tokio::sync::Semaphore {
+    static SEM: OnceLock<tokio::sync::Semaphore> = OnceLock::new();
+    SEM.get_or_init(|| tokio::sync::Semaphore::new(MAX_CONCURRENT_FETCHES))
 }
 
 /// Strips a UTF-8 BOM (`EF BB BF`) from the start of a byte slice if one is present.
@@ -28,6 +64,11 @@ fn strip_bom(bytes: &[u8]) -> &[u8] {
 /// Returns `(articles, xml_updated_secs)` where `xml_updated_secs` is the feed-level
 /// `<updated>` / `<lastBuildDate>` timestamp as Unix seconds, if present.
 pub async fn fetch_feed(url: &str) -> Result<(Vec<Article>, Option<i64>), String> {
+    // Limit concurrent in-flight feed fetches to avoid overwhelming servers.
+    let _permit = fetch_semaphore()
+        .acquire()
+        .await
+        .map_err(|e| format!("Semaphore error: {e}"))?;
     let bytes = http_client()
         .get(url)
         .send()
@@ -65,10 +106,15 @@ pub async fn fetch_feed(url: &str) -> Result<(Vec<Article>, Option<i64>), String
                 .next()
                 .map(|l| l.href)
                 .unwrap_or_default();
-            let html_content = entry
-                .content
-                .and_then(|c| c.body)
-                .unwrap_or_else(|| description.clone());
+            // Merge description (often image-rich) into content body so inline images aren't lost.
+            let html_body = entry.content.and_then(|c| c.body);
+            let html_content = match (&html_body, description.as_str()) {
+                (Some(body), desc) if !desc.is_empty() && desc != "No Description" => {
+                    format!("{body}\n{desc}")
+                }
+                (Some(body), _) => body.clone(),
+                (None, _) => description.clone(),
+            };
             let mut images: Vec<String> = Vec::new();
             // Collect images from MediaRSS attachments.
             for media in &entry.media {
@@ -85,6 +131,12 @@ pub async fn fetch_feed(url: &str) -> Result<(Vec<Article>, Option<i64>), String
                     if !images.contains(&s) {
                         images.push(s);
                     }
+                }
+            }
+            // Extract image URLs from <img> tags in the HTML content.
+            for url in extract_img_src(&html_content) {
+                if !images.contains(&url) {
+                    images.push(url);
                 }
             }
             let content = html2md::parse_html(&html_content);
