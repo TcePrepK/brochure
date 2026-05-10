@@ -93,8 +93,10 @@ async fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()
         }
     }
 
-    // Re-populate category view now that feed articles are loaded from cache.
-    if let Some(cat_id) = app.selected_sidebar_category {
+    // Re-populate category/all-feeds view now that feed articles are loaded from cache.
+    if app.in_all_feeds_context {
+        app.populate_all_feeds_view();
+    } else if let Some(cat_id) = app.selected_sidebar_category {
         app.populate_category_view(cat_id);
     }
 
@@ -402,7 +404,12 @@ fn on_feed_fetched(
             );
 
             feed.unread_count = articles.iter().filter(|a| !a.is_read).count();
+            let new_len = articles.len();
             feed.articles = articles;
+            // Clamp selected article if the list shrank (e.g. archive policy pruned many).
+            if app.selected_feed == idx && app.selected_article >= new_len {
+                app.selected_article = new_len.saturating_sub(1);
+            }
             feed.fetch_error = None;
             feed.fetched = true;
             feed.feed_updated_secs = xml_updated_secs;
@@ -422,14 +429,15 @@ fn on_feed_fetched(
         }
     }
 
-    // Refresh the all-feeds view so newly fetched articles appear immediately.
-    if app.in_all_feeds_context {
-        app.populate_all_feeds_view();
-    }
-
     // Update fetch progress counter
     app.feeds_pending = app.feeds_pending.saturating_sub(1);
     if app.feeds_pending == 0 {
+        // Refresh the all-feeds/category view once the batch completes.
+        if app.in_all_feeds_context {
+            app.populate_all_feeds_view();
+        } else if let Some(cat_id) = app.selected_sidebar_category {
+            app.populate_category_view(cat_id);
+        }
         app.feeds_total = 0;
         app.set_status("Feeds loaded.");
         let _ = storage::save_feeds(&app.feeds);
