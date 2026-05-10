@@ -117,6 +117,23 @@ pub enum SettingsItem {
 }
 
 impl SettingsItem {
+    /// Short user-facing description for this setting.
+    pub fn description(self) -> &'static str {
+        match self {
+            Self::ImportOpml => "Import feeds from an OPML file on disk",
+            Self::ExportOpml => "Export your feed list to an OPML file",
+            Self::ClearData => "Remove all feeds, categories, and preferences",
+            Self::SaveArticleContent => "Store full article content in the cache while fetching",
+            Self::ClearArticleCache => "Delete cached article content and read history",
+            Self::EagerArticleFetch => "Fetch full article text as soon as you open it",
+            Self::AutoFetchOnStart => "When and how often to check for new articles",
+            Self::ArchivePolicy => "How long to keep articles after they leave the feed",
+            Self::ScrollLoop => "Wrap around at the top and bottom of lists",
+            Self::BorderStyle => "Use rounded or straight border corners",
+            Self::Theme => "Browse built-in themes and create custom ones",
+        }
+    }
+
     /// Move to the next settings item (wraps around).
     pub fn next(self) -> Self {
         match self {
