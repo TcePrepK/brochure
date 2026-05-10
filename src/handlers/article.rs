@@ -122,10 +122,10 @@ pub(super) fn handle_category_picker(app: &mut App, key: KeyEvent, tx: &Unbounde
         cats_len + 1
     };
 
-    if app.category_picker_new_mode {
+    if app.category_picker.new_mode {
         match key.code {
             KeyCode::Enter => {
-                let name = app.category_picker_input.trim().to_string();
+                let name = app.category_picker.input.trim().to_string();
                 if !name.is_empty() {
                     // Reuse existing category if same name already exists.
                     let target_id = app
@@ -152,19 +152,19 @@ pub(super) fn handle_category_picker(app: &mut App, key: KeyEvent, tx: &Unbounde
                     save_to_category(app, target_id);
                     app.set_status(format!("Saved to '{name}'!"));
                 }
-                app.category_picker_new_mode = false;
-                app.category_picker_input.clear();
-                app.input_cursor = 0;
-                app.state = app.category_picker_return_state.clone();
+                app.category_picker.new_mode = false;
+                app.category_picker.input.clear();
+                app.category_picker.input_cursor = 0;
+                app.state = app.category_picker.return_state.clone();
             }
             KeyCode::Esc => {
-                app.category_picker_new_mode = false;
-                app.category_picker_input.clear();
-                app.input_cursor = 0;
+                app.category_picker.new_mode = false;
+                app.category_picker.input.clear();
+                app.category_picker.input_cursor = 0;
             }
             _ => super::handle_text_input(
-                &mut app.category_picker_input,
-                &mut app.input_cursor,
+                &mut app.category_picker.input,
+                &mut app.category_picker.input_cursor,
                 key.code,
                 None,
             ),
@@ -174,34 +174,35 @@ pub(super) fn handle_category_picker(app: &mut App, key: KeyEvent, tx: &Unbounde
 
     match key.code {
         KeyCode::Up => {
-            app.category_picker_cursor = app
-                .category_picker_cursor
+            app.category_picker.cursor = app
+                .category_picker
+                .cursor
                 .checked_sub(1)
                 .unwrap_or(total_items - 1);
         }
         KeyCode::Down => {
-            app.category_picker_cursor = (app.category_picker_cursor + 1) % total_items;
+            app.category_picker.cursor = (app.category_picker.cursor + 1) % total_items;
         }
         KeyCode::Enter => {
-            if app.category_picker_cursor < cats_len {
+            if app.category_picker.cursor < cats_len {
                 // Save to existing category
-                let cat_id = app.user_data.saved_categories[app.category_picker_cursor].id;
-                let cat_name = app.user_data.saved_categories[app.category_picker_cursor]
+                let cat_id = app.user_data.saved_categories[app.category_picker.cursor].id;
+                let cat_name = app.user_data.saved_categories[app.category_picker.cursor]
                     .name
                     .clone();
                 save_to_category(app, cat_id);
                 app.set_status(format!("Saved to '{cat_name}'!"));
-                app.state = app.category_picker_return_state.clone();
-            } else if app.category_picker_cursor == cats_len {
+                app.state = app.category_picker.return_state.clone();
+            } else if app.category_picker.cursor == cats_len {
                 // "New category..." — enter text input mode
-                app.category_picker_new_mode = true;
-                app.category_picker_input.clear();
-                app.input_cursor = 0;
+                app.category_picker.new_mode = true;
+                app.category_picker.input.clear();
+                app.category_picker.input_cursor = 0;
             } else if article_is_saved {
                 // "Unsave"
                 unsave_article(app);
                 if app.state == AppState::CategoryPicker {
-                    app.state = app.category_picker_return_state.clone();
+                    app.state = app.category_picker.return_state.clone();
                 }
                 if app.in_saved_context && !app.saved_view_articles.is_empty() {
                     prefetch_article_if_stub(app, tx);
@@ -209,7 +210,7 @@ pub(super) fn handle_category_picker(app: &mut App, key: KeyEvent, tx: &Unbounde
             }
         }
         KeyCode::Esc => {
-            app.state = app.category_picker_return_state.clone();
+            app.state = app.category_picker.return_state.clone();
         }
         _ => {}
     }
@@ -237,10 +238,10 @@ fn open_category_picker(app: &mut App) {
                 .position(|c| c.id == s.category_id)
         });
 
-    app.category_picker_cursor = current_cat_idx.unwrap_or(0);
-    app.category_picker_new_mode = false;
-    app.category_picker_input.clear();
-    app.category_picker_return_state = app.state.clone();
+    app.category_picker.cursor = current_cat_idx.unwrap_or(0);
+    app.category_picker.new_mode = false;
+    app.category_picker.input.clear();
+    app.category_picker.return_state = app.state.clone();
     app.state = AppState::CategoryPicker;
 }
 

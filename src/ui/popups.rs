@@ -91,8 +91,9 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
 
     // URL field
     f.render_widget(Clear, url_area);
-    let url_content = if app.add_feed_step == AddFeedStep::Url {
-        let (before, cursor_ch, after) = split_cursor(&app.input, app.input_cursor);
+    let url_content = if app.add_feed.step == AddFeedStep::Url {
+        let (before, cursor_ch, after) =
+            split_cursor(&app.add_feed.url_input, app.add_feed.input_cursor);
         Line::from(vec![
             Span::styled(before, Style::default().fg(app.theme.text)),
             Span::styled(
@@ -103,7 +104,7 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
         ])
     } else {
         Line::from(Span::styled(
-            app.add_feed_url.clone(),
+            app.add_feed.url.clone(),
             Style::default().fg(app.theme.text),
         ))
     };
@@ -111,7 +112,7 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
         .border_set(border_set(app.user_data.border_rounded))
         .borders(Borders::ALL)
         .border_style(
-            Style::default().fg(if app.add_feed_step == AddFeedStep::Url {
+            Style::default().fg(if app.add_feed.step == AddFeedStep::Url {
                 app.theme.accent
             } else {
                 app.theme.muted_text
@@ -126,7 +127,7 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
 
     // Title field
     f.render_widget(Clear, title_area);
-    let title_label = if app.add_feed_step == AddFeedStep::Url {
+    let title_label = if app.add_feed.step == AddFeedStep::Url {
         " Feed Title (enter URL first) "
     } else {
         " Feed Title (Enter to save, Esc to cancel) "
@@ -135,7 +136,7 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
         .border_set(border_set(app.user_data.border_rounded))
         .borders(Borders::ALL)
         .border_style(
-            Style::default().fg(if app.add_feed_step == AddFeedStep::Title {
+            Style::default().fg(if app.add_feed.step == AddFeedStep::Title {
                 app.theme.accent
             } else {
                 app.theme.muted_text
@@ -147,8 +148,8 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
             Style::default().fg(app.theme.link).bold(),
         ));
 
-    if app.add_feed_step == AddFeedStep::Title && app.input.is_empty() {
-        match &app.add_feed_fetched_title {
+    if app.add_feed.step == AddFeedStep::Title && app.add_feed.url_input.is_empty() {
+        match &app.add_feed.fetched_title {
             Some(t) if !t.is_empty() => {
                 f.render_widget(
                     Paragraph::new(t.as_str())
@@ -178,19 +179,21 @@ pub(super) fn draw_add_feed_popup(f: &mut Frame, app: &App) {
         return;
     }
 
-    let title_content = if app.add_feed_step == AddFeedStep::Title && !app.input.is_empty() {
-        let (before, cursor_ch, after) = split_cursor(&app.input, app.input_cursor);
-        Line::from(vec![
-            Span::styled(before, Style::default().fg(app.theme.text)),
-            Span::styled(
-                cursor_ch,
-                Style::default().fg(app.theme.bg).bg(app.theme.success),
-            ),
-            Span::styled(after, Style::default().fg(app.theme.text)),
-        ])
-    } else {
-        Line::from(String::new())
-    };
+    let title_content =
+        if app.add_feed.step == AddFeedStep::Title && !app.add_feed.url_input.is_empty() {
+            let (before, cursor_ch, after) =
+                split_cursor(&app.add_feed.url_input, app.add_feed.input_cursor);
+            Line::from(vec![
+                Span::styled(before, Style::default().fg(app.theme.text)),
+                Span::styled(
+                    cursor_ch,
+                    Style::default().fg(app.theme.bg).bg(app.theme.success),
+                ),
+                Span::styled(after, Style::default().fg(app.theme.text)),
+            ])
+        } else {
+            Line::from(String::new())
+        };
     f.render_widget(Paragraph::new(title_content).block(title_block), title_area);
 }
 
@@ -319,7 +322,7 @@ pub(super) fn draw_opml_path_popup(f: &mut Frame, app: &App) {
         &app.theme,
     );
 
-    let (before, cursor_ch, after) = split_cursor(&app.opml_path_input, app.input_cursor);
+    let (before, cursor_ch, after) = split_cursor(&app.opml.path_input, app.opml.input_cursor);
     let content = Line::from(vec![
         Span::styled(before, Style::default().fg(app.theme.text)),
         Span::styled(
@@ -392,7 +395,7 @@ pub(super) fn draw_category_picker(f: &mut Frame, app: &App) {
     let scroll_top = if visible_cats == 0 || cats_len <= visible_cats {
         0usize
     } else {
-        let cursor = app.category_picker_cursor.min(cats_len.saturating_sub(1));
+        let cursor = app.category_picker.cursor.min(cats_len.saturating_sub(1));
         cursor
             .saturating_sub(visible_cats.saturating_sub(1))
             .min(cats_len - visible_cats)
@@ -400,7 +403,7 @@ pub(super) fn draw_category_picker(f: &mut Frame, app: &App) {
 
     for (i, cat) in cats[scroll_top..].iter().take(visible_cats).enumerate() {
         let real_idx = scroll_top + i;
-        let is_selected = app.category_picker_cursor == real_idx;
+        let is_selected = app.category_picker.cursor == real_idx;
         let style = if is_selected {
             Style::default().bg(app.theme.border).fg(app.theme.accent)
         } else {
@@ -410,16 +413,16 @@ pub(super) fn draw_category_picker(f: &mut Frame, app: &App) {
     }
 
     let new_idx = cats_len;
-    if app.category_picker_new_mode {
+    if app.category_picker.new_mode {
         lines.push(Line::from(vec![
             Span::styled("  + ", Style::default().fg(app.theme.link)),
             Span::styled(
-                format!("{}|", app.category_picker_input),
+                format!("{}|", app.category_picker.input),
                 Style::default().fg(app.theme.text),
             ),
         ]));
     } else {
-        let new_style = if app.category_picker_cursor == new_idx {
+        let new_style = if app.category_picker.cursor == new_idx {
             Style::default().bg(app.theme.border).fg(app.theme.link)
         } else {
             Style::default().fg(app.theme.link)
@@ -434,7 +437,7 @@ pub(super) fn draw_category_picker(f: &mut Frame, app: &App) {
         )));
 
         let unsave_idx = cats_len + 1;
-        let unsave_style = if app.category_picker_cursor == unsave_idx {
+        let unsave_style = if app.category_picker.cursor == unsave_idx {
             Style::default().bg(app.theme.border).fg(app.theme.error)
         } else {
             Style::default().fg(app.theme.error)
@@ -456,7 +459,7 @@ pub(super) fn draw_category_picker(f: &mut Frame, app: &App) {
             bar_area,
             cats_len,
             inner.height as usize,
-            app.category_picker_cursor.min(cats_len.saturating_sub(1)),
+            app.category_picker.cursor.min(cats_len.saturating_sub(1)),
             &app.theme,
         );
     }

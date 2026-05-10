@@ -8,6 +8,7 @@ use crate::models::{
     AddFeedStep, AppState, Article, Category, CategoryId, EditorPanel, FAVORITES_URL, Feed,
     FeedEditorMode, FeedTreeItem, ListScroll, SettingsItem, Tab, TextScroll, UpdateInfo, UserData,
 };
+use crate::state::{AddFeedState, CategoryPickerState, FeedEditorState, OpmlState};
 use crate::storage::{article_cache_size, load_categories, load_feeds, load_user_data};
 use crate::ui::theme::ColorTheme;
 use ratatui::widgets::ListState;
@@ -38,7 +39,6 @@ pub struct App {
     pub selected_feed: usize,
     pub selected_article: usize,
     pub status_msg: String,
-    pub input: String,
     pub user_data: UserData,
     pub settings_selected: SettingsItem,
     pub article_scroll: TextScroll,
@@ -75,39 +75,20 @@ pub struct App {
     pub selected_saved_category: Option<u32>,
 
     // ── Category picker ──────────────────────────────────────────────────────
-    /// Cursor row in the CategoryPicker modal (0..categories + 2).
-    pub category_picker_cursor: usize,
-    /// True when the "New category..." entry is active and user is typing.
-    pub category_picker_new_mode: bool,
-    /// Text buffer for the new-category name input inside the picker.
-    pub category_picker_input: String,
-    /// State to return to when the picker closes (ArticleList or ArticleDetail).
-    pub category_picker_return_state: AppState,
+    /// State for the CategoryPicker modal.
+    pub category_picker: CategoryPickerState,
 
     // ── Saved category editor ────────────────────────────────────────────────
     /// Scroll state for the SavedCategoryEditor list.
     pub saved_cat_editor_scroll: ListScroll,
 
     // ── Multi-step AddFeed ───────────────────────────────────────────────────
-    pub add_feed_step: AddFeedStep,
-    /// URL captured in step 0, used when saving in step 1.
-    pub add_feed_url: String,
-    /// Title fetched from the feed URL in the background (placeholder for step 1).
-    pub add_feed_fetched_title: Option<String>,
-    /// Where to return after AddFeed completes (SettingsList or FeedEditor).
-    pub add_feed_return_state: AppState,
-    /// Category to place the new feed in (set from cursor when adding via FeedEditor).
-    pub add_feed_target_category: Option<CategoryId>,
-    /// Order value to insert the new feed at (set from cursor when adding via FeedEditor).
-    /// None means append at end.
-    pub add_feed_target_order: Option<usize>,
+    /// State for the multi-step AddFeed wizard.
+    pub add_feed: AddFeedState,
 
     // ── OPML path input ──────────────────────────────────────────────────────
-    /// File path typed by the user in OPMLExportPath / OPMLImportPath states.
-    pub opml_path_input: String,
-    /// Cursor position (in chars) within the active text input field.
-    /// Shared across all mutually-exclusive text-input states.
-    pub input_cursor: usize,
+    /// State for OPML import/export path input.
+    pub opml: OpmlState,
 
     // ── Fetch progress ───────────────────────────────────────────────────────
     /// Total feeds being fetched in the current batch.
@@ -140,20 +121,8 @@ pub struct App {
     pub article_cache_size: u64,
 
     // ── Feed editor ──────────────────────────────────────────────────────────
-    /// Cursor into the flattened visible-tree list inside the feed editor.
-    pub editor_cursor: usize,
-    /// Categories collapsed in the feed editor view (starts as a copy of sidebar_collapsed).
-    pub editor_collapsed: HashSet<CategoryId>,
-    /// Current interaction mode in the feed editor.
-    pub editor_mode: FeedEditorMode,
-    /// Text buffer for rename / new-category input in the feed editor.
-    pub editor_input: String,
-    /// Which panel has focus in the split editor (Categories = left, Feeds = right).
-    pub editor_panel: EditorPanel,
-    /// Cursor in the left (categories-only) panel of the editor.
-    pub editor_cat_cursor: usize,
-    /// Pending category delete: (id, total_feeds_to_delete). Set on [d], cleared on Esc or after confirm.
-    pub editor_delete_cat: Option<(CategoryId, usize)>,
+    /// State for the feed editor and saved-category editor.
+    pub feed_editor: FeedEditorState,
 
     // ── Changelog tab ────────────────────────────────────────────────────────
     /// Scroll offset for the Changelog tab view.
@@ -256,7 +225,6 @@ impl App {
             selected_feed,
             selected_article: 0,
             status_msg: "Fetching feeds...".to_string(),
-            input: String::new(),
             user_data,
             settings_selected: SettingsItem::ImportOpml,
             article_scroll: TextScroll::default(),
@@ -273,19 +241,10 @@ impl App {
             saved_view_articles: Vec::new(),
             in_saved_context: false,
             selected_saved_category: None,
-            category_picker_cursor: 0,
-            category_picker_new_mode: false,
-            category_picker_input: String::new(),
-            category_picker_return_state: AppState::ArticleList,
+            category_picker: CategoryPickerState::default(),
             saved_cat_editor_scroll: ListScroll::default(),
-            add_feed_step: AddFeedStep::Url,
-            add_feed_url: String::new(),
-            add_feed_fetched_title: None,
-            add_feed_return_state: AppState::SettingsList,
-            add_feed_target_category: None,
-            add_feed_target_order: None,
-            opml_path_input: String::new(),
-            input_cursor: 0,
+            add_feed: AddFeedState::default(),
+            opml: OpmlState::default(),
             feeds_total: 0,
             feeds_pending: 0,
             article_fetching: false,
@@ -297,13 +256,11 @@ impl App {
             in_category_context: false,
             in_all_feeds_context: false,
             article_cache_size: article_cache_size(),
-            editor_cursor: initial_editor_cursor,
-            editor_collapsed: HashSet::new(),
-            editor_mode: FeedEditorMode::Normal,
-            editor_input: String::new(),
-            editor_panel: EditorPanel::Feeds,
-            editor_cat_cursor: 0,
-            editor_delete_cat: None,
+            feed_editor: FeedEditorState {
+                cursor: initial_editor_cursor,
+                collapsed: HashSet::new(),
+                ..Default::default()
+            },
             changelog_scroll: 0,
             update_available: None,
             update_popup_scroll: 0,
@@ -380,17 +337,17 @@ impl App {
             }
             AppState::SavedCategoryList => self.move_saved_cursor(true),
             AppState::FeedEditor => {
-                if self.editor_panel == EditorPanel::Categories {
+                if self.feed_editor.panel == EditorPanel::Categories {
                     let cats = visible_cat_only_items(
                         &self.categories,
                         &self.feeds,
-                        &self.editor_collapsed,
+                        &self.feed_editor.collapsed,
                     );
                     if !cats.is_empty() {
                         let items = visible_tree_items(
                             &self.categories,
                             &self.feeds,
-                            &self.editor_collapsed,
+                            &self.feed_editor.collapsed,
                         );
                         let is_cat_moving = self.editor_moving_category(&items);
                         let wrap_len = if is_cat_moving {
@@ -399,22 +356,29 @@ impl App {
                             cats.len()
                         };
                         if self.user_data.scroll_loop {
-                            self.editor_cat_cursor = (self.editor_cat_cursor + 1) % wrap_len;
+                            self.feed_editor.cat_cursor =
+                                (self.feed_editor.cat_cursor + 1) % wrap_len;
                         } else {
-                            self.editor_cat_cursor = (self.editor_cat_cursor + 1).min(wrap_len - 1);
+                            self.feed_editor.cat_cursor =
+                                (self.feed_editor.cat_cursor + 1).min(wrap_len - 1);
                         }
                     }
                 } else {
-                    let items =
-                        visible_tree_items(&self.categories, &self.feeds, &self.editor_collapsed);
-                    if matches!(self.editor_mode, FeedEditorMode::Moving { .. }) {
+                    let items = visible_tree_items(
+                        &self.categories,
+                        &self.feeds,
+                        &self.feed_editor.collapsed,
+                    );
+                    if matches!(self.feed_editor.mode, FeedEditorMode::Moving { .. }) {
                         // During a feed move: navigate ALL items so the cursor can land on a
                         // category header (dropping there = insert as first child of that category).
                         if !items.is_empty() {
                             if self.user_data.scroll_loop {
-                                self.editor_cursor = (self.editor_cursor + 1) % items.len();
+                                self.feed_editor.cursor =
+                                    (self.feed_editor.cursor + 1) % items.len();
                             } else {
-                                self.editor_cursor = (self.editor_cursor + 1).min(items.len() - 1);
+                                self.feed_editor.cursor =
+                                    (self.feed_editor.cursor + 1).min(items.len() - 1);
                             }
                         }
                     } else {
@@ -428,14 +392,14 @@ impl App {
                         if !feed_indices.is_empty() {
                             let cur = feed_indices
                                 .iter()
-                                .position(|&i| i == self.editor_cursor)
+                                .position(|&i| i == self.feed_editor.cursor)
                                 .unwrap_or(0);
                             let next_idx = if self.user_data.scroll_loop {
                                 (cur + 1) % feed_indices.len()
                             } else {
                                 (cur + 1).min(feed_indices.len() - 1)
                             };
-                            self.editor_cursor = feed_indices[next_idx];
+                            self.feed_editor.cursor = feed_indices[next_idx];
                         }
                     }
                 }
@@ -457,17 +421,17 @@ impl App {
             }
             AppState::SavedCategoryList => self.move_saved_cursor(false),
             AppState::FeedEditor => {
-                if self.editor_panel == EditorPanel::Categories {
+                if self.feed_editor.panel == EditorPanel::Categories {
                     let cats = visible_cat_only_items(
                         &self.categories,
                         &self.feeds,
-                        &self.editor_collapsed,
+                        &self.feed_editor.collapsed,
                     );
                     if !cats.is_empty() {
                         let items = visible_tree_items(
                             &self.categories,
                             &self.feeds,
-                            &self.editor_collapsed,
+                            &self.feed_editor.collapsed,
                         );
                         let is_cat_moving = self.editor_moving_category(&items);
                         let wrap_len = if is_cat_moving {
@@ -476,25 +440,33 @@ impl App {
                             cats.len()
                         };
                         if self.user_data.scroll_loop {
-                            self.editor_cat_cursor = self
-                                .editor_cat_cursor
+                            self.feed_editor.cat_cursor = self
+                                .feed_editor
+                                .cat_cursor
                                 .checked_sub(1)
                                 .unwrap_or(wrap_len - 1);
                         } else {
-                            self.editor_cat_cursor = self.editor_cat_cursor.saturating_sub(1);
+                            self.feed_editor.cat_cursor =
+                                self.feed_editor.cat_cursor.saturating_sub(1);
                         }
                     }
                 } else {
-                    let items =
-                        visible_tree_items(&self.categories, &self.feeds, &self.editor_collapsed);
-                    if matches!(self.editor_mode, FeedEditorMode::Moving { .. }) {
+                    let items = visible_tree_items(
+                        &self.categories,
+                        &self.feeds,
+                        &self.feed_editor.collapsed,
+                    );
+                    if matches!(self.feed_editor.mode, FeedEditorMode::Moving { .. }) {
                         // During a feed move: navigate ALL items.
                         if !items.is_empty() {
                             if self.user_data.scroll_loop {
-                                self.editor_cursor =
-                                    self.editor_cursor.checked_sub(1).unwrap_or(items.len() - 1);
+                                self.feed_editor.cursor = self
+                                    .feed_editor
+                                    .cursor
+                                    .checked_sub(1)
+                                    .unwrap_or(items.len() - 1);
                             } else {
-                                self.editor_cursor = self.editor_cursor.saturating_sub(1);
+                                self.feed_editor.cursor = self.feed_editor.cursor.saturating_sub(1);
                             }
                         }
                     } else {
@@ -508,14 +480,14 @@ impl App {
                         if !feed_indices.is_empty() {
                             let cur = feed_indices
                                 .iter()
-                                .position(|&i| i == self.editor_cursor)
+                                .position(|&i| i == self.feed_editor.cursor)
                                 .unwrap_or(0);
                             let prev_idx = if self.user_data.scroll_loop {
                                 cur.checked_sub(1).unwrap_or(feed_indices.len() - 1)
                             } else {
                                 cur.saturating_sub(1)
                             };
-                            self.editor_cursor = feed_indices[prev_idx];
+                            self.feed_editor.cursor = feed_indices[prev_idx];
                         }
                     }
                 }
@@ -782,7 +754,7 @@ impl App {
     fn editor_moving_category(&self, items: &[FeedTreeItem]) -> bool {
         if let FeedEditorMode::Moving {
             origin_render_idx, ..
-        } = &self.editor_mode
+        } = &self.feed_editor.mode
         {
             matches!(
                 items.get(*origin_render_idx),
@@ -811,13 +783,13 @@ impl App {
             }
             AppState::ArticleDetail => self.state = AppState::ArticleList,
             AppState::AddFeed => {
-                self.input.clear();
-                self.input_cursor = 0;
-                self.add_feed_step = AddFeedStep::Url;
-                self.add_feed_url.clear();
-                self.add_feed_fetched_title = None;
-                self.add_feed_target_category = None;
-                self.state = self.add_feed_return_state.clone();
+                self.add_feed.url_input.clear();
+                self.add_feed.input_cursor = 0;
+                self.add_feed.step = AddFeedStep::Url;
+                self.add_feed.url.clear();
+                self.add_feed.fetched_title = None;
+                self.add_feed.target_category = None;
+                self.state = self.add_feed.return_state.clone();
             }
             AppState::SettingsList => {
                 self.settings_selected = SettingsItem::ImportOpml;
@@ -825,7 +797,7 @@ impl App {
                 self.state = AppState::FeedList;
             }
             AppState::OPMLExportPath | AppState::OPMLImportPath => {
-                self.opml_path_input.clear();
+                self.opml.path_input.clear();
                 self.state = AppState::SettingsList;
             }
             AppState::ClearData => self.state = AppState::SettingsList,
@@ -846,13 +818,14 @@ impl App {
                 }
             }
             AppState::FeedEditor => {
-                self.editor_mode = FeedEditorMode::Normal;
+                self.feed_editor.mode = FeedEditorMode::Normal;
                 self.selected_tab = Tab::Feeds;
                 self.state = AppState::FeedList;
             }
             AppState::FeedEditorRename => {
-                self.editor_input.clear();
-                self.editor_mode = FeedEditorMode::Normal;
+                self.feed_editor.input.clear();
+                self.feed_editor.input_cursor = 0;
+                self.feed_editor.mode = FeedEditorMode::Normal;
                 self.state = AppState::FeedEditor;
             }
             _ => {}

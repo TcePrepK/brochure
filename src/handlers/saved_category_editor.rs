@@ -27,8 +27,8 @@ pub(super) fn handle_saved_category_editor(app: &mut App, key: KeyEvent) {
         KeyCode::Char('r') => {
             let cursor = app.saved_cat_editor_scroll.cursor;
             if cursor < app.user_data.saved_categories.len() {
-                app.editor_input = app.user_data.saved_categories[cursor].name.clone();
-                app.input_cursor = app.editor_input.chars().count();
+                app.feed_editor.input = app.user_data.saved_categories[cursor].name.clone();
+                app.feed_editor.input_cursor = app.feed_editor.input.chars().count();
                 app.state = AppState::SavedCategoryEditorRename;
             }
         }
@@ -39,8 +39,8 @@ pub(super) fn handle_saved_category_editor(app: &mut App, key: KeyEvent) {
             }
         }
         KeyCode::Char('n') => {
-            app.editor_input.clear();
-            app.input_cursor = 0;
+            app.feed_editor.input.clear();
+            app.feed_editor.input_cursor = 0;
             app.state = AppState::SavedCategoryEditorNew;
         }
         KeyCode::Esc | KeyCode::Char('q') => {
@@ -93,7 +93,7 @@ pub(super) fn handle_saved_category_editor_delete_confirm(app: &mut App, key: Ke
 pub(super) fn handle_saved_category_editor_new(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Enter => {
-            let name = app.editor_input.trim().to_string();
+            let name = app.feed_editor.input.trim().to_string();
             if !name.is_empty() {
                 // Reuse existing category if same name already exists.
                 let already_exists = app
@@ -120,16 +120,21 @@ pub(super) fn handle_saved_category_editor_new(app: &mut App, key: KeyEvent) {
                     app.set_status(format!("Category '{name}' already exists."));
                 }
             }
-            app.editor_input.clear();
-            app.input_cursor = 0;
+            app.feed_editor.input.clear();
+            app.feed_editor.input_cursor = 0;
             app.state = AppState::SavedCategoryEditor;
         }
         KeyCode::Esc => {
-            app.editor_input.clear();
-            app.input_cursor = 0;
+            app.feed_editor.input.clear();
+            app.feed_editor.input_cursor = 0;
             app.state = AppState::SavedCategoryEditor;
         }
-        _ => super::handle_text_input(&mut app.editor_input, &mut app.input_cursor, key.code, None),
+        _ => super::handle_text_input(
+            &mut app.feed_editor.input,
+            &mut app.feed_editor.input_cursor,
+            key.code,
+            None,
+        ),
     }
 }
 
@@ -140,7 +145,7 @@ pub(super) fn handle_saved_category_editor_new(app: &mut App, key: KeyEvent) {
 pub(super) fn handle_saved_category_editor_rename(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Enter => {
-            let name = app.editor_input.trim().to_string();
+            let name = app.feed_editor.input.trim().to_string();
             if !name.is_empty() {
                 if let Some(cat) = app
                     .user_data
@@ -152,15 +157,20 @@ pub(super) fn handle_saved_category_editor_rename(app: &mut App, key: KeyEvent) 
                 let _ = save_user_data(&app.user_data);
                 app.set_status("Category renamed.".to_string());
             }
-            app.editor_input.clear();
-            app.input_cursor = 0;
+            app.feed_editor.input.clear();
+            app.feed_editor.input_cursor = 0;
             app.state = AppState::SavedCategoryEditor;
         }
         KeyCode::Esc => {
-            app.editor_input.clear();
-            app.input_cursor = 0;
+            app.feed_editor.input.clear();
+            app.feed_editor.input_cursor = 0;
             app.state = AppState::SavedCategoryEditor;
         }
-        _ => super::handle_text_input(&mut app.editor_input, &mut app.input_cursor, key.code, None),
+        _ => super::handle_text_input(
+            &mut app.feed_editor.input,
+            &mut app.feed_editor.input_cursor,
+            key.code,
+            None,
+        ),
     }
 }

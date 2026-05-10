@@ -48,8 +48,8 @@ pub(super) fn draw_saved_category_editor(f: &mut Frame, app: &mut App, area: Rec
             let name_line = if app.state == AppState::SavedCategoryEditorRename
                 && i == app.saved_cat_editor_scroll.cursor
             {
-                let chars: Vec<char> = app.editor_input.chars().collect();
-                let pos = app.input_cursor.min(chars.len());
+                let chars: Vec<char> = app.feed_editor.input.chars().collect();
+                let pos = app.feed_editor.input_cursor.min(chars.len());
                 let before: String = chars[..pos].iter().collect();
                 let after: String = chars[pos..].iter().collect();
                 Line::from(vec![
@@ -93,8 +93,8 @@ pub(super) fn draw_saved_category_editor(f: &mut Frame, app: &mut App, area: Rec
             height: 1,
             ..area
         };
-        let chars: Vec<char> = app.editor_input.chars().collect();
-        let pos = app.input_cursor.min(chars.len());
+        let chars: Vec<char> = app.feed_editor.input.chars().collect();
+        let pos = app.feed_editor.input_cursor.min(chars.len());
         let before: String = chars[..pos].iter().collect();
         let after: String = chars[pos..].iter().collect();
         let input_line = Line::from(vec![

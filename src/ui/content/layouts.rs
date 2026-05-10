@@ -42,7 +42,7 @@ fn draw_three_panel(f: &mut Frame, app: &mut App, right_area: Rect, is_preview: 
 /// Renders the Feeds tab with sidebar (categories/feeds) and content area (list or detail).
 pub fn draw_feeds_tab(f: &mut Frame, app: &mut App, area: Rect) {
     if matches!(app.state, AppState::FeedEditor | AppState::FeedEditorRename)
-        || (app.state == AppState::AddFeed && app.add_feed_return_state == AppState::FeedEditor)
+        || (app.state == AppState::AddFeed && app.add_feed.return_state == AppState::FeedEditor)
     {
         draw_feed_editor(f, app, area);
         return;
@@ -71,7 +71,7 @@ pub fn draw_feeds_tab(f: &mut Frame, app: &mut App, area: Rect) {
             draw_three_panel(f, app, cols[1], false);
         }
         AppState::CategoryPicker => {
-            let is_preview = app.category_picker_return_state != AppState::ArticleDetail;
+            let is_preview = app.category_picker.return_state != AppState::ArticleDetail;
             draw_three_panel(f, app, cols[1], is_preview);
         }
         _ => {}
@@ -96,7 +96,7 @@ pub fn draw_saved_tab(f: &mut Frame, app: &mut App, area: Rect) {
             draw_three_panel(f, app, cols[1], false);
         }
         AppState::CategoryPicker => {
-            let is_preview = app.category_picker_return_state != AppState::ArticleDetail;
+            let is_preview = app.category_picker.return_state != AppState::ArticleDetail;
             draw_three_panel(f, app, cols[1], is_preview);
         }
         _ => draw_article_list(f, app, cols[1], true),

@@ -54,13 +54,13 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
         KeyCode::Down => app.next(),
         KeyCode::Enter => match app.settings_selected {
             SettingsItem::ImportOpml => {
-                app.opml_path_input.clear();
-                app.input_cursor = 0;
+                app.opml.path_input.clear();
+                app.opml.input_cursor = 0;
                 app.state = AppState::OPMLImportPath;
             }
             SettingsItem::ExportOpml => {
-                app.opml_path_input = default_export_path();
-                app.input_cursor = app.opml_path_input.chars().count();
+                app.opml.path_input = default_export_path();
+                app.opml.input_cursor = app.opml.path_input.chars().count();
                 app.state = AppState::OPMLExportPath;
             }
             SettingsItem::ClearData => {
@@ -218,18 +218,18 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
 /// step. In the `Title` step, Enter creates and immediately fetches the new feed, then returns to
 /// the previous state.
 pub(super) fn handle_add_feed(app: &mut App, key: KeyEvent, tx: &UnboundedSender<AppEvent>) {
-    if app.add_feed_step == AddFeedStep::Url {
+    if app.add_feed.step == AddFeedStep::Url {
         match key.code {
             KeyCode::Enter => {
-                let url = app.input.trim().to_string();
+                let url = app.add_feed.url_input.trim().to_string();
                 if url.is_empty() {
                     return;
                 }
-                app.add_feed_url = url.clone();
-                app.input.clear();
-                app.input_cursor = 0;
-                app.add_feed_fetched_title = None;
-                app.add_feed_step = AddFeedStep::Title;
+                app.add_feed.url = url.clone();
+                app.add_feed.url_input.clear();
+                app.add_feed.input_cursor = 0;
+                app.add_feed.fetched_title = None;
+                app.add_feed.step = AddFeedStep::Title;
                 let tx2 = tx.clone();
                 tokio::spawn(async move {
                     let result = fetch_feed_title(&url).await;
@@ -237,14 +237,19 @@ pub(super) fn handle_add_feed(app: &mut App, key: KeyEvent, tx: &UnboundedSender
                 });
             }
             KeyCode::Esc => app.unselect(),
-            _ => super::handle_text_input(&mut app.input, &mut app.input_cursor, key.code, None),
+            _ => super::handle_text_input(
+                &mut app.add_feed.url_input,
+                &mut app.add_feed.input_cursor,
+                key.code,
+                None,
+            ),
         }
     } else {
         match key.code {
             KeyCode::Enter => {
-                let typed = app.input.trim().to_string();
+                let typed = app.add_feed.url_input.trim().to_string();
                 let title = if typed.is_empty() {
-                    match app.add_feed_fetched_title.clone() {
+                    match app.add_feed.fetched_title.clone() {
                         Some(t) if !t.is_empty() => t,
                         _ => {
                             app.set_status("Title is required.".to_string());
@@ -254,9 +259,9 @@ pub(super) fn handle_add_feed(app: &mut App, key: KeyEvent, tx: &UnboundedSender
                 } else {
                     typed
                 };
-                let url = app.add_feed_url.clone();
-                let target_category = app.add_feed_target_category.take();
-                let next_order = if let Some(insert_at) = app.add_feed_target_order.take() {
+                let url = app.add_feed.url.clone();
+                let target_category = app.add_feed.target_category.take();
+                let next_order = if let Some(insert_at) = app.add_feed.target_order.take() {
                     // Shift all sibling feeds with order >= insert_at up by 1 to make room.
                     for f in app.feeds.iter_mut() {
                         if f.category_id == target_category && f.order >= insert_at {
@@ -287,15 +292,20 @@ pub(super) fn handle_add_feed(app: &mut App, key: KeyEvent, tx: &UnboundedSender
                     let result = fetch_feed(&url).await;
                     let _ = tx2.send(AppEvent::FeedFetched(idx, result));
                 });
-                app.input.clear();
-                app.input_cursor = 0;
-                app.add_feed_step = AddFeedStep::Url;
-                app.add_feed_url.clear();
-                app.add_feed_fetched_title = None;
-                app.state = app.add_feed_return_state.clone();
+                app.add_feed.url_input.clear();
+                app.add_feed.input_cursor = 0;
+                app.add_feed.step = AddFeedStep::Url;
+                app.add_feed.url.clear();
+                app.add_feed.fetched_title = None;
+                app.state = app.add_feed.return_state.clone();
             }
             KeyCode::Esc => app.unselect(),
-            _ => super::handle_text_input(&mut app.input, &mut app.input_cursor, key.code, None),
+            _ => super::handle_text_input(
+                &mut app.add_feed.url_input,
+                &mut app.add_feed.input_cursor,
+                key.code,
+                None,
+            ),
         }
     }
 }
@@ -357,7 +367,7 @@ pub(super) fn handle_confirm_clear_cache(app: &mut App, key: KeyEvent) {
 pub(super) fn handle_opml_path(app: &mut App, key: KeyEvent, tx: &UnboundedSender<AppEvent>) {
     match key.code {
         KeyCode::Enter => {
-            let raw = app.opml_path_input.trim().to_string();
+            let raw = app.opml.path_input.trim().to_string();
             if raw.is_empty() {
                 app.set_status("Path cannot be empty.".to_string());
                 return;
@@ -399,14 +409,14 @@ pub(super) fn handle_opml_path(app: &mut App, key: KeyEvent, tx: &UnboundedSende
                     Err(e) => app.set_status(format!("Import failed: {e}")),
                 }
             }
-            app.opml_path_input.clear();
-            app.input_cursor = 0;
+            app.opml.path_input.clear();
+            app.opml.input_cursor = 0;
             app.state = AppState::SettingsList;
         }
         KeyCode::Esc => app.unselect(),
         _ => super::handle_text_input(
-            &mut app.opml_path_input,
-            &mut app.input_cursor,
+            &mut app.opml.path_input,
+            &mut app.opml.input_cursor,
             key.code,
             None,
         ),

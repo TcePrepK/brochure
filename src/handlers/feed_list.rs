@@ -92,9 +92,9 @@ pub(super) fn handle_feed_list(
         KeyCode::BackTab => app.switch_tab_left(),
         KeyCode::Enter => app.select(),
         KeyCode::Char('e') => {
-            app.editor_cursor = 0;
-            app.editor_collapsed = app.sidebar_collapsed.clone();
-            app.editor_mode = FeedEditorMode::Normal;
+            app.feed_editor.cursor = 0;
+            app.feed_editor.collapsed = app.sidebar_collapsed.clone();
+            app.feed_editor.mode = FeedEditorMode::Normal;
             app.state = AppState::FeedEditor;
         }
         KeyCode::Char('g') => {

@@ -4,6 +4,7 @@ mod app;
 mod fetch;
 mod handlers;
 mod models;
+mod state;
 mod storage;
 mod ui;
 
@@ -224,8 +225,8 @@ async fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()
             }
 
             AppEvent::FeedTitleFetched(result) => {
-                if app.state == AppState::AddFeed && app.add_feed_step == AddFeedStep::Title {
-                    app.add_feed_fetched_title = Some(result.unwrap_or_default());
+                if app.state == AppState::AddFeed && app.add_feed.step == AddFeedStep::Title {
+                    app.add_feed.fetched_title = Some(result.unwrap_or_default());
                 }
             }
 

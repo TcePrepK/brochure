@@ -48,11 +48,11 @@ pub(super) fn draw_feed_editor(f: &mut Frame, app: &mut App, area: Rect) {
 
 /// Renders the left editor panel showing feeds with tree indentation and move/rename/delete modes.
 fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
-    let is_active = app.editor_panel == EditorPanel::Feeds;
-    let in_moving_mode = matches!(app.editor_mode, FeedEditorMode::Moving { .. });
+    let is_active = app.feed_editor.panel == EditorPanel::Feeds;
+    let in_moving_mode = matches!(app.feed_editor.mode, FeedEditorMode::Moving { .. });
     let is_rename = app.state == AppState::FeedEditorRename;
 
-    let moving_origin = match &app.editor_mode {
+    let moving_origin = match &app.feed_editor.mode {
         FeedEditorMode::Moving {
             origin_render_idx, ..
         } => Some(*origin_render_idx),
@@ -60,7 +60,7 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
     };
 
     let mode_label = if is_active {
-        match &app.editor_mode {
+        match &app.feed_editor.mode {
             FeedEditorMode::Normal => "",
             FeedEditorMode::Moving { .. } => " MOVE — j/k navigate, Space drop, Esc cancel ",
             FeedEditorMode::Renaming { .. } => " RENAME ",
@@ -70,7 +70,7 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
     } else {
         ""
     };
-    let mode_color = editor_mode_color(&app.editor_mode, &app.theme);
+    let mode_color = editor_mode_color(&app.feed_editor.mode, &app.theme);
 
     let border_color = if is_active {
         app.theme.accent
@@ -96,7 +96,7 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
     let list_area = vert[0];
     let url_area = vert[1];
 
-    let tree = visible_tree_items(&app.categories, &app.feeds, &app.editor_collapsed);
+    let tree = visible_tree_items(&app.categories, &app.feeds, &app.feed_editor.collapsed);
     let rounded = app.user_data.border_rounded;
 
     // full_idx_to_visual maps full-tree index → visual list index (for scroll tracking).
@@ -143,7 +143,7 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
                 let feed = &app.feeds[*feeds_idx];
                 let indent = tree_indent(&tree, full_idx, *depth);
                 let connector = tree_connector(&tree, full_idx, *depth, rounded, "");
-                let selected = app.editor_cursor == full_idx;
+                let selected = app.feed_editor.cursor == full_idx;
                 let is_ghost = moving_origin == Some(full_idx);
                 let is_on_origin = in_moving_mode && selected && is_ghost;
                 let show_selected = selected && !in_moving_mode && is_active;
@@ -161,12 +161,12 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
                 if is_rename
                     && selected
                     && matches!(
-                        app.editor_mode,
+                        app.feed_editor.mode,
                         FeedEditorMode::Renaming { .. } | FeedEditorMode::EditingUrl { .. }
                     )
                 {
                     let (before, cursor_ch, after) =
-                        split_cursor(&app.editor_input, app.input_cursor);
+                        split_cursor(&app.feed_editor.input, app.feed_editor.input_cursor);
                     items.push(ListItem::new(Line::from(vec![
                         indent.fg(app.theme.border),
                         Span::styled(connector, connector_style),
@@ -226,13 +226,13 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
 
     let mut final_items = items;
     let mut display_visual = full_idx_to_visual
-        .get(&app.editor_cursor)
+        .get(&app.feed_editor.cursor)
         .copied()
         .unwrap_or(0);
 
     // In Moving mode: insert drop-preview row after the cursor position.
     if let Some(origin) = moving_origin {
-        let cursor = app.editor_cursor;
+        let cursor = app.feed_editor.cursor;
         if let Some(&origin_vis) = full_idx_to_visual.get(&origin)
             && let Some(&cursor_vis) = full_idx_to_visual.get(&cursor)
             && cursor_vis != origin_vis
@@ -279,12 +279,13 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
 
     // URL footer: show the selected feed's URL when on a Feed item.
     let url_text = if is_active {
-        tree.get(app.editor_cursor).and_then(|item| match item {
-            FeedTreeItem::Feed { feeds_idx, .. } => {
-                app.feeds.get(*feeds_idx).map(|f| f.url.clone())
-            }
-            _ => None,
-        })
+        tree.get(app.feed_editor.cursor)
+            .and_then(|item| match item {
+                FeedTreeItem::Feed { feeds_idx, .. } => {
+                    app.feeds.get(*feeds_idx).map(|f| f.url.clone())
+                }
+                _ => None,
+            })
     } else {
         None
     };
@@ -301,17 +302,17 @@ fn draw_editor_feeds(f: &mut Frame, app: &mut App, area: Rect) {
 
 /// Render the right panel: categories-only tree with add/rename/delete controls.
 fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
-    let is_active = app.editor_panel == EditorPanel::Categories;
+    let is_active = app.feed_editor.panel == EditorPanel::Categories;
     let is_rename = app.state == AppState::FeedEditorRename;
-    let in_moving_mode = matches!(app.editor_mode, FeedEditorMode::Moving { .. });
+    let in_moving_mode = matches!(app.feed_editor.mode, FeedEditorMode::Moving { .. });
 
     // For cat-move ghost: find the category ID being moved.
     let moving_cat_id: Option<u64> = if in_moving_mode {
         if let FeedEditorMode::Moving {
             origin_render_idx, ..
-        } = &app.editor_mode
+        } = &app.feed_editor.mode
         {
-            let items = visible_tree_items(&app.categories, &app.feeds, &app.editor_collapsed);
+            let items = visible_tree_items(&app.categories, &app.feeds, &app.feed_editor.collapsed);
             match items.get(*origin_render_idx) {
                 Some(FeedTreeItem::Category { id, .. }) => Some(*id),
                 _ => None,
@@ -324,7 +325,7 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
     };
 
     let mode_label = if is_active {
-        match &app.editor_mode {
+        match &app.feed_editor.mode {
             FeedEditorMode::Normal => "",
             FeedEditorMode::Moving { .. } => {
                 " MOVE — j/k navigate, ◀▶ depth, Space drop, Esc cancel "
@@ -336,7 +337,7 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
     } else {
         ""
     };
-    let mode_color = editor_mode_color(&app.editor_mode, &app.theme);
+    let mode_color = editor_mode_color(&app.feed_editor.mode, &app.theme);
 
     let border_color = if is_active {
         app.theme.accent
@@ -355,7 +356,7 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
     let inner = block.inner(area);
     f.render_widget(block, area);
 
-    let cats = visible_cat_only_items(&app.categories, &app.feeds, &app.editor_collapsed);
+    let cats = visible_cat_only_items(&app.categories, &app.feeds, &app.feed_editor.collapsed);
     let rounded = app.user_data.border_rounded;
 
     if cats.is_empty() {
@@ -369,8 +370,8 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
 
     // Find rename target by matching full-tree index to category ID.
     let renamed_cat_id: Option<u64> = if is_rename {
-        if let FeedEditorMode::Renaming { render_idx } = &app.editor_mode {
-            let full = visible_tree_items(&app.categories, &app.feeds, &app.editor_collapsed);
+        if let FeedEditorMode::Renaming { render_idx } = &app.feed_editor.mode {
+            let full = visible_tree_items(&app.categories, &app.feeds, &app.feed_editor.collapsed);
             match full.get(*render_idx) {
                 Some(FeedTreeItem::Category { id, .. }) => Some(*id),
                 _ => None,
@@ -382,7 +383,7 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
         None
     };
 
-    let in_new_cat_mode = matches!(app.editor_mode, FeedEditorMode::NewCategory { .. });
+    let in_new_cat_mode = matches!(app.feed_editor.mode, FeedEditorMode::NewCategory { .. });
 
     let items: Vec<ListItem> = cats
         .iter()
@@ -396,8 +397,10 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
             else {
                 return ListItem::new("");
             };
-            let selected =
-                is_active && app.editor_cat_cursor == idx && !in_new_cat_mode && !in_moving_mode;
+            let selected = is_active
+                && app.feed_editor.cat_cursor == idx
+                && !in_new_cat_mode
+                && !in_moving_mode;
             let is_ghost = moving_cat_id == Some(*id);
             let cat_colors = app.theme.category_colors();
             let color = cat_colors[(*id % cat_colors.len() as u64) as usize];
@@ -407,7 +410,8 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
 
             // Rename input row
             if renamed_cat_id == Some(*id) {
-                let (before, cursor_ch, after) = split_cursor(&app.editor_input, app.input_cursor);
+                let (before, cursor_ch, after) =
+                    split_cursor(&app.feed_editor.input, app.feed_editor.input_cursor);
                 return ListItem::new(Line::from(vec![
                     indent.fg(app.theme.border),
                     connector.fg(app.theme.border),
@@ -470,7 +474,7 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
 
     // Insert new-category input row.
     let mut final_items = items;
-    if is_rename && let FeedEditorMode::NewCategory { parent_id } = &app.editor_mode {
+    if is_rename && let FeedEditorMode::NewCategory { parent_id } = &app.feed_editor.mode {
         let parent_id = *parent_id;
         let depth = if let Some(pid) = parent_id {
             cats.iter()
@@ -483,8 +487,9 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
             0
         };
         let indent = "  ".repeat(depth as usize);
-        let insert_at = app.editor_cat_cursor.min(final_items.len());
-        let (before, cursor_ch, after) = split_cursor(&app.editor_input, app.input_cursor);
+        let insert_at = app.feed_editor.cat_cursor.min(final_items.len());
+        let (before, cursor_ch, after) =
+            split_cursor(&app.feed_editor.input, app.feed_editor.input_cursor);
         final_items.insert(
             insert_at,
             ListItem::new(Line::from(vec![
@@ -502,12 +507,12 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
 
     // In Moving mode: insert drop-preview row for category.
     let mut display_cursor = if is_active {
-        app.editor_cat_cursor
+        app.feed_editor.cat_cursor
     } else {
         usize::MAX
     };
     if in_moving_mode && moving_cat_id.is_some() && is_active {
-        let cursor = app.editor_cat_cursor;
+        let cursor = app.feed_editor.cat_cursor;
         if cursor < cats.len() {
             let src_name = moving_cat_id
                 .and_then(|id| {
@@ -517,7 +522,7 @@ fn draw_editor_categories(f: &mut Frame, app: &mut App, area: Rect) {
                         .map(|c| c.name.as_str())
                 })
                 .unwrap_or("?");
-            let depth_delta = match &app.editor_mode {
+            let depth_delta = match &app.feed_editor.mode {
                 FeedEditorMode::Moving { depth_delta, .. } => *depth_delta,
                 _ => 0,
             };
