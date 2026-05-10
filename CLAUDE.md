@@ -23,7 +23,7 @@ rule), fix it in the same commit.
 
 ## Module Map
 
-Run `rust-ast-extractor dir src/` for a live index of all source files and their responsibilities.
+Run `synopsis dir src/` for a live index of all source files and their responsibilities.
 Each file's `//!` module doc is the authoritative description — it is never out of date.
 
 ---
