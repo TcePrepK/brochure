@@ -800,7 +800,10 @@ impl App {
             AppState::ArticleList => {
                 if self.in_category_context {
                     // Return to FeedList; keep category_view_articles populated for preview.
-                    self.in_category_context = false;
+                    // in_category_context is left intact so the article-list preview renders
+                    // from category_view_articles rather than falling back to feeds[selected_feed].
+                    // `move_sidebar_cursor` / `clear_category_view` will clear it when the user
+                    // navigates to a different item in the sidebar.
                     self.state = AppState::FeedList;
                 } else if self.in_saved_context {
                     self.in_saved_context = false;
