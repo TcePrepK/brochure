@@ -262,6 +262,12 @@ pub struct UserData {
     /// Whether list navigation wraps around at the top/bottom (scrollbar loop).
     #[serde(default = "default_true")]
     pub scroll_loop: bool,
+    /// Which category ids are collapsed in the sidebar (persisted).
+    #[serde(default)]
+    pub sidebar_collapsed: Vec<u64>,
+    /// Indices of collapsed changelog entries (reversed display order, persisted).
+    #[serde(default)]
+    pub changelog_collapsed: Vec<usize>,
     /// Slug of the active theme (e.g. `"catppuccin-mocha"`, `"gruvbox-dark"`, `"custom"`).
     #[serde(default = "default_theme")]
     pub selected_theme: String,

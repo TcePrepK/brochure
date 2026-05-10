@@ -1,7 +1,7 @@
 //! Rendering for the Changelog/About tab.
 //!
 //! Displays a static About block (app name, version, description) above a
-//! scrollable list of changelog entries parsed from the embedded `changelog.json`.
+//! scrollable list of collapsible changelog entries parsed from `changelog.json`.
 
 use crate::app::App;
 use ratatui::{
@@ -94,7 +94,7 @@ fn draw_about_block(f: &mut Frame, app: &App, area: Rect) {
     );
 }
 
-/// Renders the scrollable changelog entries block.
+/// Renders the scrollable changelog entries block with collapse/expand and cursor highlight.
 fn draw_changelog_block(f: &mut Frame, app: &mut App, area: Rect) {
     let block = content_block(
         " Changelog ".fg(app.theme.notice).bold(),
@@ -118,11 +118,17 @@ fn draw_changelog_block(f: &mut Frame, app: &mut App, area: Rect) {
         }
     };
 
-    let mut lines: Vec<Line> = Vec::new();
+    let viewport_height = inner.height as usize;
     let total = entries.len();
+    let mut header_lines: Vec<usize> = Vec::with_capacity(total);
+    let mut entry_ends: Vec<usize> = Vec::with_capacity(total);
+
+    let mut full_lines: Vec<Line> = Vec::new();
     for (i, entry) in entries.iter().rev().enumerate() {
-        // Determine the tree connector based on position
-        let connector = if i == total - 1 {
+        let collapsed = app.changelog_collapsed.contains(&i);
+        let is_last = i == total - 1;
+        let is_cursor = i == app.changelog_cursor;
+        let connector = if is_last {
             if app.user_data.border_rounded {
                 " ╰─"
             } else {
@@ -131,50 +137,135 @@ fn draw_changelog_block(f: &mut Frame, app: &mut App, area: Rect) {
         } else {
             " ├─"
         };
-        let prefix = if i == total - 1 { "    " } else { " │  " };
+        let prefix = if is_last { "    " } else { " │  " };
+        let toggle_indicator = if collapsed { " ▶" } else { " ▼" };
 
-        // Version line with connector
-        lines.push(Line::from(vec![
-            Span::styled(
-                format!("{connector} "),
-                Style::default().fg(app.theme.border),
-            ),
-            Span::styled(
-                format!("v{}", entry.version),
-                Style::default().fg(app.theme.accent).bold(),
-            ),
-            Span::styled("  ·  ", Style::default().fg(app.theme.border)),
-            Span::styled(
-                entry.date.clone(),
-                Style::default().fg(app.theme.muted_text),
-            ),
-        ]));
-        // Summary line with vertical bar
-        lines.push(Line::from(vec![
-            Span::styled(prefix, Style::default().fg(app.theme.border)),
-            Span::styled(entry.summary.clone(), Style::default().fg(app.theme.text)),
-        ]));
-        // Highlights with vertical bar
-        for highlight in &entry.highlights {
-            lines.push(Line::from(vec![
-                Span::styled(prefix, Style::default().fg(app.theme.border)),
+        header_lines.push(full_lines.len());
+
+        let cursor_highlight = if is_cursor {
+            Style::default()
+                .fg(app.theme.bg_dark)
+                .bg(app.theme.accent)
+                .bold()
+        } else {
+            Style::default().fg(app.theme.text)
+        };
+
+        let toggle_color = if is_cursor {
+            app.theme.bg_dark
+        } else {
+            app.theme.muted_text
+        };
+
+        full_lines.push(
+            Line::from(vec![
                 Span::styled(
-                    format!("  • {highlight}"),
-                    Style::default().fg(app.theme.muted_text),
+                    connector.to_string(),
+                    if is_cursor {
+                        Style::default().fg(app.theme.bg_dark).bg(app.theme.accent)
+                    } else {
+                        Style::default().fg(app.theme.border)
+                    },
                 ),
+                Span::styled(
+                    toggle_indicator,
+                    Style::default().fg(toggle_color).bg(if is_cursor {
+                        app.theme.accent
+                    } else {
+                        app.theme.bg
+                    }),
+                ),
+                Span::styled(
+                    " ",
+                    if is_cursor {
+                        Style::default().fg(app.theme.bg_dark).bg(app.theme.accent)
+                    } else {
+                        Style::default().fg(app.theme.border)
+                    },
+                ),
+                Span::styled(
+                    format!("v{}", entry.version),
+                    if is_cursor {
+                        Style::default()
+                            .fg(app.theme.bg_dark)
+                            .bg(app.theme.accent)
+                            .bold()
+                    } else {
+                        Style::default().fg(app.theme.accent).bold()
+                    },
+                ),
+                Span::styled(
+                    "  ·  ",
+                    if is_cursor {
+                        Style::default().fg(app.theme.bg_dark).bg(app.theme.accent)
+                    } else {
+                        Style::default().fg(app.theme.border)
+                    },
+                ),
+                Span::styled(
+                    entry.date.clone(),
+                    if is_cursor {
+                        Style::default().fg(app.theme.bg_dark).bg(app.theme.accent)
+                    } else {
+                        Style::default().fg(app.theme.muted_text)
+                    },
+                ),
+            ])
+            .style(cursor_highlight),
+        );
+
+        if !collapsed {
+            full_lines.push(Line::from(vec![
+                Span::styled(prefix, Style::default().fg(app.theme.border)),
+                Span::styled(entry.summary.clone(), Style::default().fg(app.theme.text)),
             ]));
+            for highlight in &entry.highlights {
+                full_lines.push(Line::from(vec![
+                    Span::styled(prefix, Style::default().fg(app.theme.border)),
+                    Span::styled(
+                        format!("  • {highlight}"),
+                        Style::default().fg(app.theme.muted_text),
+                    ),
+                ]));
+            }
         }
-        // Separator line (vertical bar or nothing after last entry)
-        if i + 1 < total {
-            lines.push(Line::from(vec![Span::styled(
+
+        if !is_last {
+            full_lines.push(Line::from(vec![Span::styled(
                 prefix,
                 Style::default().fg(app.theme.border),
             )]));
         }
+
+        entry_ends.push(full_lines.len() - 1);
     }
 
-    let viewport_height = inner.height as usize;
-    let total_lines = lines.len();
+    // Auto-scroll to keep the entire cursor entry visible.
+    if let Some(&cursor_line) = header_lines.get(app.changelog_cursor)
+        && viewport_height > 0
+    {
+        let entry_end = entry_ends
+            .get(app.changelog_cursor)
+            .copied()
+            .unwrap_or(cursor_line);
+        let entry_height = entry_end - cursor_line + 1;
+
+        if cursor_line < app.changelog_scroll as usize {
+            app.changelog_scroll = cursor_line as u16;
+        }
+
+        if entry_height <= viewport_height
+            && entry_end >= app.changelog_scroll as usize + viewport_height
+        {
+            app.changelog_scroll = (entry_end - viewport_height + 1) as u16;
+        } else if entry_height > viewport_height
+            && cursor_line >= app.changelog_scroll as usize + viewport_height
+        {
+            app.changelog_scroll = cursor_line as u16;
+        }
+    }
+
+    let total_lines = full_lines.len();
     let max_scroll = total_lines.saturating_sub(viewport_height) as u16;
     if app.changelog_scroll > max_scroll {
         app.changelog_scroll = max_scroll;
@@ -190,7 +281,7 @@ fn draw_changelog_block(f: &mut Frame, app: &mut App, area: Rect) {
         inner
     };
 
-    let visible: Vec<Line> = lines
+    let visible: Vec<Line> = full_lines
         .into_iter()
         .skip(app.changelog_scroll as usize)
         .take(viewport_height)

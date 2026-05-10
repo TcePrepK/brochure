@@ -9,7 +9,9 @@ use crate::models::{
     FeedEditorMode, FeedTreeItem, ListScroll, SettingsItem, Tab, TextScroll, UpdateInfo, UserData,
 };
 use crate::state::{AddFeedState, CategoryPickerState, FeedEditorState, OpmlState};
-use crate::storage::{article_cache_size, load_categories, load_feeds, load_user_data};
+use crate::storage::{
+    article_cache_size, load_categories, load_feeds, load_user_data, save_user_data,
+};
 use crate::ui::theme::ColorTheme;
 use ratatui::layout::Rect;
 use ratatui::widgets::ListState;
@@ -128,6 +130,10 @@ pub struct App {
     // ── Changelog tab ────────────────────────────────────────────────────────
     /// Scroll offset for the Changelog tab view.
     pub changelog_scroll: u16,
+    /// Indices of collapsed changelog entries (0 = newest, reversed display order).
+    pub changelog_collapsed: std::collections::HashSet<usize>,
+    /// Currently selected changelog entry index.
+    pub changelog_cursor: usize,
 
     // ── Status message animation ─────────────────────────────────────────────
     /// Latest version available on crates.io, if newer than the running version. `None` until the
@@ -233,6 +239,12 @@ impl App {
             })
             .unwrap_or(0);
 
+        // Load persisted sidebar and changelog collapse state before moving user_data.
+        let initial_collapsed: HashSet<CategoryId> =
+            user_data.sidebar_collapsed.iter().copied().collect();
+        let initial_changelog_collapsed: HashSet<usize> =
+            user_data.changelog_collapsed.iter().copied().collect();
+
         // Editor cursor uses the non-AllFeeds tree (editor never shows AllFeeds).
         let initial_editor_items = visible_tree_items(&categories, &feeds, &HashSet::new());
         let initial_editor_cursor = initial_editor_items
@@ -270,7 +282,7 @@ impl App {
             feeds_pending: 0,
             article_fetching: false,
             categories,
-            sidebar_collapsed: HashSet::new(),
+            sidebar_collapsed: initial_collapsed,
             sidebar_cursor: 0,
             selected_sidebar_category: None,
             category_view_articles: Vec::new(),
@@ -283,6 +295,8 @@ impl App {
                 ..Default::default()
             },
             changelog_scroll: 0,
+            changelog_collapsed: initial_changelog_collapsed,
+            changelog_cursor: 0,
             update_available: None,
             update_popup_scroll: 0,
             status_msg_start_tick: 0,
@@ -733,10 +747,17 @@ impl App {
         } else {
             self.sidebar_collapsed.insert(id);
         }
+        self.persist_sidebar_collapsed();
         // Refresh the preview if still hovering over this category.
         if self.selected_sidebar_category == Some(id) {
             self.populate_category_view(id);
         }
+    }
+
+    /// Sync `sidebar_collapsed` to `user_data` and persist to disk.
+    pub(super) fn persist_sidebar_collapsed(&mut self) {
+        self.user_data.sidebar_collapsed = self.sidebar_collapsed.iter().copied().collect();
+        let _ = save_user_data(&self.user_data);
     }
 
     /// Populate `saved_view_articles` from the currently selected sidebar entry.
@@ -896,7 +917,11 @@ pub fn sidebar_tree_items(
 
 /// Collects feed indices for all feeds directly or transitively under `cat_id`,
 /// in tree order (sorted by order field within each level).
-pub(crate) fn feeds_in_category(cat_id: CategoryId, categories: &[Category], feeds: &[Feed]) -> Vec<usize> {
+pub(crate) fn feeds_in_category(
+    cat_id: CategoryId,
+    categories: &[Category],
+    feeds: &[Feed],
+) -> Vec<usize> {
     let mut result = Vec::new();
 
     // Direct feeds in this category, sorted by order.

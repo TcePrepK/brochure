@@ -47,8 +47,7 @@ pub(super) fn handle_feed_list(
                 }
             } else if let Some(cat_id) = app.selected_sidebar_category {
                 // Category header is active — refresh all feeds under this category.
-                let feed_indices =
-                    feeds_in_category(cat_id, &app.categories, &app.feeds);
+                let feed_indices = feeds_in_category(cat_id, &app.categories, &app.feeds);
                 let count = feed_indices.len();
                 if count > 0 {
                     app.feeds_total += count;
@@ -148,6 +147,7 @@ pub(super) fn handle_feed_list(
                     app.sidebar_collapsed.insert(category.id);
                 }
             }
+            app.persist_sidebar_collapsed();
             app.sidebar_cursor = 0;
             app.sidebar_title_start_tick = app.tick;
             let items = sidebar_tree_items(&app.categories, &app.feeds, &app.sidebar_collapsed);
