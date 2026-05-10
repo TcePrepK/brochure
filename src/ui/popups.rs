@@ -414,12 +414,16 @@ pub(super) fn draw_category_picker(f: &mut Frame, app: &App) {
 
     let new_idx = cats_len;
     if app.category_picker.new_mode {
+        let (before, cursor_ch, after) =
+            split_cursor(&app.category_picker.input, app.category_picker.input_cursor);
         lines.push(Line::from(vec![
             Span::styled("  + ", Style::default().fg(app.theme.link)),
+            Span::styled(before, Style::default().fg(app.theme.text)),
             Span::styled(
-                format!("{}|", app.category_picker.input),
-                Style::default().fg(app.theme.text),
+                cursor_ch,
+                Style::default().fg(app.theme.bg).bg(app.theme.link),
             ),
+            Span::styled(after, Style::default().fg(app.theme.text)),
         ]));
     } else {
         let new_style = if app.category_picker.cursor == new_idx {

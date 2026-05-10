@@ -893,7 +893,7 @@ pub fn sidebar_tree_items(
 
 /// Collects feed indices for all feeds directly or transitively under `cat_id`,
 /// in tree order (sorted by order field within each level).
-fn feeds_in_category(cat_id: CategoryId, categories: &[Category], feeds: &[Feed]) -> Vec<usize> {
+pub(crate) fn feeds_in_category(cat_id: CategoryId, categories: &[Category], feeds: &[Feed]) -> Vec<usize> {
     let mut result = Vec::new();
 
     // Direct feeds in this category, sorted by order.
