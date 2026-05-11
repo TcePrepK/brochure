@@ -3,8 +3,33 @@
 //! Covers `ArticleList`, `ArticleDetail`, and `CategoryPicker` states: navigation, read/unread
 //! toggling, star/save, opening in a browser, and the save-to-category flow.
 
+use std::io::Write;
+
 use crossterm::event::{KeyCode, KeyEvent};
 use tokio::sync::mpsc::UnboundedSender;
+
+/// Copy text to clipboard, falling back to system tools when arboard fails.
+pub(crate) fn copy_to_clipboard(text: &str) -> bool {
+    if let Ok(mut c) = arboard::Clipboard::new() {
+        if c.set_text(text.to_string()).is_ok() {
+            return true;
+        }
+    }
+    for (prog, args) in [("wl-copy", &[][..]), ("xclip", &["-selection", "clipboard"]), ("pbcopy", &[])] {
+        if let Ok(mut child) = std::process::Command::new(prog)
+            .args(args)
+            .stdin(std::process::Stdio::piped())
+            .spawn()
+        {
+            if let Some(mut stdin) = child.stdin.take() {
+                let _ = stdin.write_all(text.as_bytes());
+                let _ = child.wait();
+                return true;
+            }
+        }
+    }
+    false
+}
 
 use crate::{
     app::App,
@@ -83,17 +108,16 @@ pub(super) async fn handle_article(
         KeyCode::Char('C') => {
             if let Some(article) = get_selected_article(app) {
                 let link = article.link.clone();
-                match arboard::Clipboard::new().and_then(|mut c| c.set_text(link.clone())) {
-                    Ok(_) => {
-                        const MAX_LEN: usize = 50;
-                        let display = if link.len() > MAX_LEN {
-                            format!("{}...", &link[..MAX_LEN])
-                        } else {
-                            link
-                        };
-                        app.set_status(format!("Copied: {display}"));
-                    }
-                    Err(_) => app.set_status("Failed to copy link".to_string()),
+                if copy_to_clipboard(&link) {
+                    const MAX_LEN: usize = 50;
+                    let display = if link.len() > MAX_LEN {
+                        format!("{}...", &link[..MAX_LEN])
+                    } else {
+                        link
+                    };
+                    app.set_status(format!("Copied: {display}"));
+                } else {
+                    app.set_status("Failed to copy link".to_string());
                 }
             }
         }

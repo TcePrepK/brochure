@@ -8,6 +8,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use crate::{
     app::{App, feeds_in_category, sidebar_tree_items},
     fetch::fetch_feed,
+    handlers::article::copy_to_clipboard,
     models::{AppEvent, AppState, FAVORITES_URL, FeedEditorMode, FeedTreeItem},
 };
 
@@ -150,17 +151,16 @@ pub(super) fn handle_feed_list(
             if let Some(FeedTreeItem::Feed { feeds_idx, .. }) = items.get(app.sidebar_cursor) {
                 if let Some(feed) = app.feeds.get(*feeds_idx) {
                     let url = feed.url.clone();
-                    match arboard::Clipboard::new().and_then(|mut c| c.set_text(url.clone())) {
-                        Ok(_) => {
-                            const MAX_LEN: usize = 50;
-                            let display = if url.len() > MAX_LEN {
-                                format!("{}...", &url[..MAX_LEN])
-                            } else {
-                                url
-                            };
-                            app.set_status(format!("Copied feed URL: {display}"));
-                        }
-                        Err(_) => app.set_status("Failed to copy feed URL".to_string()),
+                    if copy_to_clipboard(&url) {
+                        const MAX_LEN: usize = 50;
+                        let display = if url.len() > MAX_LEN {
+                            format!("{}...", &url[..MAX_LEN])
+                        } else {
+                            url
+                        };
+                        app.set_status(format!("Copied feed URL: {display}"));
+                    } else {
+                        app.set_status("Failed to copy feed URL".to_string());
                     }
                 }
             }
