@@ -17,7 +17,7 @@ use super::super::{content_block, render_scrollable_list};
 use super::{
     footer::draw_article_footer,
     helpers::split_articles,
-    utils::{age_color, scroll_title, short_age},
+    utils::{age_color, scroll_title, short_age, truncate_title},
 };
 
 /// Builds a single article list item with icon, title (scrolling if selected), and age badge.
@@ -55,13 +55,19 @@ fn build_article_list_item(
                 0
             },
     );
-    let displayed_title = if is_selected {
+    if is_selected {
         let elapsed = tick.saturating_sub(article_title_start_tick);
-        scroll_title(&article.title, title_available, elapsed)
+        title_spans.push(Span::raw(scroll_title(
+            &article.title,
+            title_available,
+            elapsed,
+        )));
     } else {
-        article.title.clone()
-    };
-    title_spans.push(Span::raw(displayed_title));
+        title_spans.push(Span::raw(truncate_title(
+            &article.title,
+            title_available,
+        )));
+    }
     if let Some(ref age) = age_str {
         title_spans.push(
             age.clone()
