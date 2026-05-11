@@ -116,12 +116,40 @@ pub(super) fn draw_article_detail(
     }
 
     let style = md_style(&app.theme);
-    let result = render_markdown_with_extra(
+
+    // First pass at full width to determine if content overflows.
+    let mut render_width = content_area.width;
+    let mut result = render_markdown_with_extra(
         &article.content,
         &style,
-        content_area.width,
+        render_width,
         &article.images,
     );
+    let mut lines = result.lines.clone();
+    let mut line_count = Paragraph::new(lines)
+        .wrap(Wrap { trim: false })
+        .line_count(render_width)
+        .max(1);
+
+    if line_count > content_area.height as usize {
+        // Needs scrollbar — re-render at narrower width so separators don't overflow.
+        render_width = content_area.width.saturating_sub(2);
+        result = render_markdown_with_extra(
+            &article.content,
+            &style,
+            render_width,
+            &article.images,
+        );
+        lines = result.lines.clone();
+        line_count = Paragraph::new(lines)
+            .wrap(Wrap { trim: false })
+            .line_count(render_width)
+            .max(1);
+    }
+
+    if !is_preview {
+        app.content_line_count = line_count;
+    }
 
     let mut lines = result.lines;
 
@@ -137,7 +165,7 @@ pub(super) fn draw_article_detail(
             &mut app.protocol_cache,
             picker,
             &font_size,
-            content_area.width,
+            render_width,
             10,
         )
     } else {
@@ -150,16 +178,6 @@ pub(super) fn draw_article_detail(
         app.article_links = result.links;
         app.article_content_area = content_area;
         app.article_scroll_offset = scroll_offset;
-    }
-
-    // Build the paragraph first so we can call line_count(width) for the true rendered
-    // line count (accounts for word-wrap), not just the logical markdown line count.
-    let line_count = Paragraph::new(lines.clone())
-        .wrap(Wrap { trim: false })
-        .line_count(content_area.width)
-        .max(1);
-    if !is_preview {
-        app.content_line_count = line_count;
     }
 
     // Render inline images on top of the reserved empty lines.
@@ -177,7 +195,7 @@ pub(super) fn draw_article_detail(
             let end = p.line_start.min(lines.len());
             Paragraph::new(lines[..end].to_vec())
                 .wrap(Wrap { trim: false })
-                .line_count(content_area.width)
+                .line_count(render_width)
                 .max(1) as u16
         };
         let y0 = content_top + visual_y as i32 - scroll_offset as i32;
@@ -207,13 +225,9 @@ pub(super) fn draw_article_detail(
     }
 
     let has_scrollbar = line_count > content_area.height as usize;
-    let para_render_area = if has_scrollbar {
-        Rect {
-            width: content_area.width.saturating_sub(1),
-            ..content_area
-        }
-    } else {
-        content_area
+    let para_render_area = Rect {
+        width: render_width,
+        ..content_area
     };
     f.render_widget(paragraph, para_render_area);
 
