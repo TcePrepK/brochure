@@ -125,8 +125,8 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                 app.state = AppState::ThemeEditor;
             }
         },
-        KeyCode::Left | KeyCode::Char('h') => {
-            if app.settings_selected == SettingsItem::ArchivePolicy {
+        KeyCode::Left | KeyCode::Char('h') => match app.settings_selected {
+            SettingsItem::ArchivePolicy => {
                 app.user_data.archive_policy = app.user_data.archive_policy.prev();
                 let _ = save_user_data(&app.user_data);
                 app.set_status(format!(
@@ -134,7 +134,7 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                     app.user_data.archive_policy.label()
                 ));
             }
-            if app.settings_selected == SettingsItem::AutoFetchOnStart {
+            SettingsItem::AutoFetchOnStart => {
                 app.user_data.fetch_policy = app.user_data.fetch_policy.prev();
                 let _ = save_user_data(&app.user_data);
                 app.set_status(format!(
@@ -142,7 +142,7 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                     app.user_data.fetch_policy.label()
                 ));
             }
-            if app.settings_selected == SettingsItem::SaveArticleContent {
+            SettingsItem::SaveArticleContent => {
                 set_setting!(
                     app,
                     app.user_data.save_article_content,
@@ -150,7 +150,7 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                     "Save Article Content"
                 );
             }
-            if app.settings_selected == SettingsItem::EagerArticleFetch {
+            SettingsItem::EagerArticleFetch => {
                 set_setting!(
                     app,
                     app.user_data.eager_article_fetch,
@@ -158,16 +158,16 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                     "Eager Article Fetch"
                 );
             }
-            if app.settings_selected == SettingsItem::ScrollLoop {
+            SettingsItem::ScrollLoop => {
                 set_setting!(app, app.user_data.scroll_loop, false, "Scroll Loop");
             }
-            if app.settings_selected == SettingsItem::BorderStyle {
+            SettingsItem::BorderStyle => {
                 set_setting!(app, app.user_data.border_rounded, false, "Rounded Borders");
             }
-            // Theme is now managed in the full-screen editor (Enter on Theme row).
-        }
-        KeyCode::Right | KeyCode::Char('l') => {
-            if app.settings_selected == SettingsItem::ArchivePolicy {
+            _ => {}
+        },
+        KeyCode::Right | KeyCode::Char('l') => match app.settings_selected {
+            SettingsItem::ArchivePolicy => {
                 app.user_data.archive_policy = app.user_data.archive_policy.next();
                 let _ = save_user_data(&app.user_data);
                 app.set_status(format!(
@@ -175,7 +175,7 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                     app.user_data.archive_policy.label()
                 ));
             }
-            if app.settings_selected == SettingsItem::AutoFetchOnStart {
+            SettingsItem::AutoFetchOnStart => {
                 app.user_data.fetch_policy = app.user_data.fetch_policy.next();
                 let _ = save_user_data(&app.user_data);
                 app.set_status(format!(
@@ -183,7 +183,7 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                     app.user_data.fetch_policy.label()
                 ));
             }
-            if app.settings_selected == SettingsItem::SaveArticleContent {
+            SettingsItem::SaveArticleContent => {
                 set_setting!(
                     app,
                     app.user_data.save_article_content,
@@ -191,7 +191,7 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                     "Save Article Content"
                 );
             }
-            if app.settings_selected == SettingsItem::EagerArticleFetch {
+            SettingsItem::EagerArticleFetch => {
                 set_setting!(
                     app,
                     app.user_data.eager_article_fetch,
@@ -199,14 +199,14 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                     "Eager Article Fetch"
                 );
             }
-            if app.settings_selected == SettingsItem::ScrollLoop {
+            SettingsItem::ScrollLoop => {
                 set_setting!(app, app.user_data.scroll_loop, true, "Scroll Loop");
             }
-            if app.settings_selected == SettingsItem::BorderStyle {
+            SettingsItem::BorderStyle => {
                 set_setting!(app, app.user_data.border_rounded, true, "Rounded Borders");
             }
-            // Theme is managed in the full-screen editor (Enter on Theme row).
-        }
+            _ => {}
+        },
         _ => {}
     }
     false
