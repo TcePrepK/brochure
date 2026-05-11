@@ -37,15 +37,43 @@ const MAX_CONCURRENT_FETCHES: usize = 6;
 /// Shared HTTP GET → bytes helper. Used by all fetch functions to avoid repeating the
 /// send/bytes/error chain.
 async fn http_get_bytes(url: &str) -> Result<Vec<u8>, String> {
-    Ok(http_client()
+    let resp = http_client()
         .get(url)
+        .header("Accept-Language", "en-US,en;q=0.9")
         .send()
         .await
-        .map_err(|e| e.to_string())?
-        .bytes()
+        .map_err(|e| format!("Network error: {e}"))?;
+    let status = resp.status();
+    let body = resp.bytes().await.map_err(|e| e.to_string())?.to_vec();
+    if !status.is_success() {
+        return Err(format!("HTTP {status}"));
+    }
+    Ok(body)
+}
+
+/// Fetch bytes with an RSS-specific Accept header and challenge-page detection.
+async fn http_get_feed_bytes(url: &str) -> Result<Vec<u8>, String> {
+    let resp = http_client()
+        .get(url)
+        .header(
+            "Accept",
+            "application/rss+xml, application/xml, text/xml, */*",
+        )
+        .header("Accept-Language", "en-US,en;q=0.9")
+        .send()
         .await
-        .map_err(|e| e.to_string())?
-        .to_vec())
+        .map_err(|e| format!("Network error: {e}"))?;
+    let status = resp.status();
+    let body = resp.bytes().await.map_err(|e| e.to_string())?.to_vec();
+    if !status.is_success() {
+        return Err(format!("HTTP {status}"));
+    }
+    if is_challenge_page(&body) {
+        return Err(
+            "Server returned a challenge page — the feed is behind bot protection.".to_string(),
+        );
+    }
+    Ok(body)
 }
 
 /// Returns the shared, lazily-initialised HTTP client used for all outgoing requests.
@@ -53,10 +81,26 @@ pub(crate) fn http_client() -> &'static reqwest::Client {
     static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
     CLIENT.get_or_init(|| {
         reqwest::Client::builder()
-            .user_agent("brochure/0.1 (RSS reader)")
+            .user_agent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+            .timeout(std::time::Duration::from_secs(30))
             .build()
             .expect("failed to build HTTP client")
     })
+}
+
+/// Check if a response body is an HTML challenge page rather than a valid feed.
+fn is_challenge_page(body: &[u8]) -> bool {
+    let text = String::from_utf8_lossy(body);
+    text.contains("Enable JavaScript and cookies")
+        || text.contains("challenge-error-text")
+        || text.contains("We have detected unusual activity")
+        || text.contains("cf-browser-verification")
+        || text.contains("_cf_chl_opt")
+        || text.contains("just a moment")
+        || (text.starts_with("<!DOCTYPE html") || text.starts_with("<html"))
+            && !text.contains("<rss")
+            && !text.contains("<feed")
+            && !text.contains("<rdf:RDF")
 }
 
 /// Semaphore that limits concurrent feed fetches to avoid overwhelming servers.
@@ -83,7 +127,7 @@ pub async fn fetch_feed(url: &str) -> Result<(Vec<Article>, Option<i64>), String
         .acquire()
         .await
         .map_err(|e| format!("Semaphore error: {e}"))?;
-    let bytes = http_get_bytes(url).await?;
+    let bytes = http_get_feed_bytes(url).await?;
 
     let parsed = feed_rs::parser::parse(strip_bom(&bytes)).map_err(|e| {
         let msg = e.to_string();
@@ -113,15 +157,13 @@ pub async fn fetch_feed(url: &str) -> Result<(Vec<Article>, Option<i64>), String
                 .next()
                 .map(|l| l.href)
                 .unwrap_or_default();
-            // Merge description (often image-rich) into content body so inline images aren't lost.
             let html_body = entry.content.and_then(|c| c.body);
-            let html_content = match (&html_body, description.as_str()) {
-                (Some(body), desc) if !desc.is_empty() && desc != "No Description" => {
-                    format!("{body}\n{desc}")
-                }
-                (Some(body), _) => body.clone(),
-                (None, _) => description.clone(),
+            let desc_html = if description != "No Description" {
+                description.clone()
+            } else {
+                String::new()
             };
+            let html_content = html_body.clone().unwrap_or(desc_html.clone());
             let mut images: Vec<String> = Vec::new();
             // Collect images from MediaRSS attachments.
             for media in &entry.media {
@@ -178,10 +220,19 @@ pub async fn fetch_feed(url: &str) -> Result<(Vec<Article>, Option<i64>), String
                     images.push(url.clone());
                 }
             }
-            // Fallback: extract any remaining image URLs from raw HTML.
-            for url in extract_img_src(&html_content) {
-                if !images.contains(&url) {
-                    images.push(url);
+            // Extract image URLs from both body and description HTML.
+            if let Some(body) = &html_body {
+                for url in extract_img_src(body) {
+                    if !images.contains(&url) {
+                        images.push(url);
+                    }
+                }
+            }
+            if !desc_html.is_empty() {
+                for url in extract_img_src(&desc_html) {
+                    if !images.contains(&url) {
+                        images.push(url);
+                    }
                 }
             }
             let published_secs = entry.published.or(entry.updated).map(|dt| dt.timestamp());
@@ -206,21 +257,10 @@ pub async fn fetch_feed(url: &str) -> Result<(Vec<Article>, Option<i64>), String
 
 /// Fetch just the feed title from a URL (used for AddFeed title auto-fill).
 pub async fn fetch_feed_title(url: &str) -> Result<String, String> {
-    let bytes = http_get_bytes(url).await?;
+    let bytes = http_get_feed_bytes(url).await?;
 
     let parsed = feed_rs::parser::parse(strip_bom(&bytes)).map_err(|e| e.to_string())?;
     Ok(parsed.title.map(|t| t.content).unwrap_or_default())
-}
-
-/// Fetch and extract readable article content from a URL using Mozilla's Readability algorithm.
-pub async fn fetch_readable_content(url: &str) -> Result<String, String> {
-    let bytes = http_get_bytes(url).await?;
-
-    let parsed_url = reqwest::Url::parse(url).map_err(|_| "Invalid URL".to_string())?;
-    let mut cursor = std::io::Cursor::new(bytes);
-    readability::extractor::extract(&mut cursor, &parsed_url)
-        .map(|product| product.content)
-        .map_err(|e| format!("Readability error: {e}"))
 }
 
 /// Fetch the latest published versions of brochure from crates.io and GitHub releases.

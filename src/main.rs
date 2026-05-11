@@ -15,7 +15,7 @@ use crossterm::{
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use fetch::fetch_feed;
-use models::{AddFeedStep, AppEvent, AppState, CONTENT_STUB_MAX_LEN, FeedSource, FetchPolicy};
+use models::{AddFeedStep, AppEvent, AppState, FetchPolicy};
 use ratatui::{Terminal, backend::CrosstermBackend};
 use std::{io, time::Duration};
 use tokio::sync::mpsc;
@@ -179,65 +179,6 @@ async fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()
                 on_feed_fetched(&mut app, idx, result, &tx);
             }
 
-            AppEvent::FullArticleFetched(source, art_idx, result) => {
-                app.article_fetching = false;
-                match source {
-                    FeedSource::Saved => {
-                        let status_msg =
-                            if let Some(article) = app.saved_view_articles.get_mut(art_idx) {
-                                let msg = match result {
-                                    Ok(html) => {
-                                        article.content = html_to_markdown_rs::convert(&html, None)
-                                            .ok()
-                                            .and_then(|r| r.content)
-                                            .unwrap_or_default();
-                                        "Article loaded.".to_string()
-                                    }
-                                    Err(e) => {
-                                        article.content = format!("Failed to load article: {e}");
-                                        format!("Extraction failed: {e}")
-                                    }
-                                };
-                                if app.selected_article == art_idx {
-                                    app.content_line_count = article.content.lines().count().max(1);
-                                }
-                                Some(msg)
-                            } else {
-                                None
-                            };
-                        if let Some(msg) = status_msg {
-                            app.set_status(msg);
-                        }
-                    }
-                    FeedSource::Feed(feed_idx) => {
-                        if let Some(feed) = app.feeds.get_mut(feed_idx)
-                            && let Some(article) = feed.articles.get_mut(art_idx)
-                        {
-                            match result {
-                                Ok(html) => {
-                                    article.content = html_to_markdown_rs::convert(&html, None)
-                                        .ok()
-                                        .and_then(|r| r.content)
-                                        .unwrap_or_default();
-                                    app.set_status("Article loaded.");
-                                }
-                                Err(e) => {
-                                    article.content = format!("Failed to load article: {e}");
-                                    app.set_status(format!("Extraction failed: {e}"));
-                                }
-                            }
-                            if app.selected_feed == feed_idx && app.selected_article == art_idx {
-                                app.content_line_count = app.feeds[feed_idx].articles[art_idx]
-                                    .content
-                                    .lines()
-                                    .count()
-                                    .max(1);
-                            }
-                        }
-                    }
-                }
-            }
-
             AppEvent::FeedTitleFetched(result) => {
                 if app.state == AppState::AddFeed && app.add_feed.step == AddFeedStep::Title {
                     app.add_feed.fetched_title = Some(result.unwrap_or_default());
@@ -338,11 +279,11 @@ fn on_feed_fetched(
 
             let ts = now_secs();
 
-            // Preserve readability-enriched content for articles we already have.
+            // Preserve existing article content across feed refreshes.
             let preserved: std::collections::HashMap<String, String> = feed
                 .articles
                 .iter()
-                .filter(|a| a.content.len() >= CONTENT_STUB_MAX_LEN)
+                .filter(|a| !a.content.is_empty())
                 .map(|a| (a.link.clone(), a.content.clone()))
                 .collect();
 
@@ -357,16 +298,6 @@ fn on_feed_fetched(
                 art.source_feed = feed.title.clone();
                 if let Some(saved) = preserved.get(&art.link) {
                     art.content = saved.clone();
-                }
-            }
-            // When eager fetch is OFF, discard content for articles not yet enriched
-            // by readability so they get fetched lazily on open.
-            if !app.user_data.fetch_full_on_open {
-                for art in &mut articles {
-                    if !preserved.contains_key(&art.link) {
-                        art.content = String::new();
-                        art.images = Vec::new();
-                    }
                 }
             }
 
