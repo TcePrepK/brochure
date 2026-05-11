@@ -63,10 +63,7 @@ fn build_article_list_item(
             elapsed,
         )));
     } else {
-        title_spans.push(Span::raw(truncate_title(
-            &article.title,
-            title_available,
-        )));
+        title_spans.push(Span::raw(truncate_title(&article.title, title_available)));
     }
     if let Some(ref age) = age_str {
         title_spans.push(
@@ -146,7 +143,8 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
             .enumerate()
             .map(|(i, &(fi, ai))| {
                 let article = &app.feeds[fi].articles[ai];
-                let is_selected = app.selected_article == i && matches!(app.state, AppState::ArticleList | AppState::ArticleDetail);
+                let is_selected = app.selected_article == i
+                    && matches!(app.state, AppState::ArticleList | AppState::ArticleDetail);
                 let style = if is_selected {
                     Style::default()
                         .fg(app.theme.accent)
