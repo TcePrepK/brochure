@@ -92,6 +92,7 @@
       "Changelog entries can be collapsed/expanded persistently",
       "Sidebar collapse state remembered between sessions",
       "Settings items now show brief descriptions",
+      "Article images rendered inline in article content",
       "Resolved crash with 2-day archive policy",
       "Fixed UI freezes during batch feed fetching"
     ]
