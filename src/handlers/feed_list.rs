@@ -145,6 +145,26 @@ pub(super) fn handle_feed_list(
                 _ => {}
             }
         }
+        KeyCode::Char('y') if !app.in_saved_context => {
+            let items = sidebar_tree_items(&app.categories, &app.feeds, &app.sidebar_collapsed);
+            if let Some(FeedTreeItem::Feed { feeds_idx, .. }) = items.get(app.sidebar_cursor) {
+                if let Some(feed) = app.feeds.get(*feeds_idx) {
+                    let url = feed.url.clone();
+                    match arboard::Clipboard::new().and_then(|mut c| c.set_text(url.clone())) {
+                        Ok(_) => {
+                            const MAX_LEN: usize = 50;
+                            let display = if url.len() > MAX_LEN {
+                                format!("{}...", &url[..MAX_LEN])
+                            } else {
+                                url
+                            };
+                            app.set_status(format!("Copied feed URL: {display}"));
+                        }
+                        Err(_) => app.set_status("Failed to copy feed URL".to_string()),
+                    }
+                }
+            }
+        }
         KeyCode::Char(' ') => {
             let items = sidebar_tree_items(&app.categories, &app.feeds, &app.sidebar_collapsed);
             if let Some(FeedTreeItem::Category { id, .. }) = items.get(app.sidebar_cursor) {
