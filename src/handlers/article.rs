@@ -350,89 +350,49 @@ fn update_is_saved_flag(app: &mut App, is_saved: bool) {
 }
 
 /// Proactively fetches full article content when the cursor lands on a stub-length article.
-///
-/// Handles regular feed, category, and saved-view contexts. Does nothing when content is
-/// already at full length.
 pub(super) fn prefetch_article_if_stub(app: &mut App, tx: &UnboundedSender<AppEvent>) {
-    if app.in_category_context {
-        let (feed_idx, art_idx) = match app
-            .category_view_articles
-            .get(app.selected_article)
-            .copied()
-        {
-            Some(pair) => pair,
-            None => return,
+    let (source, art_idx, link) = if app.in_category_context {
+        let Some(&(feed_idx, art_idx)) = app.category_view_articles.get(app.selected_article)
+        else {
+            return;
         };
-
-        let article = match app
+        let Some(article) = app
             .feeds
             .get(feed_idx)
             .and_then(|f| f.articles.get(art_idx))
-        {
-            Some(a) => a,
-            None => return,
-        };
-        if article.content.len() >= CONTENT_STUB_MAX_LEN {
+        else {
             return;
-        }
-        let url = article.link.clone();
-        app.article_fetching = true;
-        let tx2 = tx.clone();
-        tokio::spawn(async move {
-            let result = fetch_readable_content(&url).await;
-            let _ = tx2.send(AppEvent::FullArticleFetched(
-                FeedSource::Feed(feed_idx),
-                art_idx,
-                result,
-            ));
-        });
+        };
+        (FeedSource::Feed(feed_idx), art_idx, article.link.clone())
     } else if app.in_saved_context {
-        // Fetch stub articles from the saved-view list.
-        let article = match app.saved_view_articles.get(app.selected_article) {
-            Some(a) => a,
-            None => return,
-        };
-        if article.content.len() >= CONTENT_STUB_MAX_LEN {
+        let Some(article) = app.saved_view_articles.get(app.selected_article) else {
             return;
-        }
-        let url = article.link.clone();
-        let art_idx = app.selected_article;
-        app.article_fetching = true;
-        let tx2 = tx.clone();
-        tokio::spawn(async move {
-            let result = fetch_readable_content(&url).await;
-            let _ = tx2.send(AppEvent::FullArticleFetched(
-                FeedSource::Saved,
-                art_idx,
-                result,
-            ));
-        });
+        };
+        (
+            FeedSource::Saved,
+            app.selected_article,
+            article.link.clone(),
+        )
     } else {
-        let feed_idx = app.selected_feed;
-        let art_idx = app.selected_article;
-        let article = match app
+        let Some(article) = app
             .feeds
-            .get(feed_idx)
-            .and_then(|f| f.articles.get(art_idx))
-        {
-            Some(a) => a,
-            None => return,
-        };
-        if article.content.len() >= CONTENT_STUB_MAX_LEN {
+            .get(app.selected_feed)
+            .and_then(|f| f.articles.get(app.selected_article))
+        else {
             return;
-        }
-        let url = article.link.clone();
-        app.article_fetching = true;
-        let tx2 = tx.clone();
-        tokio::spawn(async move {
-            let result = fetch_readable_content(&url).await;
-            let _ = tx2.send(AppEvent::FullArticleFetched(
-                FeedSource::Feed(feed_idx),
-                art_idx,
-                result,
-            ));
-        });
-    }
+        };
+        (
+            FeedSource::Feed(app.selected_feed),
+            app.selected_article,
+            article.link.clone(),
+        )
+    };
+    app.article_fetching = true;
+    let tx2 = tx.clone();
+    tokio::spawn(async move {
+        let result = fetch_readable_content(&link).await;
+        let _ = tx2.send(AppEvent::FullArticleFetched(source, art_idx, result));
+    });
 }
 
 /// Opens the selected article in detail view, marks it as read, and fetches full content if needed.
@@ -462,90 +422,38 @@ pub fn get_selected_article(app: &App) -> Option<Article> {
     }
 }
 
+/// Mark an article as read in every feed that contains it, and sync saved-article state.
+fn mark_feed_by_link(app: &mut App, link: &str) {
+    for feed in app.feeds.iter_mut() {
+        if let Some(a) = feed.articles.iter_mut().find(|a| a.link == link) {
+            a.is_read = true;
+        }
+        feed.unread_count = feed.articles.iter().filter(|a| !a.is_read).count();
+    }
+    if let Some(s) = app
+        .user_data
+        .saved_articles
+        .iter_mut()
+        .find(|s| s.article.link == link)
+    {
+        s.article.is_read = true;
+    }
+}
+
 /// Marks an article as read and persists the updated read-links set.
-///
-/// Dispatches to the appropriate context-specific helper; does nothing if already read.
 fn mark_article_as_read(app: &mut App, article: &Article) {
     if article.is_read {
         return;
     }
     app.user_data.read_links.insert(article.link.clone());
     let _ = save_user_data(&app.user_data);
+    mark_feed_by_link(app, &article.link);
 
-    if app.in_category_context {
-        mark_category_article_as_read(app, article);
-    } else if app.in_saved_context {
-        mark_saved_as_read(app, article);
-    } else {
-        mark_regular_article_as_read(app);
-    }
-}
-
-/// Marks an article as read when the user is in the category-view context.
-///
-/// Updates both the source feed and any corresponding saved-article entry.
-fn mark_category_article_as_read(app: &mut App, article: &Article) {
-    // Find and update the article in its source feed by link.
-    for feed in app.feeds.iter_mut() {
-        if let Some(a) = feed.articles.iter_mut().find(|a| a.link == article.link) {
-            a.is_read = true;
-        }
-        feed.unread_count = feed.articles.iter().filter(|a| !a.is_read).count();
-    }
-    if let Some(s) = app
-        .user_data
-        .saved_articles
-        .iter_mut()
-        .find(|s| s.article.link == article.link)
+    // In saved context, also update the in-memory saved-view list.
+    if app.in_saved_context
+        && let Some(a) = app.saved_view_articles.get_mut(app.selected_article)
     {
-        s.article.is_read = true;
-    }
-}
-
-/// Marks an article as read when the user is in the saved-articles context.
-///
-/// Updates the saved-view list, the source feed, and the saved-articles record simultaneously.
-fn mark_saved_as_read(app: &mut App, article: &Article) {
-    if let Some(a) = app.saved_view_articles.get_mut(app.selected_article) {
         a.is_read = true;
-    }
-    if let Some(feed) = app
-        .feeds
-        .iter_mut()
-        .find(|f| f.title == article.source_feed)
-    {
-        if let Some(a) = feed.articles.iter_mut().find(|a| a.link == article.link) {
-            a.is_read = true;
-        }
-        feed.unread_count = feed.articles.iter().filter(|a| !a.is_read).count();
-    }
-    if let Some(s) = app
-        .user_data
-        .saved_articles
-        .iter_mut()
-        .find(|s| s.article.link == article.link)
-    {
-        s.article.is_read = true;
-    }
-}
-
-/// Marks an article as read when the user is in the normal feed context.
-///
-/// Updates the feed's unread count and any matching saved-article entry.
-fn mark_regular_article_as_read(app: &mut App) {
-    if let Some(feed) = app.feeds.get_mut(app.selected_feed) {
-        if let Some(a) = feed.articles.get_mut(app.selected_article) {
-            a.is_read = true;
-            if let Some(s) = app
-                .user_data
-                .saved_articles
-                .iter_mut()
-                .find(|s| s.article.link == a.link)
-            {
-                s.article.is_read = true;
-            }
-        }
-        feed.unread_count = feed.articles.iter().filter(|a| !a.is_read).count();
     }
 }
 
@@ -613,38 +521,59 @@ fn update_article_content(app: &mut App, content: String) {
 }
 
 /// Toggles the read/unread state of the currently selected article and persists the change.
-///
-/// Dispatches to the correct context-specific helper and updates `user_data.read_links`.
 fn toggle_read(app: &mut App) {
-    let update = if app.in_category_context {
-        toggle_read_category(app)
+    let (link, is_read) = if app.in_category_context {
+        let &(fi, ai) = match app.category_view_articles.get(app.selected_article) {
+            Some(v) => v,
+            None => return,
+        };
+        let feed = match app.feeds.get_mut(fi) {
+            Some(v) => v,
+            None => return,
+        };
+        let art = match feed.articles.get_mut(ai) {
+            Some(v) => v,
+            None => return,
+        };
+        art.is_read = !art.is_read;
+        let link = art.link.clone();
+        let is_read = art.is_read;
+        let _ = art;
+        feed.unread_count = feed.articles.iter().filter(|a| !a.is_read).count();
+        (link, is_read)
     } else if app.in_saved_context {
-        toggle_read_saved(app)
+        let art = match app.saved_view_articles.get_mut(app.selected_article) {
+            Some(v) => v,
+            None => return,
+        };
+        art.is_read = !art.is_read;
+        let link = art.link.clone();
+        let is_read = art.is_read;
+        let source_feed = art.source_feed.clone();
+        if let Some(feed) = app.feeds.iter_mut().find(|f| f.title == source_feed) {
+            if let Some(a) = feed.articles.iter_mut().find(|a| a.link == link) {
+                a.is_read = is_read;
+            }
+            feed.unread_count = feed.articles.iter().filter(|a| !a.is_read).count();
+        }
+        (link, is_read)
     } else {
-        toggle_read_regular(app)
+        let feed = match app.feeds.get_mut(app.selected_feed) {
+            Some(v) => v,
+            None => return,
+        };
+        let art = match feed.articles.get_mut(app.selected_article) {
+            Some(v) => v,
+            None => return,
+        };
+        art.is_read = !art.is_read;
+        let link = art.link.clone();
+        let is_read = art.is_read;
+        let _ = art;
+        feed.unread_count = feed.articles.iter().filter(|a| !a.is_read).count();
+        (link, is_read)
     };
 
-    if let Some((link, is_now_read)) = update {
-        if is_now_read {
-            app.user_data.read_links.insert(link);
-        } else {
-            app.user_data.read_links.remove(&link);
-        }
-        let _ = save_user_data(&app.user_data);
-    }
-}
-
-/// Toggles read state for the selected article in category-view context.
-///
-/// Also syncs the flag to any matching saved-article entry. Returns `(link, is_now_read)` on
-/// success, or `None` if the selection is out of bounds.
-fn toggle_read_category(app: &mut App) -> Option<(String, bool)> {
-    let &(fi, ai) = app.category_view_articles.get(app.selected_article)?;
-    let art = app.feeds.get_mut(fi)?.articles.get_mut(ai)?;
-    art.is_read = !art.is_read;
-    let link = art.link.clone();
-    let is_read = art.is_read;
-    app.feeds[fi].unread_count = app.feeds[fi].articles.iter().filter(|a| !a.is_read).count();
     if let Some(s) = app
         .user_data
         .saved_articles
@@ -653,66 +582,10 @@ fn toggle_read_category(app: &mut App) -> Option<(String, bool)> {
     {
         s.article.is_read = is_read;
     }
-    Some((link, is_read))
-}
-
-/// Toggles read state for the selected article in saved-articles context.
-///
-/// Propagates the change to the source feed and the saved-articles record. Returns
-/// `(link, is_now_read)` on success, or `None` if the selection is out of bounds.
-fn toggle_read_saved(app: &mut App) -> Option<(String, bool)> {
-    let art = app.saved_view_articles.get_mut(app.selected_article)?;
-    art.is_read = !art.is_read;
-    let link = art.link.clone();
-    let is_read = art.is_read;
-    let source_feed = art.source_feed.clone();
-
-    if let Some(feed) = app.feeds.iter_mut().find(|f| f.title == source_feed) {
-        if let Some(a) = feed.articles.iter_mut().find(|a| a.link == link) {
-            a.is_read = is_read;
-        }
-        feed.unread_count = feed.articles.iter().filter(|a| !a.is_read).count();
+    if is_read {
+        app.user_data.read_links.insert(link);
+    } else {
+        app.user_data.read_links.remove(&link);
     }
-
-    if let Some(s) = app
-        .user_data
-        .saved_articles
-        .iter_mut()
-        .find(|s| s.article.link == link)
-    {
-        s.article.is_read = is_read;
-    }
-
-    Some((link, is_read))
-}
-
-/// Toggles read state for the selected article in the normal feed context.
-///
-/// Updates the feed's unread count and any matching saved-article entry. Returns
-/// `(link, is_now_read)` on success, or `None` if feeds or articles are empty.
-fn toggle_read_regular(app: &mut App) -> Option<(String, bool)> {
-    if app.feeds.is_empty() || app.feeds[app.selected_feed].articles.is_empty() {
-        return None;
-    }
-    let art = &mut app.feeds[app.selected_feed].articles[app.selected_article];
-    art.is_read = !art.is_read;
-    let link = art.link.clone();
-    let is_now_read = art.is_read;
-
-    app.feeds[app.selected_feed].unread_count = app.feeds[app.selected_feed]
-        .articles
-        .iter()
-        .filter(|a| !a.is_read)
-        .count();
-
-    if let Some(s) = app
-        .user_data
-        .saved_articles
-        .iter_mut()
-        .find(|s| s.article.link == link)
-    {
-        s.article.is_read = is_now_read;
-    }
-
-    Some((link, is_now_read))
+    let _ = save_user_data(&app.user_data);
 }
