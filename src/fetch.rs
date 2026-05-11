@@ -17,12 +17,12 @@ fn extract_img_src(html: &str) -> Vec<String> {
         if let Some(src_start) = tag.find(" src=") {
             let after_src = &tag[src_start + 5..];
             let quote = after_src.chars().next().unwrap_or('"');
-            if quote == '"' || quote == '\'' {
-                if let Some(quote_end) = after_src[1..].find(quote) {
-                    let src = &after_src[1..=quote_end];
-                    if !urls.contains(&src.to_string()) {
-                        urls.push(src.to_string());
-                    }
+            if (quote == '"' || quote == '\'')
+                && let Some(quote_end) = after_src[1..].find(quote)
+            {
+                let src = &after_src[1..=quote_end];
+                if !urls.contains(&src.to_string()) {
+                    urls.push(src.to_string());
                 }
             }
         }
@@ -33,6 +33,20 @@ fn extract_img_src(html: &str) -> Vec<String> {
 
 /// Maximum number of simultaneous feed-fetch requests.
 const MAX_CONCURRENT_FETCHES: usize = 6;
+
+/// Shared HTTP GET → bytes helper. Used by all fetch functions to avoid repeating the
+/// send/bytes/error chain.
+async fn http_get_bytes(url: &str) -> Result<Vec<u8>, String> {
+    Ok(http_client()
+        .get(url)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?
+        .bytes()
+        .await
+        .map_err(|e| e.to_string())?
+        .to_vec())
+}
 
 /// Returns the shared, lazily-initialised HTTP client used for all outgoing requests.
 pub(crate) fn http_client() -> &'static reqwest::Client {
@@ -69,14 +83,7 @@ pub async fn fetch_feed(url: &str) -> Result<(Vec<Article>, Option<i64>), String
         .acquire()
         .await
         .map_err(|e| format!("Semaphore error: {e}"))?;
-    let bytes = http_client()
-        .get(url)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?
-        .bytes()
-        .await
-        .map_err(|e| e.to_string())?;
+    let bytes = http_get_bytes(url).await?;
 
     let parsed = feed_rs::parser::parse(strip_bom(&bytes)).map_err(|e| {
         let msg = e.to_string();
@@ -199,14 +206,7 @@ pub async fn fetch_feed(url: &str) -> Result<(Vec<Article>, Option<i64>), String
 
 /// Fetch just the feed title from a URL (used for AddFeed title auto-fill).
 pub async fn fetch_feed_title(url: &str) -> Result<String, String> {
-    let bytes = http_client()
-        .get(url)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?
-        .bytes()
-        .await
-        .map_err(|e| e.to_string())?;
+    let bytes = http_get_bytes(url).await?;
 
     let parsed = feed_rs::parser::parse(strip_bom(&bytes)).map_err(|e| e.to_string())?;
     Ok(parsed.title.map(|t| t.content).unwrap_or_default())
@@ -214,14 +214,7 @@ pub async fn fetch_feed_title(url: &str) -> Result<String, String> {
 
 /// Fetch and extract readable article content from a URL using Mozilla's Readability algorithm.
 pub async fn fetch_readable_content(url: &str) -> Result<String, String> {
-    let bytes = http_client()
-        .get(url)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?
-        .bytes()
-        .await
-        .map_err(|e| e.to_string())?;
+    let bytes = http_get_bytes(url).await?;
 
     let parsed_url = reqwest::Url::parse(url).map_err(|_| "Invalid URL".to_string())?;
     let mut cursor = std::io::Cursor::new(bytes);
@@ -372,13 +365,5 @@ pub async fn fetch_image(url: &str) -> Result<Vec<u8>, String> {
     if !resolved.starts_with("http://") && !resolved.starts_with("https://") {
         return Err(format!("skipping non-HTTP URL: {url}"));
     }
-    let bytes = http_client()
-        .get(&resolved)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?
-        .bytes()
-        .await
-        .map_err(|e| e.to_string())?;
-    Ok(bytes.to_vec())
+    http_get_bytes(&resolved).await
 }
