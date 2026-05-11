@@ -6,7 +6,7 @@ use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
     prelude::Stylize,
-    style::{Color, Style},
+    style::{Color, Modifier, Style},
     widgets::{Paragraph, Wrap},
 };
 
@@ -30,8 +30,10 @@ fn md_style(theme: &crate::ui::theme::ColorTheme) -> MarkdownStyle {
         link_prefix: "🔗 ",
         quote: Style::new().fg(theme.muted_text),
         quote_indicator: "▍ ",
-        image: Style::new().fg(theme.teal),
-        image_prefix: "🖼 ",
+        image: Style::new()
+            .fg(theme.muted_text)
+            .add_modifier(Modifier::ITALIC | Modifier::DIM),
+        image_prefix: "📷 ",
         list_bullet: "• ",
         ordered_template: "{}. ",
         hr_char: '─',
@@ -84,7 +86,7 @@ pub(super) fn draw_article_detail(
     } else {
         String::new()
     };
-    let detail_title = if feed_refreshing || app.article_fetching {
+    let detail_title = if feed_refreshing {
         let spinner = SPINNER_FRAMES[app.tick % SPINNER_FRAMES.len()];
         format!(" {spinner} {}{age_suffix} ", article.title)
     } else {
@@ -119,12 +121,8 @@ pub(super) fn draw_article_detail(
 
     // First pass at full width to determine if content overflows.
     let mut render_width = content_area.width;
-    let mut result = render_markdown_with_extra(
-        &article.content,
-        &style,
-        render_width,
-        &article.images,
-    );
+    let mut result =
+        render_markdown_with_extra(&article.content, &style, render_width, &article.images);
     let mut lines = result.lines.clone();
     let mut line_count = Paragraph::new(lines)
         .wrap(Wrap { trim: false })
@@ -134,12 +132,8 @@ pub(super) fn draw_article_detail(
     if line_count > content_area.height as usize {
         // Needs scrollbar — re-render at narrower width so separators don't overflow.
         render_width = content_area.width.saturating_sub(2);
-        result = render_markdown_with_extra(
-            &article.content,
-            &style,
-            render_width,
-            &article.images,
-        );
+        result =
+            render_markdown_with_extra(&article.content, &style, render_width, &article.images);
         lines = result.lines.clone();
         line_count = Paragraph::new(lines)
             .wrap(Wrap { trim: false })
