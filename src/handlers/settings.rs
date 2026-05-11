@@ -76,13 +76,6 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
             SettingsItem::ClearArticleCache => {
                 app.state = AppState::ClearArticleCache;
             }
-            SettingsItem::FetchFullOnOpen => {
-                toggle_setting!(
-                    app,
-                    app.user_data.fetch_full_on_open,
-                    "Eager Article Fetch"
-                );
-            }
             SettingsItem::AutoFetchOnStart => {
                 app.user_data.fetch_policy = app.user_data.fetch_policy.next();
                 let _ = save_user_data(&app.user_data);
@@ -150,14 +143,6 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                     "Save Article Content"
                 );
             }
-            SettingsItem::FetchFullOnOpen => {
-                set_setting!(
-                    app,
-                    app.user_data.fetch_full_on_open,
-                    false,
-                    "Eager Article Fetch"
-                );
-            }
             SettingsItem::ScrollLoop => {
                 set_setting!(app, app.user_data.scroll_loop, false, "Scroll Loop");
             }
@@ -189,14 +174,6 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                     app.user_data.cache_full_articles,
                     true,
                     "Save Article Content"
-                );
-            }
-            SettingsItem::FetchFullOnOpen => {
-                set_setting!(
-                    app,
-                    app.user_data.fetch_full_on_open,
-                    true,
-                    "Eager Article Fetch"
                 );
             }
             SettingsItem::ScrollLoop => {

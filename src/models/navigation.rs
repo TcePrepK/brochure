@@ -102,8 +102,6 @@ pub enum SettingsItem {
     CacheFullArticles,
     /// Clear cached article content and fetch fresh on demand.
     ClearArticleCache,
-    /// Toggle eager fetching of full article content.
-    FetchFullOnOpen,
     /// Toggle automatic feed fetching on app startup.
     AutoFetchOnStart,
     /// Cycle archive policy for how long archived articles are kept.
@@ -123,9 +121,10 @@ impl SettingsItem {
             Self::ImportOpml => "Import feeds from an OPML file on disk",
             Self::ExportOpml => "Export your feed list to an OPML file",
             Self::ClearData => "Remove all feeds, categories, and preferences",
-            Self::CacheFullArticles => "Save full article content to cache during fetch instead of just the description",
+            Self::CacheFullArticles => {
+                "Save full article content to cache during fetch instead of just the description"
+            }
             Self::ClearArticleCache => "Delete cached article content and read history",
-            Self::FetchFullOnOpen => "Clear RSS content on fetch so Readability always extracts the full article text (when disabled, long RSS content is shown as-is)",
             Self::AutoFetchOnStart => "When and how often to check for new articles",
             Self::ArchivePolicy => "How long to keep articles after they leave the feed",
             Self::ScrollLoop => "Wrap around at the top and bottom of lists",
@@ -141,8 +140,7 @@ impl SettingsItem {
             Self::ExportOpml => Self::ClearData,
             Self::ClearData => Self::CacheFullArticles,
             Self::CacheFullArticles => Self::ClearArticleCache,
-            Self::ClearArticleCache => Self::FetchFullOnOpen,
-            Self::FetchFullOnOpen => Self::AutoFetchOnStart,
+            Self::ClearArticleCache => Self::AutoFetchOnStart,
             Self::AutoFetchOnStart => Self::ArchivePolicy,
             Self::ArchivePolicy => Self::ScrollLoop,
             Self::ScrollLoop => Self::BorderStyle,
@@ -160,8 +158,7 @@ impl SettingsItem {
             Self::ClearData => Self::ExportOpml,
             Self::CacheFullArticles => Self::ClearData,
             Self::ClearArticleCache => Self::CacheFullArticles,
-            Self::FetchFullOnOpen => Self::ClearArticleCache,
-            Self::AutoFetchOnStart => Self::FetchFullOnOpen,
+            Self::AutoFetchOnStart => Self::ClearArticleCache,
             Self::ArchivePolicy => Self::AutoFetchOnStart,
             Self::ScrollLoop => Self::ArchivePolicy,
             Self::BorderStyle => Self::ScrollLoop,
@@ -185,15 +182,6 @@ pub enum AddFeedStep {
     Url,
     /// User is confirming or editing the auto-detected feed title.
     Title,
-}
-
-/// Identifies where an article was opened from, used by FullArticleFetched.
-#[derive(Debug)]
-pub enum FeedSource {
-    /// A regular feed at the given index in app.feeds.
-    Feed(usize),
-    /// The article was opened from the Saved articles view.
-    Saved,
 }
 
 /// Interaction mode inside the FeedEditor screen.

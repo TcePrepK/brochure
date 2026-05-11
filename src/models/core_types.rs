@@ -52,7 +52,7 @@ pub struct Article {
     /// Whether this article has been saved to a category. Runtime flag; not persisted on Article.
     #[serde(default)]
     pub is_saved: bool,
-    /// Full article text (populated by readability fetch or saved from content field).
+    /// Full article text (from RSS/Atom content or saved content field).
     #[serde(default)]
     pub content: String,
     /// Image URLs from MediaRSS attachments (media:content, media:thumbnail).
@@ -242,9 +242,6 @@ pub struct UserData {
     /// Whether to use rounded borders in the UI.
     #[serde(default)]
     pub border_rounded: bool,
-    /// Whether to eagerly fetch full article content when viewing an article.
-    #[serde(default = "default_true")]
-    pub fetch_full_on_open: bool,
     /// Legacy migration field: reads `auto_fetch_on_start` from old JSON but is never re-written.
     /// When `false`, the value is migrated to `FetchPolicy::Never` in `load_user_data`.
     #[serde(

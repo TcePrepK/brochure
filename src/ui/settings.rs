@@ -72,7 +72,6 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
     }
 
     let save = app.user_data.cache_full_articles;
-    let eager = app.user_data.fetch_full_on_open;
     let rounded = app.user_data.border_rounded;
     let scroll_loop = app.user_data.scroll_loop;
     let cache_label = format_cache_size(app.article_cache_size);
@@ -115,12 +114,6 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
         Row::SectionHeader {
             label: " Fetching",
             is_last: false,
-        },
-        Row::Toggle {
-            item: SettingsItem::FetchFullOnOpen,
-            label: "[ Fetch Full On Open ]",
-            in_last: false,
-            on: eager,
         },
         Row::Cycle {
             item: SettingsItem::AutoFetchOnStart,
