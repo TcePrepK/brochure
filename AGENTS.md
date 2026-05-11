@@ -43,4 +43,35 @@ Whenever you read or edit a file — even for a small fix — also look for:
 - **Obvious simplifications**: dead branches, redundant variables, needlessly verbose patterns.
 
 Make these improvements in the same commit when they are clearly better and low-risk.
-When the improvement is larger or uncertain, surface it to the user as a suggesti
+When the improvement is larger or uncertain, surface it to the user as a suggestion.
+
+---
+
+## Git Commit Conventions
+
+Use the `<type>: <lowercase description>` format:
+
+| Type     | When to use                          |
+|----------|--------------------------------------|
+| `feat:`  | New user-facing feature              |
+| `fix:`   | Bug fix                              |
+| `chore:` | Maintenance (deps, git, CI, etc.)    |
+| `refactor:` | Code restructuring with no functional change |
+| `docs:`  | Documentation-only changes           |
+| `test:`  | Adding or updating tests             |
+
+**When refactoring**, split changes into focused commits — one per logical concern:
+- `refactor: replace cursor macros with composable functions`
+- `refactor: extract shared http_get_bytes helper, fix clippy warning`
+- `refactor: add shared now_secs() timestamp helper`
+- `refactor: consolidate ratatui imports, extract tree-drawing helpers`
+- `refactor: deduplicate article handler read/toggle functions`
+- `refactor: extract feed-list refresh helpers`
+- `refactor: convert settings Left/Right if-chains to match arms`
+- `refactor: use split_cursor utility in saved-category editor`
+
+**Guidelines:**
+- One file appears in at most one commit in a batch
+- Each commit compiles on its own (when possible)
+- Subject line is 72 chars or fewer
+- Do not use `-i`/interactive flags (`rebase -i`, `add -i`, `add -p`)
