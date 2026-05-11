@@ -8,8 +8,56 @@ use tokio::sync::mpsc::UnboundedSender;
 use crate::{
     app::{App, feeds_in_category, sidebar_tree_items},
     fetch::fetch_feed,
-    models::{AppEvent, AppState, FeedEditorMode, FeedTreeItem},
+    models::{AppEvent, AppState, FAVORITES_URL, FeedEditorMode, FeedTreeItem},
 };
+
+/// Refresh every non-Favorites feed. Used by both `r` (in AllFeeds context) and `R` (always).
+fn refresh_all_feeds(app: &mut App, tx: &UnboundedSender<AppEvent>) {
+    let count = app.feeds.iter().filter(|f| f.url != FAVORITES_URL).count();
+    if count == 0 {
+        return;
+    }
+    app.feeds_total += count;
+    app.feeds_pending += count;
+    app.set_status("Fetching all feeds...");
+    for (idx, feed) in app.feeds.iter_mut().enumerate() {
+        if feed.url == FAVORITES_URL {
+            continue;
+        }
+        feed.fetched = false;
+        feed.fetch_error = None;
+        let url = feed.url.clone();
+        let tx2 = tx.clone();
+        tokio::spawn(async move {
+            let result = fetch_feed(&url).await;
+            let _ = tx2.send(AppEvent::FeedFetched(idx, result));
+        });
+    }
+}
+
+/// Refresh every feed in a given category.
+fn refresh_category(app: &mut App, cat_id: u64, tx: &UnboundedSender<AppEvent>) {
+    let feed_indices = feeds_in_category(cat_id, &app.categories, &app.feeds);
+    let count = feed_indices.len();
+    if count == 0 {
+        return;
+    }
+    app.feeds_total += count;
+    app.feeds_pending += count;
+    app.set_status("Fetching category feeds...");
+    for &idx in &feed_indices {
+        if let Some(feed) = app.feeds.get_mut(idx) {
+            feed.fetched = false;
+            feed.fetch_error = None;
+            let url = feed.url.clone();
+            let tx2 = tx.clone();
+            tokio::spawn(async move {
+                let result = fetch_feed(&url).await;
+                let _ = tx2.send(AppEvent::FeedFetched(idx, result));
+            });
+        }
+    }
+}
 
 /// Handle key input while viewing the main feed list; supports navigation, refresh, and feed editor entry.
 pub(super) fn handle_feed_list(
@@ -21,51 +69,9 @@ pub(super) fn handle_feed_list(
         KeyCode::Char('q') => return true,
         KeyCode::Char('r') if !app.in_saved_context => {
             if app.in_all_feeds_context {
-                // "All Feeds" is active — refresh every feed, same as 'R'.
-                let count = app
-                    .feeds
-                    .iter()
-                    .filter(|f| f.url != crate::models::FAVORITES_URL)
-                    .count();
-                if count > 0 {
-                    app.feeds_total += count;
-                    app.feeds_pending += count;
-                    app.set_status("Fetching all feeds...");
-                    for (idx, feed) in app.feeds.iter_mut().enumerate() {
-                        if feed.url == crate::models::FAVORITES_URL {
-                            continue;
-                        }
-                        feed.fetched = false;
-                        feed.fetch_error = None;
-                        let url = feed.url.clone();
-                        let tx2 = tx.clone();
-                        tokio::spawn(async move {
-                            let result = fetch_feed(&url).await;
-                            let _ = tx2.send(AppEvent::FeedFetched(idx, result));
-                        });
-                    }
-                }
+                refresh_all_feeds(app, tx);
             } else if let Some(cat_id) = app.selected_sidebar_category {
-                // Category header is active — refresh all feeds under this category.
-                let feed_indices = feeds_in_category(cat_id, &app.categories, &app.feeds);
-                let count = feed_indices.len();
-                if count > 0 {
-                    app.feeds_total += count;
-                    app.feeds_pending += count;
-                    app.set_status("Fetching category feeds...");
-                    for &idx in &feed_indices {
-                        if let Some(feed) = app.feeds.get_mut(idx) {
-                            feed.fetched = false;
-                            feed.fetch_error = None;
-                            let url = feed.url.clone();
-                            let tx2 = tx.clone();
-                            tokio::spawn(async move {
-                                let result = fetch_feed(&url).await;
-                                let _ = tx2.send(AppEvent::FeedFetched(idx, result));
-                            });
-                        }
-                    }
-                }
+                refresh_category(app, cat_id, tx);
             } else if let Some(feed) = app.feeds.get_mut(app.selected_feed) {
                 let idx = app.selected_feed;
                 let url = feed.url.clone();
@@ -83,29 +89,7 @@ pub(super) fn handle_feed_list(
             }
         }
         KeyCode::Char('R') if !app.in_saved_context => {
-            let count = app
-                .feeds
-                .iter()
-                .filter(|f| f.url != crate::models::FAVORITES_URL)
-                .count();
-            if count > 0 {
-                app.feeds_total += count;
-                app.feeds_pending += count;
-                app.set_status("Fetching all feeds...");
-                for (idx, feed) in app.feeds.iter_mut().enumerate() {
-                    if feed.url == crate::models::FAVORITES_URL {
-                        continue;
-                    }
-                    feed.fetched = false;
-                    feed.fetch_error = None;
-                    let url = feed.url.clone();
-                    let tx2 = tx.clone();
-                    tokio::spawn(async move {
-                        let result = fetch_feed(&url).await;
-                        let _ = tx2.send(AppEvent::FeedFetched(idx, result));
-                    });
-                }
-            }
+            refresh_all_feeds(app, tx);
         }
         KeyCode::Down => app.next(),
         KeyCode::Up => app.previous(),
