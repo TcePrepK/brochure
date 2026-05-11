@@ -118,7 +118,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
                 .unwrap_or_else(|| "Category".to_string())
         };
 
-        let is_navigating = app.state == AppState::ArticleList;
+        let is_navigating = matches!(app.state, AppState::ArticleList | AppState::ArticleDetail);
         let block = content_block(
             format!(" {} ", cat_name).fg(app.theme.link).bold(),
             is_navigating,
@@ -146,7 +146,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
             .enumerate()
             .map(|(i, &(fi, ai))| {
                 let article = &app.feeds[fi].articles[ai];
-                let is_selected = app.selected_article == i && app.state == AppState::ArticleList;
+                let is_selected = app.selected_article == i && matches!(app.state, AppState::ArticleList | AppState::ArticleDetail);
                 let style = if is_selected {
                     Style::default()
                         .fg(app.theme.accent)
@@ -237,7 +237,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
         (title, arts)
     };
 
-    let is_navigating = app.state == AppState::ArticleList;
+    let is_navigating = matches!(app.state, AppState::ArticleList | AppState::ArticleDetail);
     let block = content_block(
         feed_title.fg(app.theme.link).bold(),
         is_navigating,
@@ -312,7 +312,8 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
     for &i in &archived_indices {
         let article = &articles[i];
         let is_selected = app.selected_article == i
-            && (app.state == AppState::ArticleList || app.in_saved_context);
+            && (matches!(app.state, AppState::ArticleList | AppState::ArticleDetail)
+                || app.in_saved_context);
         let is_nav_highlight = is_navigating && app.selected_article == i && !is_selected;
         items.push(build_article_list_item(
             article,
