@@ -1,9 +1,13 @@
 //! Feed/category tree sidebar rendering.
 
-use ratatui::prelude::Stylize;
+use crate::{
+    app::{App, sidebar_tree_items},
+    models::{AppState, FeedTreeItem},
+};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
+    prelude::Stylize,
     style::Style,
     text::{Line, Span},
     widgets::ListItem,
@@ -13,10 +17,6 @@ use super::super::{
     SPINNER_FRAMES, content_block, render_scrollable_list, tree_connector, tree_indent,
 };
 use super::utils::{scroll_title, truncate_title};
-use crate::{
-    app::{App, sidebar_tree_items},
-    models::{AppState, FeedTreeItem},
-};
 
 /// Renders the feeds sidebar showing categories and feeds in a tree with unread badges and fetch status.
 pub(super) fn draw_sidebar(f: &mut Frame, app: &mut App, area: Rect) {

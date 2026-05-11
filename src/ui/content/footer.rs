@@ -1,17 +1,16 @@
 //! Unified one-row footer rendered below the article list or article detail panel.
 
-use ratatui::prelude::Stylize;
+use crate::{app::App, handlers::article::get_selected_article, models::Tab};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
+    prelude::Stylize,
     style::Style,
     text::{Line, Span},
     widgets::Paragraph,
 };
 
 use super::utils::{age_color, format_age};
-use crate::handlers::article::get_selected_article;
-use crate::{app::App, models::Tab};
 
 /// Unified footer renderer used by both `draw_article_list` and `draw_article_detail`.
 ///

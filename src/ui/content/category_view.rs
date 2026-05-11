@@ -1,18 +1,20 @@
 //! Category article list preview rendering (flat date-sorted view when a category header is selected).
 
-use ratatui::prelude::Stylize;
+use crate::app::App;
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
+    prelude::Stylize,
     style::Style,
     text::{Line, Span},
     widgets::{List, ListItem, Paragraph},
 };
 
 use super::super::{content_block, render_scrollbar};
-use super::footer::draw_article_footer;
-use super::utils::{age_color, short_age, truncate_title};
-use crate::app::App;
+use super::{
+    footer::draw_article_footer,
+    utils::{age_color, short_age, truncate_title},
+};
 
 /// Render the article list panel as a flat date-sorted preview when the sidebar
 /// cursor rests on a category header (FeedList state, no navigation cursor).

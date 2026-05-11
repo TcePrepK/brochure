@@ -4,23 +4,22 @@
 //! including the two-step add-feed wizard, OPML import/export path prompts, confirmation dialogs,
 //! and the category picker for saving articles to custom categories.
 
+use crate::{
+    app::App,
+    models::{AddFeedStep, AppState, CategoryId},
+    ui::content::utils::split_cursor,
+};
 use ratatui::layout::Constraint::{Fill, Length, Min};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
+    prelude::Stylize,
     style::Style,
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
 };
 
-use super::render_scrollbar;
-use super::{border_set, content_block};
-use crate::ui::content::utils::split_cursor;
-use crate::{
-    app::App,
-    models::{AddFeedStep, AppState, CategoryId},
-};
-use ratatui::prelude::Stylize;
+use super::{border_set, content_block, render_scrollbar};
 
 /// Word-wraps `text` with a hanging bullet indent into pre-formatted strings.
 ///

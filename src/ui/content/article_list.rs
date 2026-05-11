@@ -1,21 +1,23 @@
 //! Article list panel rendering with archived sections and scrolling.
 
-use ratatui::prelude::Stylize;
+use crate::{
+    app::App,
+    models::{AppState, Article, Tab},
+};
 use ratatui::{
     Frame,
     layout::Rect,
+    prelude::Stylize,
     style::Style,
     text::{Line, Span},
     widgets::{ListItem, Paragraph, Wrap},
 };
 
 use super::super::{content_block, render_scrollable_list};
-use super::footer::draw_article_footer;
-use super::helpers::split_articles;
-use super::utils::{age_color, scroll_title, short_age};
-use crate::{
-    app::App,
-    models::{AppState, Article, Tab},
+use super::{
+    footer::draw_article_footer,
+    helpers::split_articles,
+    utils::{age_color, scroll_title, short_age},
 };
 
 /// Builds a single article list item with icon, title (scrolling if selected), and age badge.

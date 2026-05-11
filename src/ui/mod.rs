@@ -5,7 +5,7 @@
 
 mod changelog;
 mod chrome;
-mod content;
+pub(crate) mod content;
 mod feed_editor;
 mod popups;
 mod saved_category_editor;
@@ -13,17 +13,34 @@ mod settings;
 pub(crate) mod theme;
 mod theme_editor;
 
-use crate::app::App;
-use crate::models::{AppState, FeedTreeItem, Tab};
-use crate::ui::theme::ColorTheme;
-use ratatui::layout::Rect;
-use ratatui::prelude::{Line, Stylize};
-use ratatui::style::Style;
-use ratatui::widgets::{Block, Borders, List, ListItem, ListState};
+use crate::{
+    app::App,
+    models::{AppState, FeedTreeItem, Tab},
+    ui::theme::ColorTheme,
+};
+
+/// Extract the tree depth from a tree item (AllFeeds → 0, Feed/Category → their depth).
+fn tree_item_depth(item: &FeedTreeItem) -> u8 {
+    match item {
+        FeedTreeItem::AllFeeds => 0,
+        FeedTreeItem::Feed { depth, .. } | FeedTreeItem::Category { depth, .. } => *depth,
+    }
+}
+
+/// Find the depth of the next node in `tree[start..]` whose depth is ≤ `level`.
+fn next_at_or_above(tree: &[FeedTreeItem], start: usize, level: u8) -> Option<u8> {
+    tree[start..]
+        .iter()
+        .find(|n| tree_item_depth(n) <= level)
+        .map(tree_item_depth)
+}
 use ratatui::{
     Frame,
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Rect},
+    prelude::{Line, Stylize},
+    style::Style,
     symbols,
+    widgets::{Block, Borders, List, ListItem, ListState},
 };
 
 /// Braille spinner animation frames for loading indicators.
@@ -88,22 +105,7 @@ pub(crate) fn tree_indent(tree: &[FeedTreeItem], render_idx: usize, depth: u8) -
     }
     let mut s = String::new();
     for level in 1..depth {
-        let next_at_level = tree[render_idx + 1..]
-            .iter()
-            .find(|n| {
-                let d = match n {
-                    FeedTreeItem::AllFeeds => 0,
-                    FeedTreeItem::Feed { depth, .. } | FeedTreeItem::Category { depth, .. } => {
-                        *depth
-                    }
-                };
-                d <= level
-            })
-            .map(|n| match n {
-                FeedTreeItem::AllFeeds => 0,
-                FeedTreeItem::Feed { depth, .. } | FeedTreeItem::Category { depth, .. } => *depth,
-            });
-        if next_at_level == Some(level) {
+        if next_at_or_above(tree, render_idx + 1, level) == Some(level) {
             s.push_str("│  ");
         } else {
             s.push_str("   ");
@@ -124,22 +126,7 @@ pub(crate) fn tree_connector(
     if depth == 0 {
         return root_str;
     }
-    let is_last = tree[idx + 1..]
-        .iter()
-        .find(|n| {
-            let d = match n {
-                FeedTreeItem::AllFeeds => 0,
-                FeedTreeItem::Feed { depth, .. } | FeedTreeItem::Category { depth, .. } => *depth,
-            };
-            d <= depth
-        })
-        .is_none_or(|n| {
-            let d = match n {
-                FeedTreeItem::AllFeeds => 0,
-                FeedTreeItem::Feed { depth, .. } | FeedTreeItem::Category { depth, .. } => *depth,
-            };
-            d < depth
-        });
+    let is_last = next_at_or_above(tree, idx + 1, depth).is_none_or(|d| d < depth);
     if is_last {
         if rounded { "╰─ " } else { "└─ " }
     } else {

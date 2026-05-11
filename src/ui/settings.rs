@@ -1,18 +1,16 @@
 //! Settings menu rendering: toggles and action buttons for user preferences.
 
-use ratatui::{
-    Frame,
-    layout::Rect,
-    style::Style,
-    text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem},
-};
-
-use ratatui::prelude::Stylize;
-
 use crate::{
     app::App,
     models::{AppState, SettingsItem},
+};
+use ratatui::{
+    Frame,
+    layout::Rect,
+    prelude::Stylize,
+    style::Style,
+    text::{Line, Span},
+    widgets::{Block, Borders, List, ListItem},
 };
 
 use super::border_set;

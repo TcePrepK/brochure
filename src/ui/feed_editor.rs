@@ -3,22 +3,21 @@
 //! This module renders the feed editor with a two-panel layout: left panel shows feeds/categories
 //! with drag-to-move support, right panel shows categories with add/rename/delete controls.
 
+use crate::{
+    app::{App, visible_cat_only_items, visible_tree_items},
+    models::{AppState, EditorPanel, FeedEditorMode, FeedTreeItem},
+    ui::content::utils::split_cursor,
+};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
+    prelude::Stylize,
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
 };
 
-use ratatui::prelude::Stylize;
-
 use super::{border_set, tree_connector, tree_indent};
-use crate::ui::content::utils::split_cursor;
-use crate::{
-    app::{App, visible_cat_only_items, visible_tree_items},
-    models::{AppState, EditorPanel, FeedEditorMode, FeedTreeItem},
-};
 
 /// Returns the accent color for the editor mode label — yellow during moves, green otherwise.
 fn editor_mode_color(

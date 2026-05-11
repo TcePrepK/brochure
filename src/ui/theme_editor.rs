@@ -3,23 +3,22 @@
 //! Renders `ThemeEditor`, `ThemeEditorNew` (clone picker), `ThemeEditorColorEdit`,
 //! `ThemeEditorHexInput`, `ThemeEditorRename`, `ThemeEditorExport`, and `ThemeEditorImport`.
 
+use crate::{
+    app::App,
+    models::AppState,
+    ui::content::utils::split_cursor,
+    ui::theme::{COLOR_SLOTS, ColorTheme},
+};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Modifier, Style},
+    prelude::Stylize,
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph},
 };
 
 use super::{border_set, content_block};
-use crate::ui::content::utils::split_cursor;
-use crate::{
-    app::App,
-    models::AppState,
-    ui::theme::{COLOR_SLOTS, ColorTheme},
-};
-use ratatui::prelude::Stylize;
-use ratatui::style::Color;
 // ── Entry points ──────────────────────────────────────────────────────────────
 
 /// Top-level draw dispatcher for all `ThemeEditor*` states.

@@ -4,20 +4,18 @@
 //! the top tab bar showing the current tab, feed stats, and progress during fetches;
 //! and the footer showing context-sensitive key hints and scrolling status messages.
 
-use ratatui::{
-    Frame,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::Style,
-    text::{Line, Span},
-    widgets::{List, ListItem, Paragraph},
-};
-
 use crate::{
     app::App,
     models::{AppState, FAVORITES_URL, Tab},
 };
-
-use ratatui::prelude::Stylize;
+use ratatui::{
+    Frame,
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    prelude::Stylize,
+    style::Style,
+    text::{Line, Span},
+    widgets::{List, ListItem, Paragraph},
+};
 
 use super::content_block;
 

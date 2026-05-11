@@ -1,16 +1,16 @@
 //! Saved-categories sidebar rendering.
 
-use ratatui::prelude::Stylize;
+use crate::{app::App, models::AppState};
 use ratatui::{
     Frame,
     layout::Rect,
+    prelude::Stylize,
     style::Style,
     text::{Line, Span},
     widgets::{List, ListItem},
 };
 
 use super::super::content_block;
-use crate::{app::App, models::AppState};
 
 /// Renders the saved-categories sidebar with "All Saved" entry, categories, and article counts.
 pub(super) fn draw_saved_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
