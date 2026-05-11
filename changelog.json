@@ -83,5 +83,17 @@
       "Enhanced hex editor with validation and UI tweaks",
       "Resolved editor cursor issues"
     ]
+  },
+  {
+    "version": "0.6.0",
+    "date": "2026-05-11",
+    "summary": "Improved UI persistence, fixed crashes and freezes, enhanced feed handling and image display.",
+    "highlights": [
+      "Changelog entries can be collapsed/expanded persistently",
+      "Sidebar collapse state remembered between sessions",
+      "Settings items now show brief descriptions",
+      "Resolved crash with 2-day archive policy",
+      "Fixed UI freezes during batch feed fetching"
+    ]
   }
 ]
