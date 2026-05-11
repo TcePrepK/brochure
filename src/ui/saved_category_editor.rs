@@ -1,16 +1,16 @@
 //! Full-screen saved-category editor for renaming and deleting custom categories.
 
-use ratatui::prelude::Stylize;
+use crate::{app::App, models::AppState, ui::content::utils::split_cursor};
 use ratatui::{
     Frame,
     layout::Rect,
+    prelude::Stylize,
     style::Style,
     text::{Line, Span},
     widgets::{Block, Borders, ListItem, Paragraph},
 };
 
 use super::{border_set, render_scrollable_list};
-use crate::{app::App, models::AppState};
 
 /// Renders the full-screen saved-category editor for renaming and deleting custom categories.
 pub(super) fn draw_saved_category_editor(f: &mut Frame, app: &mut App, area: Rect) {
@@ -48,14 +48,12 @@ pub(super) fn draw_saved_category_editor(f: &mut Frame, app: &mut App, area: Rec
             let name_line = if app.state == AppState::SavedCategoryEditorRename
                 && i == app.saved_cat_editor_scroll.cursor
             {
-                let chars: Vec<char> = app.feed_editor.input.chars().collect();
-                let pos = app.feed_editor.input_cursor.min(chars.len());
-                let before: String = chars[..pos].iter().collect();
-                let after: String = chars[pos..].iter().collect();
+                let (before, cursor_ch, after) =
+                    split_cursor(&app.feed_editor.input, app.feed_editor.input_cursor);
                 Line::from(vec![
                     "  ".fg(app.theme.unread),
                     before.fg(app.theme.unread),
-                    "|".fg(app.theme.accent).bold(),
+                    cursor_ch.fg(app.theme.accent).bold(),
                     after.fg(app.theme.unread),
                 ])
             } else {
@@ -93,14 +91,12 @@ pub(super) fn draw_saved_category_editor(f: &mut Frame, app: &mut App, area: Rec
             height: 1,
             ..area
         };
-        let chars: Vec<char> = app.feed_editor.input.chars().collect();
-        let pos = app.feed_editor.input_cursor.min(chars.len());
-        let before: String = chars[..pos].iter().collect();
-        let after: String = chars[pos..].iter().collect();
+        let (before, cursor_ch, after) =
+            split_cursor(&app.feed_editor.input, app.feed_editor.input_cursor);
         let input_line = Line::from(vec![
             "  Category name: ".fg(app.theme.unread),
             before.fg(app.theme.unread),
-            "|".fg(app.theme.accent).bold(),
+            cursor_ch.fg(app.theme.accent).bold(),
             after.fg(app.theme.unread),
         ]);
         f.render_widget(Paragraph::new(input_line), input_area);
