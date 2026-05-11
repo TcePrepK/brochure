@@ -3,12 +3,17 @@
 use crate::ui::theme::ColorTheme;
 use ratatui::style::Color;
 
-/// Formats a Unix timestamp as a human-readable age string (e.g., "42m ago", "2d ago").
-pub(super) fn format_age(secs: i64) -> String {
-    let now = std::time::SystemTime::now()
+/// Current Unix timestamp in seconds. Shared helper to avoid repeating the 3-line incantation.
+pub(crate) fn now_secs() -> i64 {
+    std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
-        .unwrap_or(secs);
+        .unwrap_or(0)
+}
+
+/// Formats a Unix timestamp as a human-readable age string (e.g., "42m ago", "2d ago").
+pub(super) fn format_age(secs: i64) -> String {
+    let now = now_secs().max(secs);
     let diff = (now - secs).max(0) as u64;
     if diff < 60 {
         "just now".to_string()
@@ -47,10 +52,7 @@ pub(super) fn scroll_title(text: &str, available: usize, elapsed: usize) -> Stri
 
 /// Returns a color for a timestamp age: green for recent (< 1h), yellow for today, dimmed for older.
 pub(super) fn age_color(secs: i64, theme: &ColorTheme) -> Color {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs() as i64)
-        .unwrap_or(secs);
+    let now = now_secs().max(secs);
     let diff = (now - secs).max(0) as u64;
     if diff < 3600 {
         theme.success
@@ -63,10 +65,7 @@ pub(super) fn age_color(secs: i64, theme: &ColorTheme) -> Color {
 
 /// Formats a Unix timestamp as a compact short age string with a leading space (e.g., " now", " 42m", " 2h", " 3d").
 pub(super) fn short_age(secs: i64) -> String {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs() as i64)
-        .unwrap_or(secs);
+    let now = now_secs().max(secs);
     let diff = (now - secs).max(0) as u64;
     if diff < 60 {
         " now".to_string()

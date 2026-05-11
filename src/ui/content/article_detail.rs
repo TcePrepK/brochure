@@ -1,19 +1,17 @@
 //! Article detail view rendering with markdown content, scrolling, and header.
 
-use limner::render_image::Image;
-use limner::{MarkdownStyle, render_markdown_with_extra};
-use ratatui::prelude::Stylize;
+use crate::{app::App, handlers::article::get_selected_article};
+use limner::{MarkdownStyle, render_image::Image, render_markdown_with_extra};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
+    prelude::Stylize,
     style::{Color, Style},
     widgets::{Paragraph, Wrap},
 };
 
 use super::super::{SPINNER_FRAMES, content_block, render_scrollbar};
-use super::footer::draw_article_footer;
-use crate::app::App;
-use crate::handlers::article::get_selected_article;
+use super::{footer::draw_article_footer, utils::now_secs};
 
 /// Build a limner style config from the app theme.
 fn md_style(theme: &crate::ui::theme::ColorTheme) -> MarkdownStyle {
@@ -71,10 +69,7 @@ pub(super) fn draw_article_detail(
         && !app.in_category_context
         && app.feeds.get(app.selected_feed).is_some_and(|f| !f.fetched);
     let age_suffix: String = if let Some(secs) = article.published_secs {
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs() as i64)
-            .unwrap_or(secs);
+        let now = now_secs().max(secs);
         let diff = (now - secs).max(0) as u64;
         let age = if diff < 60 {
             "now".to_string()

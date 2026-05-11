@@ -21,6 +21,7 @@ use std::{io, time::Duration};
 use tokio::sync::mpsc;
 
 use crate::app::App;
+use crate::ui::content::utils::now_secs;
 
 /// Entry point for the application. Sets up terminal raw mode, alternate screen, mouse capture, and delegates to `run()` for the main event loop.
 #[tokio::main]
@@ -102,10 +103,7 @@ async fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()
 
     // Kick off initial feed fetches for all persisted feeds (unless disabled in settings).
     if app.user_data.fetch_policy != FetchPolicy::Never {
-        let now_secs = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs() as i64)
-            .unwrap_or(0);
+        let ts = now_secs();
 
         // Determine which feeds need fetching based on the policy and last-fetched time.
         let fetch_indices: Vec<usize> = app
@@ -115,12 +113,12 @@ async fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()
             .filter(|(_, feed)| match app.user_data.fetch_policy {
                 FetchPolicy::OnStart => true,
                 FetchPolicy::Never => false,
-                FetchPolicy::EveryHour => feed
-                    .last_fetched_secs
-                    .is_none_or(|last| now_secs - last >= 3600),
-                FetchPolicy::EveryDay => feed
-                    .last_fetched_secs
-                    .is_none_or(|last| now_secs - last >= 86400),
+                FetchPolicy::EveryHour => {
+                    feed.last_fetched_secs.is_none_or(|last| ts - last >= 3600)
+                }
+                FetchPolicy::EveryDay => {
+                    feed.last_fetched_secs.is_none_or(|last| ts - last >= 86400)
+                }
             })
             .map(|(idx, _)| idx)
             .collect();
@@ -338,10 +336,7 @@ fn on_feed_fetched(
                 return;
             };
 
-            let now_secs = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_secs() as i64)
-                .unwrap_or(0);
+            let ts = now_secs();
 
             // Preserve readability-enriched content for articles we already have.
             let preserved: std::collections::HashMap<String, String> = feed
@@ -404,7 +399,7 @@ fn on_feed_fetched(
                 &mut articles,
                 &feed.articles.clone(),
                 &app.user_data.archive_policy,
-                now_secs,
+                ts,
                 &app.user_data.read_links,
                 &app.user_data.saved_articles,
             );
@@ -419,7 +414,7 @@ fn on_feed_fetched(
             feed.fetch_error = None;
             feed.fetched = true;
             feed.feed_updated_secs = xml_updated_secs;
-            feed.last_fetched_secs = Some(now_secs);
+            feed.last_fetched_secs = Some(ts);
         }
         Err(e) => {
             let feed_title = app
