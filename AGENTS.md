@@ -3,8 +3,7 @@
 ## Session start
 Read these files at the beginning of every session:
 - `~/.claude/shared/task-workflow.md`
-- `~/.claude/shared/agent-orchestration.md`
-- `~/.claude/shared/rust-ast-extractor.md`
+- `~/.claude/shared/synopsis.md`
 - `~/.claude/shared/rust-conventions.md`
 
 ---
@@ -23,13 +22,6 @@ Read these files at the beginning of every session:
 
 **Do not let AGENTS.md drift from the code.** If you notice a stale reference (wrong file path, removed type, changed
 rule), fix it in the same commit.
-
----
-
-## Module Map
-
-Run `synopsis dir src/` for a live index of all source files and their responsibilities.
-Each file's `//!` module doc is the authoritative description — it is never out of date.
 
 ---
 
