@@ -99,11 +99,11 @@ pub enum SettingsItem {
     /// Clear all user data and feeds.
     ClearData,
     /// Toggle whether to save full article content when fetching.
-    SaveArticleContent,
+    CacheFullArticles,
     /// Clear cached article content and fetch fresh on demand.
     ClearArticleCache,
     /// Toggle eager fetching of full article content.
-    EagerArticleFetch,
+    FetchFullOnOpen,
     /// Toggle automatic feed fetching on app startup.
     AutoFetchOnStart,
     /// Cycle archive policy for how long archived articles are kept.
@@ -123,9 +123,9 @@ impl SettingsItem {
             Self::ImportOpml => "Import feeds from an OPML file on disk",
             Self::ExportOpml => "Export your feed list to an OPML file",
             Self::ClearData => "Remove all feeds, categories, and preferences",
-            Self::SaveArticleContent => "Store full article content in the cache while fetching",
+            Self::CacheFullArticles => "Save full article content to cache during fetch instead of just the description",
             Self::ClearArticleCache => "Delete cached article content and read history",
-            Self::EagerArticleFetch => "Fetch full article text as soon as you open it",
+            Self::FetchFullOnOpen => "Clear RSS content on fetch so Readability always extracts the full article text (when disabled, long RSS content is shown as-is)",
             Self::AutoFetchOnStart => "When and how often to check for new articles",
             Self::ArchivePolicy => "How long to keep articles after they leave the feed",
             Self::ScrollLoop => "Wrap around at the top and bottom of lists",
@@ -139,10 +139,10 @@ impl SettingsItem {
         match self {
             Self::ImportOpml => Self::ExportOpml,
             Self::ExportOpml => Self::ClearData,
-            Self::ClearData => Self::SaveArticleContent,
-            Self::SaveArticleContent => Self::ClearArticleCache,
-            Self::ClearArticleCache => Self::EagerArticleFetch,
-            Self::EagerArticleFetch => Self::AutoFetchOnStart,
+            Self::ClearData => Self::CacheFullArticles,
+            Self::CacheFullArticles => Self::ClearArticleCache,
+            Self::ClearArticleCache => Self::FetchFullOnOpen,
+            Self::FetchFullOnOpen => Self::AutoFetchOnStart,
             Self::AutoFetchOnStart => Self::ArchivePolicy,
             Self::ArchivePolicy => Self::ScrollLoop,
             Self::ScrollLoop => Self::BorderStyle,
@@ -158,10 +158,10 @@ impl SettingsItem {
             Self::Theme => Self::BorderStyle,
             Self::ExportOpml => Self::ImportOpml,
             Self::ClearData => Self::ExportOpml,
-            Self::SaveArticleContent => Self::ClearData,
-            Self::ClearArticleCache => Self::SaveArticleContent,
-            Self::EagerArticleFetch => Self::ClearArticleCache,
-            Self::AutoFetchOnStart => Self::EagerArticleFetch,
+            Self::CacheFullArticles => Self::ClearData,
+            Self::ClearArticleCache => Self::CacheFullArticles,
+            Self::FetchFullOnOpen => Self::ClearArticleCache,
+            Self::AutoFetchOnStart => Self::FetchFullOnOpen,
             Self::ArchivePolicy => Self::AutoFetchOnStart,
             Self::ScrollLoop => Self::ArchivePolicy,
             Self::BorderStyle => Self::ScrollLoop,

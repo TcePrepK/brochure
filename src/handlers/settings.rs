@@ -66,20 +66,20 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
             SettingsItem::ClearData => {
                 app.state = AppState::ClearData;
             }
-            SettingsItem::SaveArticleContent => {
+            SettingsItem::CacheFullArticles => {
                 toggle_setting!(
                     app,
-                    app.user_data.save_article_content,
+                    app.user_data.cache_full_articles,
                     "Save Article Content"
                 );
             }
             SettingsItem::ClearArticleCache => {
                 app.state = AppState::ClearArticleCache;
             }
-            SettingsItem::EagerArticleFetch => {
+            SettingsItem::FetchFullOnOpen => {
                 toggle_setting!(
                     app,
-                    app.user_data.eager_article_fetch,
+                    app.user_data.fetch_full_on_open,
                     "Eager Article Fetch"
                 );
             }
@@ -142,18 +142,18 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                     app.user_data.fetch_policy.label()
                 ));
             }
-            SettingsItem::SaveArticleContent => {
+            SettingsItem::CacheFullArticles => {
                 set_setting!(
                     app,
-                    app.user_data.save_article_content,
+                    app.user_data.cache_full_articles,
                     false,
                     "Save Article Content"
                 );
             }
-            SettingsItem::EagerArticleFetch => {
+            SettingsItem::FetchFullOnOpen => {
                 set_setting!(
                     app,
-                    app.user_data.eager_article_fetch,
+                    app.user_data.fetch_full_on_open,
                     false,
                     "Eager Article Fetch"
                 );
@@ -183,18 +183,18 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
                     app.user_data.fetch_policy.label()
                 ));
             }
-            SettingsItem::SaveArticleContent => {
+            SettingsItem::CacheFullArticles => {
                 set_setting!(
                     app,
-                    app.user_data.save_article_content,
+                    app.user_data.cache_full_articles,
                     true,
                     "Save Article Content"
                 );
             }
-            SettingsItem::EagerArticleFetch => {
+            SettingsItem::FetchFullOnOpen => {
                 set_setting!(
                     app,
-                    app.user_data.eager_article_fetch,
+                    app.user_data.fetch_full_on_open,
                     true,
                     "Eager Article Fetch"
                 );

@@ -361,7 +361,7 @@ fn on_feed_fetched(
             }
             // When eager fetch is OFF, discard content for articles not yet enriched
             // by readability so they get fetched lazily on open.
-            if !app.user_data.eager_article_fetch {
+            if !app.user_data.fetch_full_on_open {
                 for art in &mut articles {
                     if !preserved.contains_key(&art.link) {
                         art.content = String::new();
@@ -445,7 +445,7 @@ fn on_feed_fetched(
     }
 
     // Persist article cache
-    let _ = storage::save_articles(&app.feeds, app.user_data.save_article_content);
+    let _ = storage::save_articles(&app.feeds, app.user_data.cache_full_articles);
 }
 
 /// Spawn background downloads for article images not yet cached or pending.

@@ -238,13 +238,13 @@ pub struct UserData {
     pub starred_articles: Vec<Article>,
     /// Whether to save full article content when fetching (vs. description only).
     #[serde(default)]
-    pub save_article_content: bool,
+    pub cache_full_articles: bool,
     /// Whether to use rounded borders in the UI.
     #[serde(default)]
     pub border_rounded: bool,
     /// Whether to eagerly fetch full article content when viewing an article.
     #[serde(default = "default_true")]
-    pub eager_article_fetch: bool,
+    pub fetch_full_on_open: bool,
     /// Legacy migration field: reads `auto_fetch_on_start` from old JSON but is never re-written.
     /// When `false`, the value is migrated to `FetchPolicy::Never` in `load_user_data`.
     #[serde(
