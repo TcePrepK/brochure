@@ -3,32 +3,44 @@
 //! Covers `ArticleList`, `ArticleDetail`, and `CategoryPicker` states: navigation, read/unread
 //! toggling, star/save, opening in a browser, and the save-to-category flow.
 
-use std::io::Write;
-
 use crossterm::event::{KeyCode, KeyEvent};
 use tokio::sync::mpsc::UnboundedSender;
 
-/// Copy text to clipboard, falling back to system tools when arboard fails.
-pub(crate) fn copy_to_clipboard(text: &str) -> bool {
-    if let Ok(mut c) = arboard::Clipboard::new() {
-        if c.set_text(text.to_string()).is_ok() {
-            return true;
-        }
-    }
-    for (prog, args) in [("wl-copy", &[][..]), ("xclip", &["-selection", "clipboard"]), ("pbcopy", &[])] {
-        if let Ok(mut child) = std::process::Command::new(prog)
-            .args(args)
+/// Copy text to clipboard using system clipboard tools, with arboard as last resort.
+/// Returns `None` on success, or `Some(text)` if all methods fail (caller should show the text).
+pub(crate) fn copy_to_clipboard(text: &str) -> Option<&str> {
+    // System tools are more portable across SSH/tmux/Wayland/X11 than arboard.
+    let tools: [(&str, &[&str]); 5] = [
+        ("wl-copy", &[]),
+        ("xclip", &["-selection", "clipboard"]),
+        ("xsel", &["-i", "-b"]),
+        ("tmux", &["load-buffer", "-"]),
+        ("pbcopy", &[]),
+    ];
+    for (prog, args) in &tools {
+        let Ok(mut child) = std::process::Command::new(*prog)
+            .args(*args)
             .stdin(std::process::Stdio::piped())
             .spawn()
-        {
-            if let Some(mut stdin) = child.stdin.take() {
-                let _ = stdin.write_all(text.as_bytes());
-                let _ = child.wait();
-                return true;
-            }
+        else {
+            continue;
+        };
+        if let Some(mut stdin) = child.stdin.take() {
+            use std::io::Write;
+            let _ = stdin.write_all(text.as_bytes());
+        }
+        // stdin is dropped here, closing the pipe so the child can exit.
+        if child.wait().is_ok() {
+            return None;
         }
     }
-    false
+    // Last resort: arboard (fails in most non-graphical environments).
+    if let Ok(mut c) = arboard::Clipboard::new() {
+        if c.set_text(text.to_string()).is_ok() {
+            return None;
+        }
+    }
+    Some(text)
 }
 
 use crate::{
@@ -106,18 +118,68 @@ pub(super) async fn handle_article(
             }
         }
         KeyCode::Char('C') => {
-            if let Some(article) = get_selected_article(app) {
-                let link = article.link.clone();
-                if copy_to_clipboard(&link) {
-                    const MAX_LEN: usize = 50;
-                    let display = if link.len() > MAX_LEN {
-                        format!("{}...", &link[..MAX_LEN])
-                    } else {
-                        link
-                    };
-                    app.set_status(format!("Copied: {display}"));
+            if app.state == AppState::ArticleDetail {
+                // Copy article link.
+                if let Some(article) = get_selected_article(app) {
+                    let link = article.link.clone();
+                    match copy_to_clipboard(&link) {
+                        None => {
+                            let display = if link.len() > 50 {
+                                format!("{}...", &link[..50])
+                            } else {
+                                link.clone()
+                            };
+                            app.set_status(format!("Copied: {display}"));
+                        }
+                        Some(fallback) => {
+                            app.set_status(format!("Copy not available — link: {fallback}"));
+                        }
+                    }
+                }
+            } else if app.in_saved_context {
+                // Saved tab — copy article link instead.
+                if let Some(article) = get_selected_article(app) {
+                    let link = article.link.clone();
+                    match copy_to_clipboard(&link) {
+                        None => {
+                            let display = if link.len() > 50 {
+                                format!("{}...", &link[..50])
+                            } else {
+                                link.clone()
+                            };
+                            app.set_status(format!("Copied: {display}"));
+                        }
+                        Some(fallback) => {
+                            app.set_status(format!("Copy not available — link: {fallback}"));
+                        }
+                    }
+                }
+            } else {
+                // Single-feed or category context — copy feed URL.
+                let url = if app.in_category_context {
+                    let (fi, _ai) = app
+                        .category_view_articles
+                        .get(app.selected_article)
+                        .copied()
+                        .unwrap_or((app.selected_feed, 0));
+                    app.feeds.get(fi).map(|f| f.url.clone())
                 } else {
-                    app.set_status("Failed to copy link".to_string());
+                    app.feeds.get(app.selected_feed).map(|f| f.url.clone())
+                };
+                if let Some(url) = url {
+                    match copy_to_clipboard(&url) {
+                        None => {
+                            let display = if url.len() > 50 {
+                                format!("{}...", &url[..50])
+                            } else {
+                                url
+                            };
+                            app.set_status(format!("Copied feed URL: {display}"));
+                        }
+                        Some(fallback) => {
+                            app.set_status(format!("Copy not available — URL: {fallback}"));
+                        }
+                    }
                 }
             }
         }
