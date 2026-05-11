@@ -188,34 +188,30 @@ fn sort_articles_by_date(triples: &mut [(usize, usize, Option<i64>)]) {
     });
 }
 
-// ── Navigation macros ──────────────────────────────────────────────────────
-
-/// Advance a cursor index forward, wrapping or clamping based on `$loop`.
-/// Exits the calling function early (via `return`) when already at the end and not looping.
-macro_rules! cursor_next {
-    ($cursor:expr, $len:expr, $loop:expr) => {
-        if $loop {
-            $cursor = ($cursor + 1) % $len;
-        } else if $cursor < $len - 1 {
-            $cursor += 1;
-        } else {
-            return;
-        }
-    };
+/// Advance a cursor index, wrapping or clamping based on `wrap`. Returns `None` when
+/// already at the end and not wrapping (caller should early-return).
+fn cursor_next(cursor: usize, len: usize, wrap: bool) -> Option<usize> {
+    if len == 0 {
+        return None;
+    }
+    Some(if wrap {
+        (cursor + 1) % len
+    } else {
+        (cursor + 1).min(len - 1)
+    })
 }
 
-/// Retreat a cursor index backward, wrapping or clamping based on `$loop`.
-/// Exits the calling function early (via `return`) when already at the start and not looping.
-macro_rules! cursor_prev {
-    ($cursor:expr, $len:expr, $loop:expr) => {
-        if $loop {
-            $cursor = $cursor.checked_sub(1).unwrap_or($len - 1);
-        } else if $cursor > 0 {
-            $cursor -= 1;
-        } else {
-            return;
-        }
-    };
+/// Retreat a cursor index, wrapping or clamping based on `wrap`. Returns `None` when
+/// already at the start and not wrapping.
+fn cursor_prev(cursor: usize, len: usize, wrap: bool) -> Option<usize> {
+    if len == 0 {
+        return None;
+    }
+    Some(if wrap {
+        cursor.checked_sub(1).unwrap_or(len - 1)
+    } else {
+        cursor.saturating_sub(1)
+    })
 }
 
 impl App {
@@ -551,11 +547,17 @@ impl App {
         }
         let len = items.len();
         let loop_ = self.user_data.scroll_loop;
-        if forward {
-            cursor_next!(self.sidebar_cursor, len, loop_);
+        self.sidebar_cursor = if forward {
+            match cursor_next(self.sidebar_cursor, len, loop_) {
+                Some(c) => c,
+                None => return,
+            }
         } else {
-            cursor_prev!(self.sidebar_cursor, len, loop_);
-        }
+            match cursor_prev(self.sidebar_cursor, len, loop_) {
+                Some(c) => c,
+                None => return,
+            }
+        };
         self.sidebar_title_start_tick = self.tick;
         match items.get(self.sidebar_cursor) {
             Some(FeedTreeItem::AllFeeds) => self.populate_all_feeds_view(),
