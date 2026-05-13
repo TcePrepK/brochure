@@ -78,6 +78,75 @@ pub(super) fn short_age(secs: i64) -> String {
     }
 }
 
+/// Formats a Unix timestamp as a human-readable date string (e.g. "Mon, 11 May 2026 19:43").
+pub(super) fn format_pub_date(secs: i64) -> String {
+    if secs < 0 {
+        return "unknown".into();
+    }
+    let days = secs / 86400;
+    let day_secs = secs % 86400;
+    let hour = day_secs / 3600;
+    let min = (day_secs % 3600) / 60;
+
+    let mut y = 1970i64;
+    let mut rem = days;
+    loop {
+        let ny = if is_leap(y) { 366 } else { 365 };
+        if rem < ny {
+            break;
+        }
+        rem -= ny;
+        y += 1;
+    }
+
+    const MONTH_DAYS: [i64; 12] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    const MONTHS: [&str; 12] = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    const DAYS: [&str; 7] = ["Thu", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed"];
+
+    let mut m = 0usize;
+    for (i, &md) in MONTH_DAYS.iter().enumerate() {
+        let dim = if i == 1 && is_leap(y) { 29 } else { md };
+        if rem < dim {
+            m = i;
+            break;
+        }
+        rem -= dim;
+    }
+    let d = rem + 1;
+
+    let jan1_weekday = weekday_of_jan1(y);
+    let doy = (days - date_to_days(y, 1, 1)) as usize;
+    let wd = DAYS[(jan1_weekday + doy) % 7];
+
+    format!("{wd}, {d} {} {y} {hour:02}:{min:02}", MONTHS[m])
+}
+
+fn is_leap(y: i64) -> bool {
+    (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
+}
+
+fn weekday_of_jan1(y: i64) -> usize {
+    let mut days = 0i64;
+    for yr in 1970..y {
+        days += if is_leap(yr) { 366 } else { 365 };
+    }
+    (days % 7) as usize
+}
+
+fn date_to_days(y: i64, m: i64, d: i64) -> i64 {
+    let mut total = 0i64;
+    for yr in 1970..y {
+        total += if is_leap(yr) { 366 } else { 365 };
+    }
+    const MD: [i64; 12] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    for (i, &md) in MD.iter().enumerate().take((m - 1) as usize) {
+        total += if i == 1 && is_leap(y) { 29 } else { md };
+    }
+    total + d - 1
+}
+
 /// Splits text at cursor position, returning (before_cursor, cursor_char, after_cursor).
 /// The cursor_char is the character under the cursor, or a space if at end of text.
 pub fn split_cursor(text: &str, cursor: usize) -> (String, String, String) {
