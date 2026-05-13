@@ -145,6 +145,12 @@ fn draw_settings(f: &mut Frame, app: &App, area: Rect) {
             on: rounded,
         },
         Row::Cycle {
+            item: SettingsItem::BodyAlignment,
+            label: "[ Body Alignment ]",
+            in_last: true,
+            value: app.alignment_label().to_string(),
+        },
+        Row::Cycle {
             item: SettingsItem::Theme,
             label: "[ Theme ]",
             in_last: true,

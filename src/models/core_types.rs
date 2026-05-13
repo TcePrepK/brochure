@@ -262,6 +262,9 @@ pub struct UserData {
     /// Which category ids are collapsed in the sidebar (persisted).
     #[serde(default)]
     pub sidebar_collapsed: Vec<u64>,
+    /// Body text alignment for article reading (left/center/right/justify).
+    #[serde(default)]
+    pub body_alignment: String,
     /// Indices of collapsed changelog entries (reversed display order, persisted).
     #[serde(default)]
     pub changelog_collapsed: Vec<usize>,

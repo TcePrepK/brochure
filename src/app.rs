@@ -13,6 +13,7 @@ use crate::storage::{
     article_cache_size, load_categories, load_feeds, load_user_data, save_user_data,
 };
 use crate::ui::theme::ColorTheme;
+use limner::Alignment;
 use ratatui::layout::Rect;
 use ratatui::widgets::ListState;
 use std::collections::{HashMap, HashSet};
@@ -165,6 +166,9 @@ pub struct App {
     /// Current scroll offset of the article detail view.
     pub article_scroll_offset: u16,
 
+    /// Body text alignment for article reading.
+    pub body_alignment: Alignment,
+
     // ── Title auto-scroll animation ──────────────────────────────────────────
     /// Value of `tick` when the sidebar cursor last moved — used to scroll long feed titles.
     pub sidebar_title_start_tick: usize,
@@ -242,6 +246,17 @@ impl App {
         let initial_changelog_collapsed: HashSet<usize> =
             user_data.changelog_collapsed.iter().copied().collect();
 
+        // Parse body alignment before user_data is moved into Self.
+        let initial_body_alignment = {
+            let s = user_data.body_alignment.to_lowercase();
+            match s.as_str() {
+                "center" => Alignment::Center,
+                "right" => Alignment::Right,
+                "justify" => Alignment::Justify,
+                _ => Alignment::Left,
+            }
+        };
+
         // Editor cursor uses the non-AllFeeds tree (editor never shows AllFeeds).
         let initial_editor_items = visible_tree_items(&categories, &feeds, &HashSet::new());
         let initial_editor_cursor = initial_editor_items
@@ -305,6 +320,7 @@ impl App {
             article_links: Vec::new(),
             article_content_area: Rect::default(),
             article_scroll_offset: 0,
+            body_alignment: initial_body_alignment,
             sidebar_title_start_tick: 0,
             article_title_start_tick: 0,
             theme,
@@ -319,6 +335,36 @@ impl App {
     pub fn set_status(&mut self, msg: impl Into<String>) {
         self.status_msg = msg.into();
         self.status_msg_start_tick = self.tick;
+    }
+
+    /// Cycle body alignment to the next variant.
+    pub fn cycle_alignment_next(&mut self) {
+        self.body_alignment = match self.body_alignment {
+            Alignment::Left => Alignment::Center,
+            Alignment::Center => Alignment::Right,
+            Alignment::Right => Alignment::Justify,
+            Alignment::Justify => Alignment::Left,
+        };
+    }
+
+    /// Cycle body alignment to the previous variant.
+    pub fn cycle_alignment_prev(&mut self) {
+        self.body_alignment = match self.body_alignment {
+            Alignment::Left => Alignment::Justify,
+            Alignment::Justify => Alignment::Right,
+            Alignment::Right => Alignment::Center,
+            Alignment::Center => Alignment::Left,
+        };
+    }
+
+    /// Human-readable label for the current body alignment.
+    pub fn alignment_label(&self) -> &'static str {
+        match self.body_alignment {
+            Alignment::Left => "Left",
+            Alignment::Center => "Center",
+            Alignment::Right => "Right",
+            Alignment::Justify => "Justify",
+        }
     }
 
     // ── Tab switching ────────────────────────────────────────────────────────

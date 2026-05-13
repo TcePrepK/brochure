@@ -98,6 +98,12 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
             SettingsItem::BorderStyle => {
                 toggle_setting!(app, app.user_data.border_rounded, "Rounded Borders");
             }
+            SettingsItem::BodyAlignment => {
+                app.cycle_alignment_next();
+                app.user_data.body_alignment = app.alignment_label().to_lowercase().to_string();
+                let _ = save_user_data(&app.user_data);
+                app.set_status(format!("Body Alignment: {}", app.alignment_label()));
+            }
             SettingsItem::Theme => {
                 // Position cursor on the currently active theme.
                 let builtin_names = ColorTheme::builtin_names();
@@ -149,6 +155,12 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
             SettingsItem::BorderStyle => {
                 set_setting!(app, app.user_data.border_rounded, false, "Rounded Borders");
             }
+            SettingsItem::BodyAlignment => {
+                app.cycle_alignment_prev();
+                app.user_data.body_alignment = app.alignment_label().to_lowercase().to_string();
+                let _ = save_user_data(&app.user_data);
+                app.set_status(format!("Body Alignment: {}", app.alignment_label()));
+            }
             _ => {}
         },
         KeyCode::Right | KeyCode::Char('l') => match app.settings_selected {
@@ -181,6 +193,12 @@ pub(super) fn handle_settings(app: &mut App, key: KeyEvent) -> bool {
             }
             SettingsItem::BorderStyle => {
                 set_setting!(app, app.user_data.border_rounded, true, "Rounded Borders");
+            }
+            SettingsItem::BodyAlignment => {
+                app.cycle_alignment_next();
+                app.user_data.body_alignment = app.alignment_label().to_lowercase().to_string();
+                let _ = save_user_data(&app.user_data);
+                app.set_status(format!("Body Alignment: {}", app.alignment_label()));
             }
             _ => {}
         },

@@ -110,6 +110,8 @@ pub enum SettingsItem {
     ScrollLoop,
     /// Toggle rounded UI borders.
     BorderStyle,
+    /// Cycle body text alignment for reading.
+    BodyAlignment,
     /// Open the theme picker popup.
     Theme,
 }
@@ -129,6 +131,9 @@ impl SettingsItem {
             Self::ArchivePolicy => "How long to keep articles after they leave the feed",
             Self::ScrollLoop => "Wrap around at the top and bottom of lists",
             Self::BorderStyle => "Use rounded or straight border corners",
+            Self::BodyAlignment => {
+                "Body text alignment for reading (Left / Center / Right / Justify)"
+            }
             Self::Theme => "Browse built-in themes and create custom ones",
         }
     }
@@ -144,7 +149,8 @@ impl SettingsItem {
             Self::AutoFetchOnStart => Self::ArchivePolicy,
             Self::ArchivePolicy => Self::ScrollLoop,
             Self::ScrollLoop => Self::BorderStyle,
-            Self::BorderStyle => Self::Theme,
+            Self::BorderStyle => Self::BodyAlignment,
+            Self::BodyAlignment => Self::Theme,
             Self::Theme => Self::ImportOpml,
         }
     }
@@ -153,7 +159,8 @@ impl SettingsItem {
     pub fn prev(self) -> Self {
         match self {
             Self::ImportOpml => Self::Theme,
-            Self::Theme => Self::BorderStyle,
+            Self::Theme => Self::BodyAlignment,
+            Self::BodyAlignment => Self::BorderStyle,
             Self::ExportOpml => Self::ImportOpml,
             Self::ClearData => Self::ExportOpml,
             Self::CacheFullArticles => Self::ClearData,
