@@ -7,26 +7,34 @@ use std::sync::OnceLock;
 /// Extract image URLs from `<img src="...">` tags in HTML content.
 fn extract_img_src(html: &str) -> Vec<String> {
     let mut urls = Vec::new();
-    let mut remaining = html;
-    while let Some(start) = remaining.find("<img") {
-        let img_tag_start = start;
-        let rest = &remaining[img_tag_start..];
-        let end = rest.find('>').map(|e| e + 1).unwrap_or(rest.len());
-        let tag = &rest[..end];
-        // Look for src="..." or src='...'
-        if let Some(src_start) = tag.find(" src=") {
-            let after_src = &tag[src_start + 5..];
-            let quote = after_src.chars().next().unwrap_or('"');
-            if (quote == '"' || quote == '\'')
-                && let Some(quote_end) = after_src[1..].find(quote)
-            {
-                let src = &after_src[1..=quote_end];
-                if !urls.contains(&src.to_string()) {
-                    urls.push(src.to_string());
+    let bytes = html.as_bytes();
+    let mut offset = 0;
+    while offset + 4 <= bytes.len() {
+        if bytes[offset] == b'<'
+            && (bytes[offset + 1] == b'i' || bytes[offset + 1] == b'I')
+            && (bytes[offset + 2] == b'm' || bytes[offset + 2] == b'M')
+            && (bytes[offset + 3] == b'g' || bytes[offset + 3] == b'G')
+        {
+            let rest = &html[offset..];
+            let end = rest.find('>').map(|e| e + 1).unwrap_or(rest.len());
+            let tag = &rest[..end];
+            let low_tag = tag.to_lowercase();
+            if let Some(src_pos) = low_tag.find(" src=") {
+                let after_src = &tag[src_pos + 5..];
+                let quote = after_src.chars().next().unwrap_or('"');
+                if (quote == '"' || quote == '\'')
+                    && let Some(qend) = after_src[1..].find(quote)
+                {
+                    let src = &after_src[1..=qend];
+                    if !urls.contains(&src.to_string()) {
+                        urls.push(src.to_string());
+                    }
                 }
             }
+            offset += end;
+        } else {
+            offset += 1;
         }
-        remaining = &remaining[img_tag_start + end..];
     }
     urls
 }
