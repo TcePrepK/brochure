@@ -166,6 +166,15 @@ impl SettingsItem {
     }
 }
 
+/// Identifies where an article lives in the app, used by the full-article fetch event.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum FeedSource {
+    /// A regular feed at the given index in app.feeds.
+    Feed(usize),
+    /// The article was opened from the Saved articles view.
+    Saved,
+}
+
 /// Which panel has focus in the feed editor.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EditorPanel {

@@ -1,7 +1,7 @@
 //! Article detail view rendering with markdown content, scrolling, and header.
 
 use crate::{app::App, handlers::article::get_selected_article};
-use limner::{MarkdownStyle, render_image::Image, render_markdown_with_extra};
+use limner::{Alignment, MarkdownStyle, render_image::Image, render_markdown_with_extra};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
@@ -17,18 +17,24 @@ use super::{footer::draw_article_footer, utils::now_secs};
 fn md_style(theme: &crate::ui::theme::ColorTheme) -> MarkdownStyle {
     MarkdownStyle {
         paragraph: Style::new().fg(theme.text),
+        paragraph_alignment: Alignment::Left,
         heading_1: Style::new().fg(theme.accent).bold(),
+        heading_1_alignment: Alignment::Left,
         heading_2: Style::new().fg(theme.accent).bold(),
+        heading_2_alignment: Alignment::Left,
         heading_3: Style::new().fg(theme.accent),
+        heading_3_alignment: Alignment::Left,
         bold: Style::new().bold(),
         italic: Style::new().italic(),
         strikethrough: Style::new().crossed_out(),
         inline_code: Style::new().fg(theme.teal).bg(Color::Rgb(40, 40, 40)),
         code_block: Style::new().fg(theme.teal),
         code_block_bg: theme.bg_dark,
+        code_block_alignment: Alignment::Left,
         link: Style::new().fg(theme.link).underlined(),
         link_prefix: "🔗 ",
         quote: Style::new().fg(theme.muted_text),
+        quote_alignment: Alignment::Left,
         quote_indicator: "▍ ",
         image: Style::new()
             .fg(theme.muted_text)

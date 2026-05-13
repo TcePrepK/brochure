@@ -1,6 +1,6 @@
 //! Events flowing over the MPSC channel into the main event loop.
 
-use super::{Article, UpdateInfo};
+use super::{Article, FeedSource, UpdateInfo};
 
 /// Events flowing over the MPSC channel into the main event loop.
 #[derive(Debug)]
@@ -13,6 +13,8 @@ pub enum AppEvent {
     FeedFetched(usize, Result<(Vec<Article>, Option<i64>), String>),
     /// Result of background feed-title fetch during the AddFeed flow.
     FeedTitleFetched(Result<String, String>),
+    /// Result of fetching the full article content: (source, article_idx, Result<content, error>).
+    FullArticleFetched(FeedSource, usize, Result<String, String>),
     /// A newer version of brochure is available on crates.io.
     UpdateAvailable(UpdateInfo),
     /// An image has been downloaded for display in the article detail.

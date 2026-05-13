@@ -19,3 +19,6 @@ pub use tree::{Category, CategoryId, FeedTreeItem};
 
 /// URL used to identify the virtual Favorites feed (never persisted).
 pub const FAVORITES_URL: &str = "internal:favorites";
+
+/// Articles shorter than this are considered stubs and trigger a readability fetch.
+pub const CONTENT_STUB_MAX_LEN: usize = 500;

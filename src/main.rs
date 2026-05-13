@@ -15,7 +15,7 @@ use crossterm::{
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use fetch::fetch_feed;
-use models::{AddFeedStep, AppEvent, AppState, FetchPolicy};
+use models::{AddFeedStep, AppEvent, AppState, FeedSource, FetchPolicy};
 use ratatui::{Terminal, backend::CrosstermBackend};
 use std::{io, time::Duration};
 use tokio::sync::mpsc;
@@ -196,6 +196,77 @@ async fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()
                     && let Ok(img) = limner::render_image::img_crate::load_from_memory(&bytes)
                 {
                     app.image_cache.insert(url, img);
+                }
+            }
+
+            AppEvent::FullArticleFetched(source, art_idx, result) => {
+                app.article_fetching = false;
+                match source {
+                    FeedSource::Saved => {
+                        let status_msg =
+                            if let Some(article) = app.saved_view_articles.get_mut(art_idx) {
+                                let msg = match result {
+                                    Ok(html) => {
+                                        article.content = html_to_markdown_rs::convert(&html, None)
+                                            .ok()
+                                            .and_then(|r| r.content)
+                                            .unwrap_or_default();
+                                        "Article loaded.".to_string()
+                                    }
+                                    Err(e) => {
+                                        article.content =
+                                            format!("Failed to load article: {e}");
+                                        format!("Extraction failed: {e}")
+                                    }
+                                };
+                                if app.selected_article == art_idx {
+                                    app.content_line_count =
+                                        article.content.lines().count().max(1);
+                                }
+                                Some(msg)
+                            } else {
+                                None
+                            };
+                        if let Some(msg) = status_msg {
+                            app.set_status(msg);
+                        }
+                    }
+                    FeedSource::Feed(feed_idx) => {
+                        let (status_msg, line_count) =
+                            if let Some(feed) = app.feeds.get_mut(feed_idx)
+                                && let Some(article) = feed.articles.get_mut(art_idx)
+                            {
+                                match result {
+                                    Ok(html) => {
+                                        article.content =
+                                            html_to_markdown_rs::convert(&html, None)
+                                                .ok()
+                                                .and_then(|r| r.content)
+                                                .unwrap_or_default();
+                                        let lc = if art_idx == app.selected_article {
+                                            article.content.lines().count().max(1)
+                                        } else {
+                                            app.content_line_count
+                                        };
+                                        ("Article loaded.".to_string(), lc)
+                                    }
+                                    Err(e) => {
+                                        article.content =
+                                            format!("Failed to load article: {e}");
+                                        let lc = if art_idx == app.selected_article {
+                                            article.content.lines().count().max(1)
+                                        } else {
+                                            app.content_line_count
+                                        };
+                                        (format!("Extraction failed: {e}"), lc)
+                                    }
+                                }
+                            } else {
+                                ("Unknown article.".to_string(), app.content_line_count)
+                            };
+                        app.set_status(status_msg);
+                        app.content_line_count = line_count;
+                    }
                 }
             }
         }

@@ -141,6 +141,10 @@ pub struct App {
     /// Value of `tick` when `status_msg` was last set — used to compute per-message scroll offset.
     pub status_msg_start_tick: usize,
 
+    // ── Article fetching ──────────────────────────────────────────────────────
+    /// Whether a full-article readability fetch is in flight.
+    pub article_fetching: bool,
+
     // ── Image cache ──────────────────────────────────────────────────────────
     /// Decoded image pixel data keyed by URL.
     pub image_cache: HashMap<String, limner::render_image::img_crate::DynamicImage>,
@@ -289,6 +293,7 @@ impl App {
             changelog_scroll: 0,
             changelog_collapsed: initial_changelog_collapsed,
             changelog_cursor: 0,
+            article_fetching: false,
             update_available: None,
             update_popup_scroll: 0,
             status_msg_start_tick: 0,
@@ -1080,6 +1085,7 @@ mod tests {
     use super::*;
 
     /// Build a minimal `Article` with only a title set; all other fields are empty/default.
+    #[allow(dead_code)]
     fn mock_article(title: &str) -> Article {
         Article {
             title: title.to_string(),
@@ -1096,6 +1102,7 @@ mod tests {
     }
 
     /// Return an `App` pre-loaded with one uncategorised feed containing two articles.
+    #[allow(dead_code)]
     fn app_with_feed() -> App {
         let mut app = App::new();
         // Clear any disk-loaded state so tests are isolated

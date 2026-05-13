@@ -263,6 +263,17 @@ pub async fn fetch_feed_title(url: &str) -> Result<String, String> {
     Ok(parsed.title.map(|t| t.content).unwrap_or_default())
 }
 
+/// Fetch the full article HTML from the article's URL using Readability, then convert to markdown.
+pub async fn fetch_readable_content(url: &str) -> Result<String, String> {
+    let bytes = http_get_bytes(url).await?;
+
+    let parsed_url = reqwest::Url::parse(url).map_err(|_| "Invalid URL".to_string())?;
+    let mut cursor = std::io::Cursor::new(bytes);
+    readability::extractor::extract(&mut cursor, &parsed_url)
+        .map(|product| product.content)
+        .map_err(|e| format!("Readability error: {e}"))
+}
+
 /// Fetch the latest published versions of brochure from crates.io and GitHub releases.
 /// Filters GitHub releases to only those newer than the current version, sorted newest-first.
 /// Returns `Some(UpdateInfo)` if any newer versions exist, `None` if already up to date.

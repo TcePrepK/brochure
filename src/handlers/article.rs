@@ -35,18 +35,18 @@ pub(crate) fn copy_to_clipboard(text: &str) -> Option<&str> {
         }
     }
     // Last resort: arboard (fails in most non-graphical environments).
-    if let Ok(mut c) = arboard::Clipboard::new() {
-        if c.set_text(text.to_string()).is_ok() {
-            return None;
-        }
+    if let Ok(mut c) = arboard::Clipboard::new()
+        && c.set_text(text.to_string()).is_ok()
+    {
+        return None;
     }
     Some(text)
 }
 
 use crate::{
     app::App,
-    fetch::fetch_feed,
-    models::{AppEvent, AppState, Article, SavedArticle, SavedCategory},
+    fetch::{fetch_feed, fetch_readable_content},
+    models::{AppEvent, AppState, Article, CONTENT_STUB_MAX_LEN, FeedSource, SavedArticle, SavedCategory},
     storage::save_user_data,
 };
 
@@ -88,6 +88,7 @@ pub(super) async fn handle_article(
                 }
             } else {
                 app.next();
+                prefetch_article_if_stub(app, tx);
             }
         }
         KeyCode::Up => {
@@ -97,10 +98,11 @@ pub(super) async fn handle_article(
                 }
             } else {
                 app.previous();
+                prefetch_article_if_stub(app, tx);
             }
         }
         KeyCode::Enter if app.state == AppState::ArticleList => {
-            open_article(app);
+            open_article(app, tx);
         }
         KeyCode::Char('m') => toggle_read(app),
         KeyCode::Char('s') => open_category_picker(app),
@@ -428,11 +430,12 @@ fn update_is_saved_flag(app: &mut App, is_saved: bool) {
     }
 }
 
-/// Opens the selected article in detail view and marks it as read.
-fn open_article(app: &mut App) {
+/// Opens the selected article in detail view, marks it as read, and fetches full content if needed.
+fn open_article(app: &mut App, tx: &UnboundedSender<AppEvent>) {
     let article = get_selected_article(app);
     let Some(article) = article else { return };
     mark_article_as_read(app, &article);
+    fetch_full_article_if_stub(app, tx, &article);
     app.select();
 }
 
@@ -557,4 +560,122 @@ fn toggle_read(app: &mut App) {
         app.user_data.read_links.remove(&link);
     }
     let _ = save_user_data(&app.user_data);
+}
+
+/// Proactively fetches full article content when the cursor lands on a stub-length article.
+pub(super) fn prefetch_article_if_stub(app: &mut App, tx: &UnboundedSender<AppEvent>) {
+    let (source, art_idx, link) = if app.in_category_context {
+        let Some(&(feed_idx, art_idx)) = app.category_view_articles.get(app.selected_article)
+        else {
+            return;
+        };
+        let Some(article) = app
+            .feeds
+            .get(feed_idx)
+            .and_then(|f| f.articles.get(art_idx))
+        else {
+            return;
+        };
+        if article.content.len() >= CONTENT_STUB_MAX_LEN {
+            return;
+        }
+        (FeedSource::Feed(feed_idx), art_idx, article.link.clone())
+    } else if app.in_saved_context {
+        let Some(article) = app.saved_view_articles.get(app.selected_article) else {
+            return;
+        };
+        if article.content.len() >= CONTENT_STUB_MAX_LEN {
+            return;
+        }
+        (
+            FeedSource::Saved,
+            app.selected_article,
+            article.link.clone(),
+        )
+    } else {
+        let Some(article) = app
+            .feeds
+            .get(app.selected_feed)
+            .and_then(|f| f.articles.get(app.selected_article))
+        else {
+            return;
+        };
+        if article.content.len() >= CONTENT_STUB_MAX_LEN {
+            return;
+        }
+        (
+            FeedSource::Feed(app.selected_feed),
+            app.selected_article,
+            article.link.clone(),
+        )
+    };
+    app.article_fetching = true;
+    let tx2 = tx.clone();
+    tokio::spawn(async move {
+        let result = fetch_readable_content(&link).await;
+        let _ = tx2.send(AppEvent::FullArticleFetched(source, art_idx, result));
+    });
+}
+
+/// Spawns a background task to fetch readable content for the article if it is still a stub.
+///
+/// Sets a loading placeholder in the article content and flips `article_fetching` while the
+/// request is in flight.  Does nothing when content is already at full length.
+fn fetch_full_article_if_stub(app: &mut App, tx: &UnboundedSender<AppEvent>, article: &Article) {
+    if article.content.len() >= CONTENT_STUB_MAX_LEN {
+        return;
+    }
+
+    app.set_status("Fetching full article...".to_string());
+    update_article_content(app, "⏳ Fetching full article, please wait...".to_string());
+
+    let tx2 = tx.clone();
+    let url = article.link.clone();
+    let source = if app.in_category_context {
+        let (fi, _ai) = app
+            .category_view_articles
+            .get(app.selected_article)
+            .copied()
+            .unwrap_or((app.selected_feed, app.selected_article));
+        FeedSource::Feed(fi)
+    } else if app.in_saved_context {
+        FeedSource::Saved
+    } else {
+        FeedSource::Feed(app.selected_feed)
+    };
+    let art_idx = if app.in_category_context {
+        app.category_view_articles
+            .get(app.selected_article)
+            .map(|&(_, ai)| ai)
+            .unwrap_or(app.selected_article)
+    } else {
+        app.selected_article
+    };
+    app.article_fetching = true;
+    tokio::spawn(async move {
+        let result = fetch_readable_content(&url).await;
+        let _ = tx2.send(AppEvent::FullArticleFetched(source, art_idx, result));
+    });
+}
+
+/// Replaces the in-memory content field of the currently selected article.
+///
+/// Writes to the correct backing store depending on the active view context.
+fn update_article_content(app: &mut App, content: String) {
+    if app.in_category_context {
+        if let Some(&(fi, ai)) = app.category_view_articles.get(app.selected_article)
+            && let Some(feed) = app.feeds.get_mut(fi)
+            && let Some(a) = feed.articles.get_mut(ai)
+        {
+            a.content = content;
+        }
+    } else if app.in_saved_context {
+        if let Some(a) = app.saved_view_articles.get_mut(app.selected_article) {
+            a.content = content;
+        }
+    } else if let Some(feed) = app.feeds.get_mut(app.selected_feed)
+        && let Some(a) = feed.articles.get_mut(app.selected_article)
+    {
+        a.content = content;
+    }
 }

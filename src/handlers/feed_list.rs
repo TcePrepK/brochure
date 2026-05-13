@@ -148,21 +148,21 @@ pub(super) fn handle_feed_list(
         }
         KeyCode::Char('y') if !app.in_saved_context => {
             let items = sidebar_tree_items(&app.categories, &app.feeds, &app.sidebar_collapsed);
-            if let Some(FeedTreeItem::Feed { feeds_idx, .. }) = items.get(app.sidebar_cursor) {
-                if let Some(feed) = app.feeds.get(*feeds_idx) {
-                    let url = feed.url.clone();
-                    match copy_to_clipboard(&url) {
-                        None => {
-                            let display = if url.len() > 50 {
-                                format!("{}...", &url[..50])
-                            } else {
-                                url.clone()
-                            };
-                            app.set_status(format!("Copied feed URL: {display}"));
-                        }
-                        Some(fallback) => {
-                            app.set_status(format!("Copy not available — URL: {fallback}"));
-                        }
+            if let Some(FeedTreeItem::Feed { feeds_idx, .. }) = items.get(app.sidebar_cursor)
+                && let Some(feed) = app.feeds.get(*feeds_idx)
+            {
+                let url = feed.url.clone();
+                match copy_to_clipboard(&url) {
+                    None => {
+                        let display = if url.len() > 50 {
+                            format!("{}...", &url[..50])
+                        } else {
+                            url.clone()
+                        };
+                        app.set_status(format!("Copied feed URL: {display}"));
+                    }
+                    Some(fallback) => {
+                        app.set_status(format!("Copy not available — URL: {fallback}"));
                     }
                 }
             }
