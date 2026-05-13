@@ -115,7 +115,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
                 .unwrap_or_else(|| "Category".to_string())
         };
 
-        let is_navigating = matches!(app.state, AppState::ArticleList | AppState::ArticleDetail);
+        let is_navigating = matches!(app.state, AppState::ArticleList);
         let block = content_block(
             format!(" {} ", cat_name).fg(app.theme.link).bold(),
             is_navigating,
@@ -235,7 +235,7 @@ pub(super) fn draw_article_list(f: &mut Frame, app: &mut App, area: Rect, show_f
         (title, arts)
     };
 
-    let is_navigating = matches!(app.state, AppState::ArticleList | AppState::ArticleDetail);
+    let is_navigating = matches!(app.state, AppState::ArticleList);
     let block = content_block(
         feed_title.fg(app.theme.link).bold(),
         is_navigating,
