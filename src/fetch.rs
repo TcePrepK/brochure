@@ -165,7 +165,10 @@ pub async fn fetch_feed(url: &str) -> Result<(Vec<Article>, Option<i64>), String
                 .next()
                 .map(|l| l.href)
                 .unwrap_or_default();
-            let html_body = entry.content.and_then(|c| c.body);
+            let html_body = entry
+                .content
+                .and_then(|c| c.body)
+                .filter(|b| !b.trim().is_empty());
             let desc_html = if description != "No Description" {
                 description.clone()
             } else {
